@@ -1,0 +1,127 @@
+
+
+CPG:
+  title: New Fancy Guideline to Control something
+  identifier: concord-prediab-type2dm-children-adol
+  uspstf: https://www.uspreventiveservicestaskforce.org/uspstf/index.php/recommendation/prediabetes-type2-diabetes-children-adolescents-screening#fullrecommendationstart
+  type: screening
+
+define: &ldl_code ["13457-7", "18262-6", "2089-1"]
+
+variables:
+  - id: Age
+
+  - id: DM
+    required: True
+    code: 
+      loinc: ['dmsnmod']
+    
+
+  - id: LDL
+    required: True
+    code:
+      loinc: *ldl_code
+    filter:
+      value_expression: '<= 160'
+      before: 10
+    
+
+
+eligibility:
+
+  - id: age_eligibility
+    expression: $Age > 18
+
+  - id: dm_eligibility
+    expression: $DM == 1
+
+assessments:
+
+  - id: riskscore
+    function: perform_func_to_determine() # Function to assess this "risk-diabetes".
+    show_if_negative: True # default 
+    show_if_undetermined: True # default 
+    narrative:
+      True: You are high risk to get kidney issues maybe.
+      False: Atleast You do not have diabetes.
+
+  - id: riskdiabetes
+    expression: $LDL > 189
+    show_if_negative: True # default 
+    show_if_undetermined: True # default 
+    # raise error if show = true and narrative == None
+    narrative:
+      True: Your LDL is high, and may lead to ascvd. 
+      False: Atleast ldl is low...
+  
+  - id: risk_diabetes2
+    expression: ($riskdiabetes + $riskscore) == 2
+    show_if_negative: True # default 
+    show_if_undetermined: True # default 
+    # raise error if show = true and narrative == None
+    narrative:
+      True: Your LDL is high, and may lead to ascvd. 
+      False: Atleast ldl is low...
+
+  - id: hbA1c
+    expression: ($risk_diabetes2 + $riskscore) == 2
+    narrative:
+      True: Your LDL is high, and may lead to ascvd. 
+      False: Atleast ldl is low...
+
+
+recommendations:
+
+  - id: display-general 
+    title: General advise on diabetes
+    type: display
+    narrative:
+      True: Basically, you eat nonsense.. you get diseases. 
+
+
+  - id: RaheelRec
+    title: aheelraheation
+    code: 
+      concord: ['med-recommendation']
+      snomed: ['something']
+    show_if_negative: True # default 
+    rationale: Apparently, a few papers proved this.
+    narrative: 
+      True: Raheel rec where riskscore has to be false
+    based_on: # these are a list of assessment.ids
+      False: [riskscore]
+
+  - id: get-on-medication
+    title: Medication Recommendation
+    code: 
+      concord: ['med-recommendation']
+      snomed: ['something']
+    show_if_negative: True # default 
+    rationale: Apparently, a few papers proved this.
+    narrative: 
+      True: People like you, with similar profile and health status, including lab tests have found taking a medication to control blood sugar __beneficial__ in preventing diabetes associated conditions like neuropathies or kidney affects.
+    based_on: # these are a list of assessment.ids
+      True: [riskdiabetes]
+      False: [riskscore, risk_diabetes2]
+
+
+  - id: a1c_working
+    title: The regex is working. hbA1c is False
+    based_on:
+      False: [hbA1c]
+
+
+
+      # supporting-variables: maybe each variable can have nested variables.
+        # - va
+
+      
+
+
+
+
+
+  
+
+
+

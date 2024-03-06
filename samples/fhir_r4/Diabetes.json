@@ -1,0 +1,38 @@
+{
+  "resourceType": "Condition",
+  "id": "diabetes-fhir-id",
+  "clinicalStatus": {
+    "coding": [
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+        "code": "active"
+      }
+    ]
+  },
+  "verificationStatus": {
+    "coding": [
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+        "code": "confirmed"
+      }
+    ]
+  },
+  "code": {
+    "coding": [
+      {
+        "system": "http://snomed.info/sct",
+        "code": "44054006-",
+        "display": "Diabetes"
+      }
+    ],
+    "text": "Diabetes"
+  },
+  "subject": {
+    "reference": "Patient/87a339d0-8cae-418e-89c7-8651e6aab3c6"
+  },
+  "encounter": {
+    "reference": "Encounter/2b35fc79-ac6d-4e92-8104-fc62bd30aefb"
+  },
+  "onsetDateTime": "1985-05-30T19:17:40-04:00",
+  "recordedDate": "1985-05-30T19:17:40-04:00"
+}

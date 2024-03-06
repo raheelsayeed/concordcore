@@ -1,0 +1,23 @@
+<div class="card base-variable">
+  <small>ID: {{ record.id }}</small>
+    <h3>{{ record.record.title }}:</h3>
+    <h1>{{ record.record.value or "N/A" }}</h1> 
+    {% markdown %}
+    <p>{{ record.record.get_narrative() or "" }}</p>
+    {% endmarkdown %}
+    <p>Values: {{ record.record.values.representation }} </p>
+    {% if record.record.value_source %}
+    Source: {{ record.record.value_source }}
+    <p>Value is derived from or based on:</p>
+    <ul>
+      {% for source in record.record.value_source %}
+      <li>{{ source.id }} --> {{ source.values }} dated: {{ source.dated }}<br/>
+        <em class="error">{{ source.error }}</em>
+        </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {{ record.record.as_dict() }}
+    <p class="error"><em>Problems evaluating: {{ record.error }}</em></p>
+</div>
+  

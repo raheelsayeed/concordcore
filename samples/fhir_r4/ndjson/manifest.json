@@ -1,0 +1,67 @@
+{
+    "transactionTime": "2024-02-02T19:49:49.996Z",
+    "requiresAccessToken": true,
+    "output": [
+        {
+            "type": "Patient",
+            "url": "https://ehi-server.smarthealthit.org/jobs/8442ca6c5272a9b3/download/Patient.ndjson",
+            "count": 1
+        },
+        {
+            "type": "Organization",
+            "url": "https://ehi-server.smarthealthit.org/jobs/8442ca6c5272a9b3/download/Organization.ndjson",
+            "count": 3
+        },
+        {
+            "type": "Practitioner",
+            "url": "https://ehi-server.smarthealthit.org/jobs/8442ca6c5272a9b3/download/Practitioner.ndjson",
+            "count": 3
+        },
+        {
+            "type": "Encounter",
+            "url": "https://ehi-server.smarthealthit.org/jobs/8442ca6c5272a9b3/download/Encounter.ndjson",
+            "count": 16
+        },
+        {
+            "type": "Condition",
+            "url": "https://ehi-server.smarthealthit.org/jobs/8442ca6c5272a9b3/download/Condition.ndjson",
+            "count": 7
+        },
+        {
+            "type": "Observation",
+            "url": "https://ehi-server.smarthealthit.org/jobs/8442ca6c5272a9b3/download/Observation.ndjson",
+            "count": 167
+        },
+        {
+            "type": "Immunization",
+            "url": "https://ehi-server.smarthealthit.org/jobs/8442ca6c5272a9b3/download/Immunization.ndjson",
+            "count": 11
+        },
+        {
+            "type": "DiagnosticReport",
+            "url": "https://ehi-server.smarthealthit.org/jobs/8442ca6c5272a9b3/download/DiagnosticReport.ndjson",
+            "count": 12
+        },
+        {
+            "type": "Procedure",
+            "url": "https://ehi-server.smarthealthit.org/jobs/8442ca6c5272a9b3/download/Procedure.ndjson",
+            "count": 15
+        },
+        {
+            "type": "CareTeam",
+            "url": "https://ehi-server.smarthealthit.org/jobs/8442ca6c5272a9b3/download/CareTeam.ndjson",
+            "count": 2
+        },
+        {
+            "type": "CarePlan",
+            "url": "https://ehi-server.smarthealthit.org/jobs/8442ca6c5272a9b3/download/CarePlan.ndjson",
+            "count": 2
+        },
+        {
+            "type": "MedicationRequest",
+            "url": "https://ehi-server.smarthealthit.org/jobs/8442ca6c5272a9b3/download/MedicationRequest.ndjson",
+            "count": 1
+        }
+    ],
+    "error": []
+}

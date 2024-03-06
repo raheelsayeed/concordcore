@@ -1,0 +1,38 @@
+{
+  "resourceType": "Condition",
+  "id": "hyperglycemia-fhir-id",
+  "clinicalStatus": {
+    "coding": [
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+        "code": "active"
+      }
+    ]
+  },
+  "verificationStatus": {
+    "coding": [
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+        "code": "confirmed"
+      }
+    ]
+  },
+  "code": {
+    "coding": [
+      {
+        "system": "http://snomed.info/sct",
+        "code": "80394007",
+        "display": "Hyperglycemia (disorder)"
+      }
+    ],
+    "text": "Hyperglycemia (disorder)"
+  },
+  "subject": {
+    "reference": "Patient/87a339d0-8cae-418e-89c7-8651e6aab3c6"
+  },
+  "encounter": {
+    "reference": "Encounter/2df63e95-32d5-47ab-b428-d680a122d0d0"
+  },
+  "onsetDateTime": "2002-05-16T19:17:40-04:00",
+  "recordedDate": "2002-05-16T19:17:40-04:00"
+}

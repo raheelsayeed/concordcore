@@ -1,0 +1,22 @@
+
+<div class="card {{ recommendation.applies }}-recommendation">
+<small>{{ recommendation.recommendation.id }}</small>
+<h3>{{ recommendation.title }} | Applies: {{ recommendation.applies }} </h3> 
+<!-- {% if recommendation.recommendation.description %}<p>{{ recommendation.recommendation.description or ""}}</p>{% endif %} -->
+<p span="recommendation">
+{% markdown %}
+<strong>Description</strong>: {{ recommendation.recommendation.description or "" }} <br/>
+<strong>Narrative</strong>: {{ recommendation.sanitized_narrative or "-" }}
+{% endmarkdown %}
+</p>
+{% if recommendation.based_on %}
+<ol>
+<strong>Based on the following <em>assessments</em></strong>:
+{% for b in recommendation.based_on %}
+<li><em>{{ b.record.sanitized_narrative or b.record.get_narrative() or b.record.title or b.record.id }}</em></li>
+{% endfor %}
+</ol>
+{% endif %}
+<p>{{ recommendation.recommendation.as_dict() }}</p>
+<p class="error">Errors: {{ recommendation.error }}</p>
+</div>

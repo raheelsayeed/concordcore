@@ -1,0 +1,217 @@
+# resources
+# - https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8848991/
+# - https://www.screenlc.com/dpp-vue/index.html
+# ---------------------------------------------------------------------------------------
+
+# for former smokers (personal history of nicotine dependence).
+define: &nicotine_dependence_ICD_10CM ['Z87.891'] 
+# F17.21 - for current smokers (nicotine dependence).
+# https://www.wichita.edu/about/conferences/documents/Tobacco_Behavioral_Health/rodriguez/KDADSBHFacilitationSOW.pdf
+define: &nicotine_dependence_ICD_10CM2 ['F17.21', 'F17.210', 'F17.211', 'F17.213', 'F17.218', 'F17.219']
+
+CPG:
+  identifier: screening_for_lung_cancer
+  title: Screening for Lung Cancer
+  publisher: US Preventive Services Task Force
+  uspstf: https://www.uspreventiveservicestaskforce.org/uspstf/index.php/recommendation/lung-cancer-screening
+  doi: doi:10.1001/jama.2021.1117
+  uri: https://jamanetwork.com/journals/jama/fullarticle/2777244
+  tags: [preventative, screening, cancer]
+  description: |
+    Associating risk with pack years also ignores the fact that lung cancer occurs in never-smokers. In fact, lung cancer in never-smokers is among the top 10 causes of cancer deaths in the United States.
+
+
+  # coding info: https://www.acr.org/Clinical-Resources/Lung-Cancer-Screening-Resources/FAQ
+
+
+variables:
+  
+  - id: Age
+  - id: Ethnicity
+  - id: Gender
+
+    # TOBACCO DEPENDENCE HISTORY
+  - id: smoking_history_loinc
+    title: Smoking history
+    code:
+      loinc: ["72166-2"]
+      
+  - id: nicotine_dependence
+    title: Tobacco use or Nicotine dependence
+    code: 
+      icd10cm: ['Z87.891', 'F17.21', 'F17.210', 'F17.211', 'F17.213', 'F17.218', 'F17.219']
+
+  # Tobacco USage
+  - id: tobacco_use_duraion
+    title: Smoking tobacco use duration
+    code:
+      loinc: ['67741-9']
+    question: For how many years did you (have you) smoke(d) up to now?
+      # https://loinc.org/63640-7
+      # https://loinc.org/63629-0
+  - id: smoking_cigarettes_per_day
+    question: How many cigarettes per day do, or did, you smoke?
+    code:
+      loinc: ['63640-7', '63629-0', '63773-6', '64219-9']
+
+
+  - id: time_since_quit_smoking
+    title: Years since quit smoking
+    type: date
+    narrative:
+      patient:
+        HasValue: You have not smoked since $value.
+
+
+  
+  - id: Emphysema or COPD
+    code:
+      icd10cm: ['J44.*', 'J44.9', 'J44', 'J43.9', 'J43', 'J44.1']
+    description: |
+        A 2018 study found that for people with chronic obstructive pulmonary disease (COPD), pack years might not be the best way to measure. How long they've smoked was more closely linked with COPD than the "cigarettes per day in pack-years" estimates.
+
+  # other risk factor related variables:
+  - id: environmental_exposures
+  - id: prior_radiation_therapy
+  - id: other_lung_diseases #noncancer
+  - id: family_history_lung_cancer
+# The task force recommends using age and smoking history to determine screening eligibility rather than more elaborate risk prediction models because there is insufficient evidence to assess whether risk prediction model–based screening would improve outcomes relative to using the risk factors of age and smoking history for broad implementation in primary care.
+
+  #screening tests
+  - id: ldct
+    code: 
+      loinc: ['ldct']
+
+# This recommendation applies to adults aged 50 to 80 years 
+eligibility:
+
+  - id: EligibileAge
+    expression: $Age > 49 and $Age < 81
+
+assessments:
+
+  - id: AfricanAmerican_Men
+    title: African American/Black men have a higher incidence of lung cancer than White men.
+    expression: '($Ethnicity == "urn:oid:2.16.840.1.113883.6.238|2058-6" or $Ethnicity == "urn:oid:2.16.840.1.113883.6.238|2060-2") and $Gender == "http://snomed.info/sct|248153007"'
+    narrative:
+      patient:
+        True: African American (Black) men have a higher incidence of lung cancer than White men.
+
+  - id: White_women
+    title: White women have higher incidence than African American/Black women
+    description: This difference between White and Black women is most likely due to smoking exposure and related to exposure to carcinogens in cigarettes. The difference may also be related to other social risk factors.
+    expression: $Gender == 2 and $Ethnicity == 1
+    references: [1, 7, 8]
+    narrative:
+      patient:
+        True: White women have higher incidence than African American/Black women
+
+  - id: pack_years
+    title: History of smoking in pack-years
+    description: Pack years is a way to measure the amount of tobacco smoked over a period of time. It is calculated by multiplying number of packs of cigarettes smoked per day by the number of years the person has smoked.
+    expression: ($smoking_cigarettes_per_day/20) * $tobacco_use_duraion
+    narrative:
+      patient:
+        HasValue: You have a smoking history of $value pack years.
+
+  - id: quit_within_15_years
+    title: Quit within the last 15 years
+    expression: $time_since_quit_smoking < 16
+
+  - id: never_smoked
+    title: Never smoked tobacco
+    expression: '$smoking_history_loinc == "http://loinc.org|LA18978-9"'
+  
+  # LA18981-3 LA18982-1 LA18977-1 LA18976-
+  - id: currently_smoke
+    title: Currently smokes 
+    expression: '$smoking_history_loinc == "http://loinc.org|LA18981-3" or $smoking_history_loinc == "http://loinc.org|LA18982-1" or $smoking_history_loinc == "http://loinc.org|LA18977-1" or $smoking_history_loinc == "http://loinc.org|LA18976-3"'
+    narrative:
+      patient:
+        True: As of $smoking_history_loinc.date, you smoking history suggests that you are a current smoking ($smoking_history_loinc).
+        False: You are not a current smoking
+        None: Your smoking history could not be ascertained.
+
+  - id: formerly_smoked
+    title: Formerly smoked tobacco
+    expression: '$smoking_history_loinc == "http://snomed.info/sct|8517006"'
+    narrative:
+      patient:
+        True: You formerly smoked tobacco
+
+
+
+
+  - id: smoking_status_determination
+    title: Smoking history and status
+    description: Smoking is one of the most important risk factors for lung cancer. The risk increases with cumulative quantity and duration of smoking and with age but __decreases__ with increasing time _since_ __quitting__ for persons who formerly smoked.
+    expression: '$smoking_history_loinc == "http://loinc.org|LA18976-3"'
+
+
+
+
+  
+recommendations:
+
+  - id: magnitude_net_benefit
+    title: USPSTF Assessment of Magnitude of Net Benefit
+    description: USPSTF concludes with moderate certainty that annual screening for lung cancer with LDCT has a __moderate net benefit__ in persons at high risk of lung cancer based on __age__, total cumulative exposure to __tobacco smoke__, and years since quitting smoking. The moderate net benefit of screening depends on limiting screening to persons at high risk, the accuracy of image interpretation being similar to or better than that found in clinical trials, and the resolution of most false-positive results with serial imaging rather than invasive procedures.
+    type: display
+
+  - id: screening_tests
+    title: Screening tests
+    type: display
+    description: Low-dose computed tomography has high sensitivity and reasonable specificity for the detection of lung cancer, with demonstrated benefit in screening persons at high risk.9-11 Other potential screening modalities that are not recommended because they have not been found to be beneficial include sputum cytology, chest radiography, and measurement of biomarker levels.
+    references: [9,10,11,12,13]
+
+  - id: discontinue_screening
+    description: Screening should be __discontinued once a person has not smoked for 15 years__ or if in health conditions that substantially limit life expectancy or the ability or willingness to have curative lung surgery.
+    type: display
+
+  - id: Smoking_Cessation_Counseling
+    title: Smoking Cessation Counseling
+    expression: $currently_smoke == True
+    narrative:
+      patient:
+        True: Counselling material for patients
+      provider:
+        True: To be consistent with USPSTF recommendation, persons should receive smoking cessation interventions through primary care __concurrent__ with referral for lung cancer screening. Screening does not prevent most lung cancer deaths; thus, smoking cessation remains essential. 
+
+  - id: CT_Recommendation
+    title: Annual Screening recommendation
+    type: evaluation
+    description: USPSTF recommends __annual__ screening for lung cancer with low-dose computed tomography (LDCT) in adults aged 50 to 80 years who have a 20 pack-year smoking history and currently smoke or have quit within the last 15 years.
+    expression: ($pack_years > 19) and ($currently_smoke == True or $quit_within_15_years == True)
+    uspstf_grade: B
+    narrative:
+      patient:
+        True: You are eligibile for screening by $dueDate_LDCT
+
+  - id: Lung_RADS
+    title: Using Lung-RADS
+    type: display_provider
+    narrative:
+      provider:
+        True: In an effort to minimize the uncertainty and variation about the evaluation and management of lung nodules and to standardize the reporting of LDCT screening results, the American College of Radiology developed the Lung Imaging Reporting and Data System (Lung-RADS) classification system and endorses its use in lung cancer screening.20 Lung-RADS provides guidance to clinicians on which findings are suspicious for cancer and the suggested management of lung nodules detected on LDCT. Data suggest that the use of Lung-RADS may decrease the rate of false-positive results in lung cancer screening.
+
+
+# https://www.cms.gov/regulations-and-guidance/legislation/ehrincentiveprograms/downloads/9_record_smoking_status.pdf
+# Standards Criteria
+# §170.207(h)
+# Coded to one of the following SNOMED CT® codes:
+# (1) Current every day smoker. 449868002
+# (2) Current some day smoker. 428041000124106
+# (3) Former smoker. 8517006
+# (4) Never smoker. 266919005
+# (5) Smoker, current status unknown. 77176002
+# (6) Unknown if ever smoked. 266927001
+# (7) Heavy tobacco smoker. 428071000124103
+# (8) Light tobacco smoker. 428061000124105
+
+# Interesting Quotes:
+
+# Implementation of Lung Cancer Screening
+# Available data indicate that uptake of lung cancer screening is low. One recent study using data for 10 states found that 14.4% of persons eligible for lung cancer screening (based on 2013 USPSTF criteria) had been screened in the prior 12 months.18 Increasing lung cancer screening discussions and offering screening to eligible persons who express a preference for it is a key step to realizing the potential benefit of lung cancer screening.
+
+# Shared Decision-making
+# Shared decision-making is important when clinicians and patients discuss screening for lung cancer. The benefit of screening varies with risk because persons at higher risk are more likely to benefit. Screening does not prevent most lung cancer deaths; thus, smoking cessation remains essential. Lung cancer screening has the potential to cause harm, including false-positive results and incidental findings that can lead to subsequent testing and treatment, including the anxiety of living with a lung lesion that may be cancer. Overdiagnosis of lung cancer and the risks of radiation exposure are harms, although their exact magnitude is uncertain. The decision to undertake screening should involve a thorough discussion of the potential benefits, limitations, and harms of screening.

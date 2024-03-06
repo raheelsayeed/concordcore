@@ -1,0 +1,38 @@
+{
+  "resourceType": "Condition",
+  "id": "hypertension-fhir-id",
+  "clinicalStatus": {
+    "coding": [
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+        "code": "active"
+      }
+    ]
+  },
+  "verificationStatus": {
+    "coding": [
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+        "code": "confirmed"
+      }
+    ]
+  },
+  "code": {
+    "coding": [
+      {
+        "system": "http://snomed.info/ct",
+        "code": "38341003",
+        "display": "Hypertension"
+      }
+    ],
+    "text": "Hypertension"
+  },
+  "subject": {
+    "reference": "Patient/9a82c90c-ba2d-4b36-a523-ee13e38b8e39"
+  },
+  "encounter": {
+    "reference": "Encounter/b863d97b-da31-44ba-9677-87d082a13ccf"
+  },
+  "onsetDateTime": "1968-04-26T23:16:23-05:00",
+  "recordedDate": "1968-04-26T23:16:23-05:00"
+}

@@ -1,0 +1,346 @@
+define: &scc_loinc ['symptoms_cc']
+#cervical_cytology_test
+define: &cervical_cytology_labtest_snomed ['171149006', '416107004', '417036008', '440623000', '448651000124104']
+define: &cervical_cytology_lab_test_cpt ['88141', '88142', '88143', '88147', '88148', '88150', '88152', '88153', '88164', '88165', '88166', '88167', '88174', '88175']
+define: &cervical_cytology_lab_test_hcpcs ['G0123','G0124', 'G0141', 'G0143', 'G0144', 'G0145', 'G0147', 'G0148', 'P3000', 'P3001', 'Q0091']
+define: &cervical_cytology_labtest_loinc ['10524-7', '18500-9', '19762-4', '19764-0', '19765-7', '19766-5', '19774-9', '33717-0', '47527-7', '47528-5']
+#cervical_cytology_result
+define: &cervical_cytology_result_snomed ['168406009', '168407000', '168408005', '168410007', '168414003', '168415002', '168416001', '168424006', '250538001', '268543007', '269957009', '269958004', '269959007', '269960002', '269961003', '269963000', '275805003', '281101005', '309081009', '310841002', '310842009', '416030007', '416032004', '416033009', '439074000', '439776006', '439888000', '441087007', '441088002', '441094005', '441219009', '441667007', '700399008', '700400001', '1155766001', '62051000119105', '62061000119107', '98791000119102']
+#HPV_test
+define: &hpv_test_high_risk_cpt  ['87624', '87625']
+define: &hpv_test_high_risk_HCPCS ['G0476']
+define: &hpv_test_high_risk_loinc ['30167-1', '38372-9', '82354-2', '82456-5', '21440-3', '77400-0', '59263-4', '59264-2', '82675-0', '95539-3', '59420-0', '69002-4', '71431-1', '75694-0', '77379-6', '77399-4']
+define: &hpv_test_snomed ['448651000124104', '35904009']
+
+define: &cervical_cytology_abnormal_snomed ['441087007']
+#HPV_Result
+define: &hpv_result_snomed ['718591004']
+# Hysterectomy with no residual cervix
+define: &hysterectomy_no_residual_cervix_CPT ['51925', '56308', '57530', '57531', '57540','57545', '57550', '57555', '57556', '58150', '58152', '58180', '58200', '58210', '58240', '58260', '58541', '58542', '58543', '58544', '58262', '58263', '58267', '58270', '58275', '58280', '58285', '58290', '58291', '58292', '58293', '58294', '58548', '58550', '58552', '58553', '58554', '58570', '58571', '58572', '58573', '58575', '58951', '58953', '58954', '58956', '59135', '59525']
+define: &hysterectomy_no_residual_cervix_ICD-10PCS ['0UTC0ZZ', '0UTC4ZZ','0UTC7ZZ', '0UTC8ZZ']
+# Absence of cervix
+define: &absence_cervix_ICD-10CM ['Q51.5', 'Z90.710', 'Z90.712']
+
+# https://vsac.nlm.nih.gov/valueset/expansions?pr=ecqm&rel=eCQM%20Update%202022-05-05&q=CMS124v11
+
+
+CPG:
+
+  identifier: screening_for_cervical_cancer
+  title: Screening for Cervical Cancer
+  publisher: US Preventive Services Task Force
+  uspstf: https://www.uspreventiveservicestaskforce.org/uspstf/recommendation/cervical-cancer-screening#toc
+  doi: doi:10.1001/jama.2018.10897
+  uri: https://jamanetwork.com/journals/jama/fullarticle/2697704
+  tags: [preventative, screening]
+
+
+eligibility:
+
+  - id: EligibleAge 
+    expression: $Age > 12 and $Age < 66
+    type: inclusion
+
+  - id: IndividualsWithCervix
+    expression: $Gender != "248152007|http://snomed.info/sct"
+    title: Individuals that have cervix (not men)
+
+variables:
+
+  - id: Age
+    code:
+      concord: ['Age']
+
+  - id: Gender
+    code:
+      concord: ['Gender']
+
+
+  # Cytology/PAP TEST ===========================================
+  - id: cervical_cytology_labtest
+    title: Cervical cytology lab test
+    code:
+      snomed: *cervical_cytology_labtest_snomed
+      loinc: *cervical_cytology_labtest_loinc
+      cpt: *cervical_cytology_lab_test_cpt
+      hcpcs: *cervical_cytology_lab_test_hcpcs
+    filter: 
+      after: 1095
+
+  - id: cervical_cytology_result
+    title: Cervical cytology result
+    code:
+      snomed: *cervical_cytology_result_snomed
+    filter:
+      after: 1095
+
+  - id: hpv_test
+    title: HPV Test
+    code:
+      loinc: *hpv_test_high_risk_loinc
+      hcpcs: *hpv_test_high_risk_HCPCS
+      cpt: *hpv_test_high_risk_cpt
+      snomed: *hpv_test_snomed
+    filter:
+      after: 1095
+    
+  - id: hpv_test_result
+    title: HPV Test Result
+    code:
+      snomed: *hpv_result_snomed
+    filter:
+      after: 1095  
+
+  - id: cotesting
+    title: Pap and HrHPV Co-Tests
+
+  # Signs ===========================================
+  - id: hysterectemy_no_cervix
+    title: Undergone hysterectomy with no residual cervix? 
+    code: 
+      cpt: *hysterectomy_no_residual_cervix_CPT
+      icd10pcs: *hysterectomy_no_residual_cervix_ICD-10PCS
+
+  - id: individuals_without_cervix
+    code:
+      icd10cm: *absence_cervix_ICD-10CM
+
+
+  # Symptoms and Signs
+
+  - id: symptoms_cervicalcancer
+    required: False
+    code:
+      snomed: *scc_loinc
+
+  - id: condition_hpv
+    title: HPV infection
+    code:
+      snomed: ['240532009']
+
+
+# # adequate: ========================================
+  - id: cervical_cytology_labtest_last10Years_recent3
+    title: Cervical cytology lab test
+    code:
+      snomed: *cervical_cytology_labtest_snomed
+      loinc: *cervical_cytology_labtest_loinc
+      cpt: *cervical_cytology_lab_test_cpt
+      hcpcs: *cervical_cytology_lab_test_hcpcs
+    filter: 
+      expression: '== False'
+      after: 3650
+      upper: 3
+
+  - id: cervical_cytology_result_last10Years_recent3
+    title: Cervical cytology result
+    code:
+      snomed: *cervical_cytology_result_snomed
+    filter: 
+      expression: '== False'
+      after: 3650
+      upper: 3
+
+  - id: hrHPV_negative_recent_2_tenyears
+    title: Recent 2 hrHPV Tests within last 10 years
+    code:
+      snomed: *hpv_result_snomed
+    filter: 
+      expression: '== False'
+      after: 3650
+      upper: 2
+
+      
+
+
+
+assessments:
+
+  - id: Adequately_Screened_10Years
+    title: Adequately screened with Pap Tests
+    expression: ($cervical_cytology_result_last10Years_recent3.count == 3 or $hrHPV_negative_recent_2_tenyears.count == 2)
+    narrative:
+      patient:
+        True: Adequately screened
+        False: Not adequately screened
+
+# Test dates, 
+# None if no test done
+  - id: recentPapTestDate
+    title: Pap Test date
+    expression: $cervical_cytology_labtest.date
+    required: False
+    narrative:
+      patient:
+        HasValue: Your last Pap test was on $cervical_cytology_labtest.date
+        None: A pap test was not found in your record
+
+  - id: recentHrHPVTestDate
+    title: Pap Test date
+    expression: $hpv_test.date
+    narrative:
+      patient:
+        HasValue: Your last Pap test was on $cervical_cytology_labtest.date
+        None: HrHPV test was not found in your record
+
+  # what is the code for co-testing?
+  - id: recentCoTestDate
+    title: Recent CoTesting (Pap/HrHPV) date
+    expression: $cotesting.date
+    narrative:
+      patient:
+        HasValue: Last co-testing done on date
+        None: Co-Testing was not found in your record
+  
+
+    
+# Age 21-29 years
+# If you are in this age group, USPSTF recommends getting your first Pap test at age 21, followed by Pap testing every 3 years. Even if you are sexually active, you do not need a Pap test before age 21.
+# if age == 21 and pap_smear == None:
+# ---> recommend papsmear:
+
+  - id: Age_below_21
+    expression: $Age < 21
+
+  - id: Age_21
+    expression: $Age == 21 
+    title: Age is 21
+    narrative:
+      patient:
+        True: You are $Age years of age. USPSTF recommends screening beginning at __age 21 years__.
+        False: Age is not 21
+
+
+  - id: PriorPapTests
+    expression: $cervical_cytology_labtest == 0 and $cervical_cytology_result == 0
+    title: No prior Pap tests recorded
+    user_attestable: True
+    narrative:
+      patient:
+        False: There is no record of Pap tests in your data.
+        True: You have a record of Pap test
+
+
+  - id: Age_21_29
+    expression: $Age > 20 and $Age < 30 
+    title: Women aged 21 to 29 years
+    narrative:
+      patient: 
+        True: Your age is between 21 and 29 years.
+        False: Your age is not between 21 and 29 years.
+
+  - id: date_for_next_Pap_Age21_29
+    function: nextDate_PapTest_Age21_29
+    title: Date for the next Pap test for women aged 21 - 29 years
+
+
+# For ages 30-65
+# Check if age appropriate
+  - id: Age_30_65
+    expression: $Age > 29 and $Age < 66
+    title: Age between 30 and 65 years
+    narrative:
+      patient:
+        True: You are aged between 30 and 65 years
+
+  - id: dueDate_Age_30_65_papAlone
+    function: nextDatePolicy_PapTest_Alone
+    title: Due date for Pap Test alone
+  
+  - id: dueDate_Age_30_65_HrHPVAlone
+    function: nextDatePolicy_hrHPVTest_Alone
+    title: Due date for HrHPV test
+
+  - id: dueDate_Age_30_65_cotesting
+    function: nextDatePolicy_CoTesting
+    title: Due date for Co-Testing (Both Pap test and HrHPV)
+
+  - id: Age_65_Above
+    expression: $Age > 65
+    title: Age over 65 years
+
+    # Procedures
+  - id: undergone_hysterectemy_no_cervix
+    expression: $hysterectemy_no_cervix == True
+
+
+
+# recommendation is mainly based on Age groups
+recommendations:
+
+# 1. AGE BELOW 21 =========================
+  - id: Age_below_21_Recommendation
+    title: Age 20 or less
+    expression: $Age_below_21 == True
+    uspstf_grade: D
+    narrative:
+      patient:
+        True: USPSTF recommends against the need for a cytology test your $Age (Less than 21).
+      
+# 2. AGE @ 21 ============================
+  - id: Age21_NoPap_Recommendation
+    title: Age 21 years with no prior pap tests
+    expression: $Age_21 == True and $PriorPapTests == False
+    uspstf_grade: A
+    narrative:
+      patient:
+        True: USPSTF recommends getting first Pap test at age 21, followed by Pap testing every 3 years.
+
+# 3. AGE BETWEEN 21 AND 29 ==========================
+  - id: Age_21_29_Recommendation
+    title: Pap Test recommendation for women age between 21-29 years
+    uspstf_grade: A
+    expression: $Age_21_29 == True and $date_for_next_Pap_Age21_29 != None 
+    narrative:
+      patient:
+        True: USPSTF recommends getting a Pap test every 3 years. You are due for a Pap test on $date_for_next_Pap_Age21_29 ('humanReadableDate like tomorrow, dayafter etc').
+      provider:
+        True: USPSTF recommends getting a Pap test every 3 years for this individual. Due on $date_for_next_Pap_Age21_29 ('humanReadableDate like tomorrow, dayafter etc').
+      
+# 4. RECOMMENDATION FOR WOMEN AGED 30-65
+  - id: Age_30_65_Recommendation
+    title: Recommendation for women between 30 - 65 years
+    uspstf_grade: A
+    expression: $Age_30_65 == True and $undergone_hysterectemy_no_cervix == False
+    narrative:
+      patient:
+        True: |
+          For you, USPSTF recommends the following screening protocol:
+
+          1. Every 3 years with Cytology alone __OR__
+          2. Every 5 years with hrHPV testing alone __OR__
+          3. Every 5 years with cotesting
+
+          Discuss with your doctor as to which of the above is the best plan for you.
+          You are _due_ for a screening text:
+
+            - Pap Test _alone_ due by __$dueDate_Age_30_65_papAlone__  __OR__
+            - hrHPV test _alone_ is due by __$dueDate_Age_30_65_HrHPVAlone__  __OR__
+            - Cotesting (hrHPV and Pap) test due on __$dueDate_Age_30_65_cotesting__ 
+
+          Your Past tests: $pas_tests
+          
+
+    
+# 5. RECOMMENDATION FOR WOMEN AGED > 65 WITH ADEQUATE PRIOR SCREENING
+    # women ager appropriate
+    # if done test-P, then recommend date for test-P
+    # if done test-H, then recommend date for test-H
+    # if done test-C, then recommend date for test-C
+    # if no-test-found, recommend choices for P,H,C
+  - id: Age_65_Above_PriorAdequateScreened_Recommendation
+    title: Recommendation for Women over 65 years with adequate prior screening
+    expression: $Age_65_Above == True $Adequately_Screened_10Years == True
+    narrative:
+      patient:
+        True: USPSTF recommends against screening for women who are above 65 years of age and had been adequately screened
+    
+
+
+  - id: Women_With_Hysterectomy
+    title: Women with hysterectomy
+    expression: $undergone_hysterectemy_no_cervix == True
+    uspstf_grade: D
+    narrative:
+      patient:
+        True: USPSTF recommends against screening for women who have had a hysterectomy

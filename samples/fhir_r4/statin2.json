@@ -1,0 +1,116 @@
+{
+  "status" : "active",
+  "dosage" : [
+    {
+      "timing" : {
+        "code" : {
+          "text" : "daily"
+        },
+        "repeat" : {
+          "period" : 1,
+          "periodUnits" : "d",
+          "frequency" : 1,
+          "boundsPeriod" : {
+            "start" : "2022-03-07"
+          }
+        }
+      },
+      "method" : {
+        "text" : "Take",
+        "coding" : [
+          {
+            "system" : "urn:oid:1.2.840.114350.1.13.362.2.7.4.798268.8600",
+            "display" : "Take",
+            "code" : "11"
+          }
+        ]
+      },
+      "quantityQuantity" : {
+        "code" : "mg",
+        "value" : 20,
+        "system" : "http://unitsofmeasure.org",
+        "unit" : "mg"
+      },
+      "text" : "Take 1 tablet (20 mg total) by mouth daily.",
+      "asNeededBoolean" : false,
+      "extension" : [
+        {
+          "url" : "https://open.epic.com/fhir/extensions/ordered-dose",
+          "valueQuantity" : {
+            "code" : "mg",
+            "value" : 20,
+            "system" : "http://unitsofmeasure.org",
+            "unit" : "mg"
+          }
+        },
+        {
+          "url" : "https://open.epic.com/fhir/extensions/admin-amount",
+          "valueQuantity" : {
+            "value" : 1,
+            "unit" : "tablet"
+          }
+        }
+      ],
+      "route" : {
+        "text" : "Oral",
+        "coding" : [
+          {
+            "system" : "urn:oid:1.2.840.114350.1.13.362.2.7.4.698288.330",
+            "display" : "Oral",
+            "code" : "15"
+          }
+        ]
+      }
+    }
+  ],
+  "patient" : {
+    "display" : "Kohane, Isaac Dr",
+    "reference" : "https://ws-interconnect-fhir.partners.org/Interconnect-FHIR-MU-PRD/api/FHIR/DSTU2/Patient/T6Ifgq1jekTgGGyg.j2MWkdrBmSuq6IcfYRoU.rNCM2IB"
+  },
+  "id" : "T6BnUyrWOfoROnN.N6EEQu7SAaVz3g3EiSLG1LKRPdK0B",
+  "effectivePeriod" : {
+    "start" : "2022-03-07"
+  },
+  "medicationCodeableConcept" : {
+    "text" : "atorvastatin 20 MG tablet",
+    "coding" : [
+      {
+        "system" : "http://www.nlm.nih.gov/research/umls/rxnorm",
+        "display" : "atorvastatin 20 MG tablet",
+        "code" : "617310"
+      }
+    ]
+  },
+  "identifier" : [
+    {
+      "use" : "usual",
+      "system" : "urn:oid:1.2.840.114350.1.13.362.2.7.2.798268",
+      "value" : "971314307"
+    },
+    {
+      "use" : "usual",
+      "system" : "urn:oid:1.2.840.114350.1.13.362.2.7.3.798268.801",
+      "value" : "971314307:0008107301"
+    }
+  ],
+  "informationSource" : {
+    "display" : "Jeffrey C Bass Statin2.json",
+    "reference" : "https://ws-interconnect-fhir.partners.org/Interconnect-FHIR-MU-PRD/api/FHIR/DSTU2/Practitioner/TsFwE3USM61OFBxFNtG-EYwB"
+  },
+  "extension" : [
+    {
+      "url" : "http://hl7.org/fhir/3.0/StructureDefinition/extension-MedicationStatement.category",
+      "valueCodeableConcept" : {
+        "text" : "Community",
+        "coding" : [
+          {
+            "system" : "http://hl7.org/fhir/medication-statement-category",
+            "display" : "Community",
+            "code" : "community"
+          }
+        ]
+      }
+    }
+  ],
+  "resourceType" : "MedicationStatement"
+}

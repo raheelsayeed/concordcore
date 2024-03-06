@@ -1,0 +1,533 @@
+CPG:
+  title: "Statin Use for the Primary Prevention of Cardiovascular Disease in Adults: Preventive Medication"
+  identifier: StatinUseForPrimaryPreventionASCVD
+  publisher: American College of Cardiology and American Heart Association
+  uri: https://www.ahajournals.org/doi/pdf/10.1161/CIR.0000000000000678
+  doi: 10.1161/CIR.0000000000000678
+  uspstf: https://www.uspreventiveservicestaskforce.org/uspstf/index.php/recommendation/statin-use-in-adults-preventive-medication
+  parent_cpg_doi: ''
+  type: [preventative]
+  revision: 1.0
+  revision_date: 2024-01-3
+  rendering_template_path: 'cholesterol_templates/'
+  description: >
+      Recommendations made by the USPSTF are independent of the U.S. government. They should not be construed as an official position of the Agency for Healthcare Research and Quality or the U.S. Department of Health and Human Services.
+
+
+define: &ldl_code ["13457-7", "18262-6", "2089-1"]
+define: &tg_code ["2571-8", "3043-7"]
+define: &hdl_code ["2085-9"]
+
+
+variables:
+#--------------------------------------------------------
+    #demographic_data
+    - id: Age
+      code:
+        concord: ['Age']
+
+    - id: Gender
+      code:
+        concord: ['Gender']
+
+    - id: Ethnicity
+      code:
+        concord: ['Ethnicity']
+
+#--------------------------------------------------------
+    # Laboratory tests
+    - id: LDL
+      title: Low density lipoprotein
+      user_attestable: False
+      code:
+       loinc: *ldl_code
+
+    - id: HDL
+      title: High density lipoprotein
+      user_attestable: False
+      code: 
+        loinc: *hdl_code
+
+    - id: triglycerides
+      title: Triglycerides
+      user_attestable: False 
+      code: 
+       loinc: *tg_code
+  
+    - id: Chol
+      title: Serum Cholesterol
+      user_attestable: False 
+      code: 
+        loinc: ["2093-3"] 
+
+    - id: ApoB
+      title: Apo Lipoprotein B
+      user_attestable: False
+      required: False 
+      code: 
+        loinc: ["1884-6"]
+
+    - id: HbA_one_c
+      title: HBA1c
+      user_attestable: False
+      required: False
+      code: 
+        loinc: ["4548-4"]
+
+    - id: glu
+      title: Blood glucose
+      user_attestable: False
+      required: False
+      code:
+        loinc: ["2345-7", "2339-0"]
+
+
+#--------------------------------------------------------
+    # VITAL SIGNS
+    - id: bloodpressure
+      title: Blood Pressure
+      user_attestable: False 
+      code: 
+        loinc: ["55284-4"]
+
+
+#--------------------------------------------------------
+    # DIAGNOSIS/CONDITIONS
+    - id: is_diabetic
+      title: Diabetes Mellitus
+      user_attestable: True
+      code: 
+        snomed: ["44054006"]
+
+    - id: htn
+      title: Hypertension
+      code:
+        snomed: ["38341003"]
+
+    - id: is_smoker
+      title: Tobacco smoking status
+      code:
+        loinc: ["72166-2"]
+
+
+
+#--------------------------------------------------------
+    # Medications
+    - id: med_for_htn
+      title: Medication for Hypertension
+      reconcile: True
+      code: 
+        rxnorm: ["104375", "104376", "104377", "104378", "206771", "213482", "206764", "206765", "206766", "207965", "823971", "823982", "823986", "1806890", "197884", "197885", "197886", "197887", "205326", "311353", "311354", "314076", "314077", "1806884"] 
+    
+    - id: med_statins
+      title: Statin Medications
+      reconcile: True
+      code: 
+        rxnorm: ["262095", "617314", "617318", "617320", "750199", "750203", "750207", "750211", "750215", "750227", "750231", "750235", "750239", "259255", "404011", "404013", "597967", "597971", "597974", "597977", "597980", "597984", "597987", "597990", "597993", "617310", "617311", "617312", "2167563", "2167567", "2167571", "2167575", "859421", "859426", "859749", "859753", "2536060", "2536062", "2536064", "2536066", "2167557", "2167565", "2167569", "2167573", "2535745", "2535747", "2535749", "2535750", "859419", "859424", "859747", "859751", "206257", "206258", "884383", "997006", "997007", "197903", "197904", "197905", "359731", "433849", "582041", "582042", "582043", "729605", "359732", "904668", "904664", "904460", "904469", "904477", "904483", "904458", "904467", "904475", "904481", "861646", "861650", "861654", "2001260", "2001264", "2001268", "861643", "861648", "861652", "2001254", "2001262", "2001266", "1944262", "1944266", "104490", "104491", "152923", "208220", "213319", "1245420", "1245430", "1245441", "1245449", "1944264", "198211", "200345", "312961", "314231", "476345", "476349", "476350", "476351", "757702", "757703", "757704", "757705", "761907", "761909", "762970", "312962", "1790679", "103918", "103919", "687048", "310404", "310405", "360507","316672","1422096","859751","197903","904467","1422086","597980","259255","83367","36567"]
+
+    - id: med_nonstatins_chol
+      title: Medications to lower blood cholesterol (non-Statins)
+      reconcile: True
+      code: 
+        rxnorm: ["352304", "2283236", "349556", "2283230", "540281", "544518", "578797", "578799", "583096", "1442165", "1442170", "702055", "702169", "763250", "763252", "828377", "828381", "860884", "860888", "141916", "200311", "310288", "310289", "349287", "351133", "389191", "477560", "477562", "483425", "483427", "483429", "577031", "616853", "616852", "749802", "749804", "828373", "828379", "860880", "860886", "1442163", "1442168", "205751", "315106", "310459", "433853", "199700", "848949", "1801280", "848951", "848943", "1801279", "1048447", "1048452", "1048445", "1048450", "866907", "866912", "866910", "866900", "866905", "1102207", "1102202", "1087302", "1087623", "1102206", "1119573", "207662", "211684", "311944", "876861", "876866", "212579", "260852", "647346", "1098135", "1098142", "1098144", "1428828", "1314672", "2121691", "1088779", "2001472", "2001474", "2001480", "2001492", "1098134", "1098141", "1098143", "198024", "198759", "198760", "199143", "200015", "243782", "247747", "311951", "311955", "311959", "311960", "311963", "314131", "391943", "796544", "848987", "881376", "1539267", "2001486", "1102196", "1102201", "283092", "311948", "891522", "1314666", "1119569", "1364854", "1364855", "1235389", "1241896", "1087298", "876858", "876863", "1234482", "1659161", "1659167", "1659179", "1659183", "1659156", "1659165", "1659177", "1659182", "1665900", "1665906", "1801322", "1665895", "1665904", "1801319", "352304", "1245420", "1245430", "1245441", "1245449", "2536060", "2536062", "2536064", "2536066", "2283236", "349556", "476345", "476349", "476350", "476351", "2535745", "2535747", "2535749", "2535750", "2283230"]
+
+
+    #--------------------------------------------------------
+    #Riskfactor variables
+
+    #1. Peristantly Elevated Triglycerides
+    - id: elevated_tg
+      title: Elevated Triglycerides
+      user_attestable: False
+      required: False
+      code:
+        loinc: *tg_code
+      filter: 
+        expression: ' > 175'
+      narrative:
+        patient:
+          True: 'Tests with Triglyceride over 175: $values'
+          False: 'There are no tests with triglycerides over 175 in your data ($values)'
+          None: Triglyceride tests were found in your data
+
+   
+      
+
+  #--------------------------------------------------------
+  #Risk factor variables
+  #All are optional and user attestable
+    - id: Psoriasis
+      code:
+        snomed: ["9014002"] 
+      required: False
+
+    - id: ckd
+      title: Chronic kidney disease
+      required: False
+      code:
+        snomed: ["709044004"]
+
+    - id: RA
+      title: Rheumatoid arthritis
+      required: False
+      code:
+        snomed: ["69896004"]
+
+
+  #FEMALE RISK FACTOR
+    - id: Preeclampsia
+      title: Preeclampsia
+      code:
+        snomed: ["105651000119100", "398254007", "48194001"]
+      required: False
+
+    - id: PrematureMenopause
+      title: Premature menopause
+      required: False
+      code: 
+        snomed: ["373717006"]
+
+  #FAMILYHISTORY
+    - id: FamilyHxPrematureASCVD
+      title: Family history of premature ASCVD
+      required: False
+
+  #SouthAsian
+    - id: sa_ancestry
+      title: South asian ancestry
+      required: False
+      type: bool
+
+
+  #Other riskfactors
+
+
+    - id: hsCRP
+      title: HsCRP test
+      user_attestable: False
+      required: False
+      code: 
+        loinc: ["30522-7"]
+
+      #2. Peristantly Elevated LDL
+    - id: elevated_LDL_list
+      user_attestable: False
+      required: False
+      code:
+        loinc: *ldl_code
+      filter:
+        expression: ' > 160'
+      narrative:
+        patient:
+          True: 'Tests with LDL over 160: $values'
+          False: 'There are no tests with results over 160 in your data ($all_values)'
+          None: No LDL tests were found in your data
+
+
+#-Check eligibility.
+#-assume all variables already listed above
+#-evaluate using expressions and healthcontext
+eligibility:
+
+    - id: age_range
+      title: This CPG is fit for people aged between 40 and 75 years
+      expression: $Age > 40 and $Age < 76
+
+
+
+assessments:
+
+    - id: persistant_tg
+      title: Persistantly elevated triglycerides
+      expression: $elevated_tg.count > 2 if $triglycerides.count > 2 else None
+      user_attestable: False
+      required: False
+      description: Persistently elevated triglycerides (175 mg/dL or greater on three or more occasions)
+      narrative: 
+        patient:
+          True: 'You have high Triglyceride in atleast 3 tests $values'
+          False: 'You do not have high Triglycerides in atleast 3 ocasions $values'
+          None: 'Not enough data. Need atleast 3 tests to determine risk $triglycerides.count'     
+
+
+
+
+    # simple_eval
+    - id: lowHDL
+      title: Low HDL
+      user_attestable: False
+      required: False
+      expression: '($HDL < 40) if ($Gender == "248153007|http://snomed.info/sct") else ($HDL < 50)'
+
+    - id: elevated_glucose
+      title: Elevated glucose
+      user_attestable: False
+      required: False
+      expression: $glu > 160
+
+    - id: Race_Is_Black_AfricanAmerican
+      expression: '$Ethnicity == "2058-6|urn:oid:2.16.840.1.113883.6.238" or $Ethnicity == "2060-2|urn:oid:2.16.840.1.113883.6.238"'
+
+    - id: Elevated_hsCRP
+      title: Is hsCRP elevated?
+      user_attestable: False
+      required: False
+      expression: $hsCRP > 1.99
+      narrative:
+        patient:
+          None: Could not ascertain value for elevated hsCRP
+          False: hsCRP is not elevated
+          True: Your hsCRP is elevated $value (more than 1.99 mg/dL)
+      
+
+    - id: elevated_apoB
+      title: Elevated apolipoprotein B
+      user_attestable: False
+      required: False
+      expression: $ApoB > 130
+      narrative:
+        patient:
+          True: ApoB is quite high bro!
+          None: ApoB values could not found in your data
+
+    - id: persistant_Elevated_LDL
+      title: Persistantly elevated LDL
+      description: LDL is elevated at three or more occasions
+      expression: $elevated_LDL_list.count > 2 if $LDL.count > 2 else None
+      user_attestable: False
+      required: False
+      narrative: 
+        patient:
+          True: 'Your LDL is elevated in atleast 3 occasions: $values'
+          False: 'You do not have high LDL in atleast 3 ocasions $values'
+          None: 'Not enough data. Need atleast 3 tests to determine risk $LDL.count' 
+
+    #1._RR_ChronicConditions
+    - id: chronicConditions
+      title: Chronic inflammatory conditions
+      expression: ($RA + $Psoriasis + $ckd) > 1
+    #2._RR_Female risk enhancing factors
+    - id: Femaleriskfactors
+      title: Female-specific risk-enhancing factors
+      expression: ($Preeclampsia + $PrematureMenopause) > 1
+    #3._Metabolic risk factors
+    #
+    - id: metabolic_syndrome
+      title: Metabolic risk factors
+      user_attestable: False
+      required: False
+      expression: |
+        (1 if $lowHDL else 0)  + (1 if $elevated_glucose else 0) + (1 if $elevated_tg else 0) > 3
+      code: 
+        concord: ['riskfactors.metabolicsyndrome']
+      narrative:
+        patient:
+          True: Atleast 3 are needed to to be positive. 
+          False: $count riskfactors(s) found. Atleast 3 are needed for this to be classified as a risk-factor, __however__, there may be additional factors but not in your data
+    #FINAL_RR
+    - id: multiple_risk_factors
+      title: Multiple risk-enhancing factors
+      expression: ($FamilyHxPrematureASCVD + $sa_ancestry + $Femaleriskfactors) > 2
+      narrative:
+        patient:
+          False: Atleast __3__ factors are needed to be positive.
+          True: There were atleast __3__ risk enhancing factors found in your data. ACC/AHA guidance suggests that these factors, _if found_, can enhance the risk of developing heart attack, stroke or other cardiovascular event.
+            
+
+    # ------------------------------------------------------------------------------------
+    - id: ascvd_ten_year_risk_score
+      title: Ten Year Risk score
+      description: The ten year risk score estimates the likelihood of an individual having a cardiovascular event like a heart attack, stroke in the next 10 years.
+      function: tenyearriskscore
+      narrative:
+        patient:
+          HasValue: |
+            
+            Your ten-year heart disease risk score is: 
+            ------------------------------------------
+            
+            # $value
+
+            This score was calculated from your medical history and lab results.
+
+            - The  __$value__  score is an estimation of your chance of having a heart attack or stroke or other cardiovascular event __within the next ten years__.
+            - __x out of 100__ individuals _like you_ would be predicted to have a heart attack, stroke or other cardiovascular event within the next ten years.
+            - __x out of 100__ individuals _like you_ would be predicted to __not__ have a heart attack, stroke or other cardiovascular event within the next ten years.
+
+            This score was calculated from the following data:
+            
+              - Your demographics: $Age years, Gender: $Gender, ethnicity: $Ethnicity (Is race/ethnicity AfricanAmerican or Black: $Race_Is_Black_AfricanAmerican)
+              - Vitals: Blood Pressure: $bloodpressure
+              - Choleseterol: $Chol
+              - HDL: $HDL
+              - Have diabetes: $is_diabetic
+              - History of smoking?: $is_smoker
+              - Taking Hypertension medications?: $med_for_htn
+
+    - id: ascvd_optimal_risk_score
+      title: Optimal Ten Year risk score
+      function: optimal_tenyearriskscore
+      narrative:
+        patient:
+          True: optimal_risk_score_interpreter.md
+        patient:
+          HasValue: |
+            Under optimal lab test results and history, your ten-year score could be
+            # $value
+
+    # ------------------------------------------------------------------------------------
+      
+    - id: ldl_over_189
+      title: LDL is greater than 189
+      expression: $LDL > 189
+      narrative: 
+        patient:
+          True: |
+            Your LDL-Cholesterol is __$LDL mg/dL dated $LDL.date__. 
+            A value of __190 mg/dL or more__ is a high risk state that increases the risk of developing heart attack or stroke or other cardiovascular event.
+          None: Could not be determined.
+          False: Your recent LDL is below 189 mg/dL
+
+    - id: is_diabetic
+      title: Diabetes Mellitus is a high risk condition for development of ascvd
+      expression: $is_diabetic == 1
+      narrative: 
+        patient:
+          True: Statin Benefit Group- Diabetes Mellitus is a high risk condition for development of ascvd.
+
+    - id: low_riskscore
+      title: Low Risk
+      expression: $ascvd_ten_year_risk_score < 5.0 
+      narrative:
+        patient:
+          True: Ten Year risk score is $ascvd_ten_year_risk_score. It is considered Low Risk (less than 5.0)
+      
+    - id: borderline_risk
+      title: Borderline Risk
+      expression: $ascvd_ten_year_risk_score > 5.0 and $ascvd_ten_year_risk_score < 7.5
+      narrative:
+        patient:
+          True: >
+            Ten Year risk score is $ascvd_ten_year_risk_score. It is considered borderline (between 5.0 and 7.5)
+            
+            Out of a 100 people, there is a higher risk of a cardiovascular event for $ascvd_ten_year_risk_score.clean
+            of the individuals
+
+    - id: intermediate_risk
+      title: Ten year risk score is categorizes as "Intermediate Risk"
+      expression: $ascvd_ten_year_risk_score > 7.49 and $ascvd_ten_year_risk_score < 20.0
+      narrative:
+        patient:
+          True: >
+            Ten Year risk score is $ascvd_ten_year_risk_score. It is considered Intermediate.
+          
+            Out of a 100 people, there is a higher risk of a cardiovascular event for {{ascvd_ten_year_risk_score.clean}} of the individuals
+
+    - id: high_risk
+      title: Ten Year risk score categorized as "High"
+      expression: $ascvd_ten_year_risk_score > 20.0
+      narrative:
+        patient:
+          True: >
+            Ten Year risk score is $ascvd_ten_year_risk_score. It is considered High.
+          
+            Out of a 100 people, there is a higher risk of a cardiovascular event for {{ascvd_ten_year_risk_score.clean}} of the individuals
+
+recommendations:
+
+
+
+  - id: display_uc
+    type: display
+    title: Understanding Cholesterol
+    narrative:
+      patient:
+        True: |
+
+          Elevated cholesterol (a fat-like substance that comes from animal foods or is made in your body) can clog arteries that reduce blood flow to the organs and may lead to heart attack or stroke or other cardiovascular event.
+
+          - __HDL = Good__
+            High density lipoprotein (HDL) is known as good cholesterol
+          - __LDL = Bad__
+            Low density lipoprotein is known as bad cholesterol
+          - __Triglycerides__ is the most common type of fat in the body
+          - __Total Cholesterol__
+            is equal to your HDL + LDL + 1/5th Triglyceride level
+
+  - id: managing_cholesterol
+    type: display
+    title: Managing Cholesterol
+    narrative:
+      patient:
+        True: |
+          The following lifestyle measures can help manage blood cholesterol
+
+          - __Eating healthy__ • A diet high in saturated fat (red meat, poultry, butter, cheese) can raise LDL cholesterol. Balancing your diet with  lean meat, skinless poultry, whole grain, fruits and vegetables can help lower risk of heart attack or stroke or other cardiovascular event.
+          - __Being physically active__
+            Sedentary lifestyle is a risk factor for developing heart disease. A good starting point is at least 150 minutes of physical activity a week.
+          - __Track Levels__
+            Keeping track of your cholesterol levels over time will help you and your doctor better assess your health and progress.
+          - __Avoid exposure to tobacco or smoking products__
+            Smoking raises blood pressure and lowers HDL (good cholesterol) which raises the risk of clot formation and heart attack or stroke or other cardiovascular event.
+
+
+  - id: sbp_1_ldl
+    title: Recommendation based on High LDL
+    type: medication
+    description: LDL over 189 enhances the risk of developing a heart attack, stroke or other cardiovascular event.
+    expression: $ldl_over_189 == True
+    narrative:
+      patient:
+        True: Evidence suggests that starting a __high intensity statin__ medication to control blood cholesterol has been helpful. Your LDL is $LDL
+    citations: a list of citations supporting this
+    # loe: Some
+    class_of_recommendation: II_B
+
+    
+  - id: sbg_2_dm
+    title: Diabetes Mellitus is a high risk factor for ASCVD
+    expression: $is_diabetic == True
+    narrative:
+      patient:
+        True: For people with diabetes mellitus, evidence suggests that starting a igh intensity statin medication to control blood cholesterol has been helpful
+    citations: a list of citations supporting this
+    class_of_recommendation: II_B
+
+  - id: sbg_3_riskscore_less_than_5
+    title: Recommendation based on "Low Risk" ten-year score
+    expression: $low_riskscore == True
+    narrative:
+      patient:
+        True: For people with a ten-year risk score between, ACC/AHA make recommendations for a medication to control blood cholesterol to prevent developing of a heart attack or stroke or other cardiovascular event.
+    citations: a list of citations supporting this
+    # level_of_evidence: Some
+    class_of_recommendation: II_B
+
+
+  - id: sbg_3_riskscore_boderline
+    title: Recommendation based on Borderline Risk ten-year score
+    expression: $borderline_risk == True
+    narrative:
+      patient:
+        True: For people with a ten-year risk score between, ACC/AHA make recommendations for a medication to control blood cholesterol to prevent developing of a heart attack or stroke or other cardiovascular event.
+    citations: a list of citations supporting this
+    class_of_recommendation: II_B
+
+  - id: sbg_3_riskscore_over_7
+    title: Intermediate Risk
+    expression: $intermediate_risk == True
+    narrative:
+      patient:
+        True: For people with a ten-year risk score between, ACC/AHA make recommendations for a medication to control blood cholesterol to prevent developing of a heart attack or stroke or other cardiovascular event.
+    citations: a list of citations supporting this
+    class_of_recommendation: II_B
+
+  - id: sbg_3_riskscore_over_20
+    title: High Risk
+    expression: $high_risk == True
+    narrative:
+      patient:
+        True: For people with a ten-year risk score between, ACC/AHA make recommendations for a medication to control blood cholesterol to prevent developing of a heart attack or stroke or other cardiovascular event.
+    citations: a list of citations supporting this
+    class_of_recommendation: II_B
+

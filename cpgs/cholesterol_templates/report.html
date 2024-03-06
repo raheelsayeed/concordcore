@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <title>Recommendations on the management of blood cholesterol for preventing cardiovascular disease</title>
+    <style>
+
+        body {
+            font-family: -apple-system, sans-serif;
+            font-size: 10pt;
+            line-height: 1.4;
+            padding: 0;
+            margin: 0;
+        }
+
+
+        .notice {
+            border: dotted #CCC;
+            background: rgb(227, 241, 248);
+            padding: 10px;
+            margin: 3pt;
+        }
+
+        .recommendation-icon {
+            width: 60px;
+            float: left;
+            margin-right: 20px;
+        }
+
+        .recommendation-header {
+            font-size: 18px;
+            color: rgb(81, 81, 81);
+            /* line-height: 32px; */
+        }
+
+
+        .recommendation-tip {
+            /* font-size: 12px; */
+            color: #696969;
+        }
+
+        .recommendation-table {
+            table-layout: fixed;
+            width: 100%;
+        }
+
+
+
+
+        h1 {
+            font-size: 100%
+        }
+
+        h2 {
+            font-size: 130%
+        }
+
+        h3 {
+            font-size: 130%
+        }
+
+        .variable-value {
+            color: #5a6a8c;
+            font-weight: 500;
+            
+        }
+
+        .bg-labs {
+            /* background: #fdf7f7; */
+        }
+
+        .bg-lifestyle {
+            /* background: #fafffc; */
+        }
+
+        .bg-family {
+            /* background: rgb(249, 249, 249); */
+        }
+
+        .bg-conditions {
+            /* background: rgb(251, 255, 255); */
+        }
+
+        .banner-cell {
+            text-align: right;
+        }
+
+        .banner-cell p {
+            font-size: x-large;
+            font-weight: 300;
+            margin-top: auto;
+        }
+
+        .subhead {
+            vertical-align: top;
+            top: 5px;
+            color: rgb(106, 106, 106);
+            font-size: large;
+            border: #FFFFFF;
+        }
+
+        header {
+            background: #EEE;
+            padding: 1rem 1rem 0.5rem;
+            border-radius: 0 0 0.5rem 0.5rem;
+            margin: 0 0 2rem;
+        }
+
+        footer {
+            background: #EEE;
+            padding: 0.5rem 1rem 1rem;
+            border-radius: 0.5rem 0.5rem 0 0;
+            margin: 2rem 0 0;
+        }
+
+        .container {
+            width: 1200px;
+            padding: 0 1em;
+            margin: auto;
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+
+        hr {
+            height: 2px;
+            border: none;
+            background: #CCC;
+        }
+
+        h1 small {
+            font-size: 1rem;
+            line-height: 1.3;
+            margin: 0.5rem 0 0;
+            display: block;
+        }
+
+        h2 small {
+            font-size: small;
+            line-height: 1.4;
+            margin: 0.5rem 0 0;
+            display: block;
+        }
+
+        h3 small {
+            /* font-size: small; */
+            line-height: 1.4;
+            /* margin: 0.5rem 0 0; */
+            display: block;
+            font-weight: 400;
+        }
+
+        table {
+            border-collapse: collapse;
+            /* margin: 1em auto; */
+            width: 100%;
+        }
+
+        .main-table td {
+            border-bottom: 0.1px dotted #999999b7;
+            padding: 1ex;
+            vertical-align: top;
+        }
+
+        .recommendation-table td {
+            border-bottom: 0.1px dotted grey;
+            padding: 1ex;
+            vertical-align: top;
+        }
+
+        .circle {
+            background-color: whitesmoke;
+            width:40px;
+            height:40px;
+            border-radius:50%;
+            color:#5a6a8c;
+            vertical-align: middle;
+            line-height: 30px;
+            text-align:center;
+        }
+        
+
+
+        /* ol {
+            margin: 0;
+            padding: 0 0 0 1.1em;
+            text-align: left;
+        } */
+
+        .data-table {
+            color: #444;
+            /* max-width: 40em; */
+        }
+
+        .data-table th {
+            text-align: right;
+            padding: 0.5ex 1ex;
+            width: 60%;
+        }
+
+        .data-table td {
+            text-align: left;
+            padding: 0.5ex 1ex;
+        }
+        
+        .data-table td:empty {
+            visibility: hidden;
+        }
+
+        .data-table tr+tr td,
+        .data-table tr+tr th {
+            border-top: 1px solid #EEE;
+        }
+
+        /* .data-table caption {
+            border-bottom: 2px solid #CCC;
+            color: #666;
+            padding: 0 2em 1ex;
+            margin: 0 0 0.5ex;
+        } */
+
+        .dark-gray {
+            color: #696969;
+        }
+
+        .gray {
+            color: grey;
+        }
+
+        /* .bg-blue { background: #F5F5F5; color: #0; } */
+        .red {
+            color: #941100;
+        }
+
+        .text-left {
+            text-align: left;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .badge {
+            color: #941100;
+            border-radius: 2em;
+            padding: 2px 1ex;
+        }
+
+        .score {
+            color: #545454e4;
+            font-size: 50px;
+            border-radius: 2em;
+            padding: 2px 1ex;
+        }
+
+        .red-heading {
+            color: #030303b7;
+            border-bottom: 1.4px solid #030303b7;
+            margin: 1em 0 0.5em;
+            padding: 0 0 2px 0;
+        }
+
+        .red-heading:before {
+            content: "";
+            width: 10px;
+            height: 10px;
+            background: #941100;
+            display: inline-block;
+            margin: 0 6px 0 0;
+        }
+
+ 
+        
+
+        .rf {
+            list-style-type: none;
+            padding: 0px;
+            margin: 0px;
+            
+        }
+
+        
+
+        .rf li {
+            display: inline-block;
+            margin: 2px 10px 10px 10px;
+            width: 200px;
+            vertical-align: top;
+        }
+
+        .rf sub {
+            color: black;
+        }
+
+        .rf sub, p {
+            padding: 0;
+            margin: 0;
+        }
+
+        .recommendation-section ul {
+            padding: 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            grid-auto-rows: 1fr;
+            grid-gap: 8px;
+        }
+
+        .recommendation-section ul, sbg { 
+            grid-template-columns: repeat(auto-fit, minmax(49%, 1fr));
+        }
+
+        .recommendation-section li {
+            /* background-color: rgb(250, 250, 250); */
+            padding: 10px;
+            margin: 2px;
+            width: 120px;
+            display: inline-block;
+            height:auto;   
+            width: auto;
+        }
+        .recommendation-section h1 {
+            color: #030303b7;
+            border-bottom: 2.0px dotted #444444b7;
+            margin: 1em 0 0.5em;
+            padding: 0 0 2px 0;
+            /* font-style: normal; */
+            font-weight: 600;
+            font-size: larger;
+
+            
+        }
+
+        
+    </style>
+</head>
+
+<body>
+
+    
+
+    <div class="container">
+        <header>
+            <a stype="float: left;" href="http://concord.health" target="_blank" rel="noopener">
+                <img src="[HMS_DBMI_LOGO]"
+                    style="height: 30px" />
+            </a>
+
+            <a style="float: right;" href="http://concord.health" target="_blank" rel="noopener">
+                <img
+                    src="[PPM_LOGO]" />
+            </a>
+
+            <h2>
+                Management of blood cholesterol for preventing cardiovascular disease
+            </h2>
+        </header>
+            <table>
+                <tbody>
+                <tr>
+                <td style="vertical-align:top;">
+                    <p>
+                          <span style="vertical-align:middle; display: inline-block;">
+                            <svg style="width:54px;height:54px" viewBox="0 0 24 24">
+                                <path d="M0 0h24v24H0V0z" fill="none" />
+                                <path fill="#941100"
+                                    d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM7.07 18.28c.43-.9 3.05-1.78 4.93-1.78s4.51.88 4.93 1.78C15.57 19.36 13.86 20 12 20s-3.57-.64-4.93-1.72zm11.29-1.45c-1.43-1.74-4.9-2.33-6.36-2.33s-4.93.59-6.36 2.33C4.62 15.49 4 13.82 4 12c0-4.41 3.59-8 8-8s8 3.59 8 8c0 1.82-.62 3.49-1.64 4.83zM12 6c-1.94 0-3.5 1.56-3.5 3.5S10.06 13 12 13s3.5-1.56 3.5-3.5S13.94 6 12 6zm0 5c-.83 0-1.5-.67-1.5-1.5S11.17 8 12 8s1.5.67 1.5 1.5S12.83 11 12 11z" />    
+                            </svg>
+                          </span>
+                          <span style="vertical-align:middle; display: inline-block; font-size:24px;">Name: <strong>[Patient Name]</strong></span>
+                    </p>
+                </td>
+                <td>
+                <table>
+                <tbody>
+                <tr>
+                <td>
+                    Report date:
+
+                </td>
+                <td>
+                    <strong>$ReportDate</strong>
+                </td>
+                </tr>
+                <tr>
+                <td>
+                Age:
+                </td>
+                <td>
+                <strong>{{ Age }} years (DOB: $birthday)</strong>
+                </td>
+                </tr>
+                <tr>
+                <td>
+                    Gender
+                </td>
+                <td>
+                    <strong>{{ Gender }}</strong>
+                </td>
+                </tr>
+                <tr>
+                <td>
+                Race/Ethnicity
+                </td>
+                <td>
+                    <strong>{{ Ethnicity }}</strong>
+                </td>
+                </tr>
+                </tbody>
+                </table>
+                </td>
+                </tr>
+                </tbody>
+                </table>
+
+
+        <h3 class="red-heading">Heart Disease Risk
+            <br /><span class="grey"><small><em>Based on guidance from American College of Cardiology and American Heart Association</em></small></span>
+        </h3>
+        <table class="main-table">
+            <tbody>
+                <tr>
+                    <td style="width: 25%;">
+                    Your LDL is High
+                    Diabetes Mellitus
+
+                    </td>
+                    <td style="width: 220px; text-align: right;">[GRAPHIC]</td>
+                    <td style="width: auto; vertical-align: top;">[RISKMEANING]</td>
+                </tr>
+                <tr>
+                    <td style="width: 25%;">
+                        [RISKSTATUS]
+                    </td>
+                    <td colspan="2">[AMIATRISK]</td>
+                </tr>
+                <tr>
+                    <td style="width: 23%;">
+                        <div class="banner-cell">
+                            <sub>LABS & HISTORY</sub>
+
+                        </div>
+                    </td>
+                    <td colspan="2">
+                        [LABS]
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div class="banner-cell"><sub>HEART DISEASE RISK ENHANCING FACTORS</sub></div>
+                    </td>
+                    <td colspan="2">
+
+                        <!-- [RISKFACTORS] -->
+                        [RISKFACTORS]
+
+                        
+
+                        
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+
+        <h3 class="red-heading">Supporting Guideline Recommendations <br /><span class="grey">
+            <!-- <small><em>Discuss with your doctor</em></small> -->
+                    </span></h3>
+
+
+        <!-- RECOMMENDATIONS -->
+        <table class="recommendation-table">
+            <colgroup>
+                <col style="width: 150px;" />
+                <col style="width: auto;" />
+            </colgroup>
+            <tbody>
+                [RECOMMENDATIONBLOCKS]
+
+
+                <!-- 1. Cholesterol -->
+                <!-- <!--  -->
+                <tr>
+                    <td class="subhead">
+                        <img class="recommendation-icon" src="https://cdn4.iconfinder.com/data/icons/health-and-medical-35/512/drops-512.png" />
+                        <h4>Controlling Cholesterol</h4>
+                    </td>
+                    
+                    
+                <td>
+                        <div class="recommendation-section">
+                            <h1>Medication</h1>
+                            <p><em>According to the ACC/AHA guidelines,</em></small><br/>Based on your ten-year risk score, lab results and medical history, a medication may <strong>not</strong> be beneficial at this time.</p>
+
+                        <div class="recommendation-header">
+                            [CHOLESTEROL_MEDICATION_STATEMENT]
+                        </div>
+                        <div class="notice">
+                            [CHOLESTEROL_COMPLIANCE]
+                        </div>
+
+        
+
+                        <section class="recommendation-section">
+                                <h1>Understanding Cholesterol</h1>
+                        <p>Cholesterol is a fat-like substance that comes from animal foods or the body and if elevated, can clog arteries and lead to heart attack or stroke.</p>
+                        <ul style="margin-bottom: 13px;">
+                            <li><span style="color: green;"><strong>HDL = Good</strong></span>: High density lipoprotein is known as good cholesterol</li>
+                            <li><span style="color: red;"><strong>LDL = Bad</strong></span>: Low density lipoprotein is known as good cholesterol</li>
+                            <li><strong>Triglyceride</strong> is the most common type of fat in the body</li>
+                            <li><strong>Total Cholesterol</strong>: HDL + LDL + 1/5th Triglyceride level</li>
+                        </ul>
+                        <br/>
+                        <p>Tracking your cholesterol levels over time and taking steps to reduce high cholesterol can help heart health.</p>
+                        <p>Here are some steps you can take</p>
+                        <ul style="list-style-type:none;">
+                            <li><img style="display: inline-block; height: 50px; vertical-align: middle;" src="data:image/jpeg;base64,\(UIImage(named: "nutrition")!.toBase64()!)"/>
+                                <p style="">
+                                    <strong>Eating healthy</strong><br/>
+                                Here comes more things to write and talk about and per asd asd asd fasd fasd fasdf asd asdsdfasd fsdfa</p>
+                            </li>
+                            <li>Being physically active<br/><img style=" height: 50px; vertical-align: middle;" src="data:image/jpeg;base64,\(UIImage(named: "activity")!.toBase64()!)"/></li>
+                            <li>Taking medication if needed<br/><img style=" height: 50px; vertical-align: middle;" src="data:image/jpeg;base64,\(UIImage(named: "pills")!.toBase64()!)"/></li>
+                        </ul>
+
+
+                        
+
+                    </section>
+                    </div>
+                </td>
+                </tr> 
+
+                <!-- 1. Blood Pressure -->
+                <!-- <!-- <tr> -->
+                    <tr>
+                    <td class="subhead">
+                        Managing Blood Pressure
+                    </td>
+                    <td>
+                        <img class="recommendation-icon" src="https://cdn2.iconfinder.com/data/icons/diseases-and-injury-1/340/pressure_hypertension_medical_health_blood_measurement_heart_pulse-512.png" />
+                    </td>
+                    <td>
+                        <div class="recommendation">
+                        <div class="recommendation-header">
+                            Your blood pressure is <strong>[BP]</strong>
+                        </div>
+                        <p>High blood pressure puts a strain on our heart, arteries and kidneys and increases the risk of heart attack or stroke.</p>
+                        <div class="notice">
+                            [BLOODPRESSURE_COMPLIANCE]
+                        </div>
+                        <div class="recommendation-tip">
+                            Routinely tracking, eating healthy, being more physically active, managing weight, sleeping well help in controlling blood pressure
+                        </div>
+                        </div>
+                    </td>
+                </tr>
+
+
+                <!-- Sugar -->
+                <!-- <!--  -->
+                    <tr>
+                    <td class="subhead">
+                        Sugar (Glucose)
+                    </td>
+                    <td>
+                        <img class="recommendation-icon" src="https://cdn1.iconfinder.com/data/icons/unyu-healthcare/100/blood_unyu-512.png" />
+                    </td>
+                    <td>
+                        <div>
+                            <p>
+                            
+                        </p>
+                        <div class="recommendation-header">
+                            Your blood sugar is <strong>[BLOODSUGAR]</strong>
+                        </div>
+                        <p>High levels of sugar (glucose) in the blood can lead to Type-2 diabetes mellitus which can damage the heart, kidneys, eyes and nerves.</p>
+
+                        <div class="recommendation-tip">
+                            Routinely tracking levels, limiting sweetened drinks, added sugars and being more physically active control blood sugar.
+                        </div>
+                        </div>
+                    </td>
+                </tr> 
+
+                <!-- Stop Smoking -->
+                <!-- <!--  -->
+                    <tr>
+                    <td class="subhead">
+                        Smoking & tobacco
+                    </td>
+                    <td>
+                        <img class="recommendation-icon" src="https://cdn1.iconfinder.com/data/icons/drug-categories-icostory-black-and-white/64/button-stop_smoking-no_smoking-sign-drugs-512.png" />
+                    </td>
+                    <td>
+                        <div>
+                        <div class="recommendation-header">
+                            
+                        </div>
+                        <p>Cigarette smokers have a higher risk of developing cardiovascular disease. It is one of the most preventable cause of death in the U.S. Quitting is the best thing you can do for your health.</p>
+                        <p class="recommendation-tip">Please visit <em>heart.org/tobacco</em> for more</p>
+                        </div>
+                    </td>
+                </tr>
+
+                <!-- Activity -->
+                <!--  
+                    <tr>
+                    <td class="subhead">
+                        Get Active
+                    </td>
+                    <td>
+                        <img class="recommendation-icon" src="https://cdn4.iconfinder.com/data/icons/weight-loss/64/exercise-healthy-physical-activity-running-weight_loss-active_duty-512.png" />
+                    </td>
+                    <td>
+                        <div>
+                        <div class="recommendation-header">
+                            Being physically active improves your quality of life.
+                        </div>
+                        <p>
+                            Adults should get a weekly total of atleast <br>
+                            <span style="color:#941100; font-size: large; font-weight: 500;">150 minutes per week</span> of moderate aerobic activity</br>
+                            -or- </br>
+                            <span style="color:#941100; font-size: large; font-weight: 500;">75 minutes per week</span> of vigorous aerobic activity</br>
+                            -or-<br>
+                            <span style="color:#941100; font-size: large; font-weight: 500;">a combination of both</span>, spread throughout the week.</br>
+                        </p>
+                        <p class="recommendation-tip">
+                            Replacing sedentary time (such as sitting, reclining or lying for a long time) with light or moderate activity may reasonably reduce risk of heart disease.
+                            <small>Examples of Light activity: walking slowly, cooking, light housework, Moderate activity: brisk walking, biking, recreational swimming</small>
+                        </p>
+                    </td>
+                </tr> -->
+
+                <!-- EAT -->
+
+                <!-- <tr>
+                    <td class="subhead">
+                        Eat Better
+                    </td>
+                    <td>
+                        <img class="recommendation-icon" src="https://cdn0.iconfinder.com/data/icons/go-green-line-save-our-world/512/Green_Cosuming-512.png" />
+                    </td>
+                    <td>
+                        <div>
+                        <div class="recommendation-header">
+                            Dietary habits vastly affect health
+                        </div>
+                        <p>
+                            <span style="color:#941100; font-size: large; font-weight: 500;">
+                            Include</span> more of vegetables, fruits, whole grains, beans, legumes, nuts, plant-based proteins and fish in your diet.</p>
+
+                        <p>
+                            <span style="color:#941100; font-size: large; font-weight: 500;">
+                            Limit</span> sugary drinks and foods, fatty or processed meats, full-fat dairy products, eggs and tropic oils
+                        </p>
+
+                        [DIABETIC_NOTICE]
+                        </div>
+                    </td>
+                </tr> -->
+
+                <!-- Weight -->
+                <!-- <tr>
+                    <td class="subhead">
+                        Lose Weight
+                    </td>
+                    <td>
+                        <img class="recommendation-icon" src="https://cdn0.iconfinder.com/data/icons/fitness-95/24/scale2-512.png" />
+                    </td>
+                    <td>
+                        <div class="recommendation-header">
+                            Your body mass index is <strong>High (25.2)</strong>
+                        </div>
+                        <p>Body Mass Index is a numerical value of your weight in relation to your height. It can help you know whether you're at a healthy weight or need to lose weight.</p>
+                        <p class="recommendation-tip">Keeping track of your BMI, physically active, eating healthy and smartly can help reduce weight and improve your heart health.</p>
+                        </div>
+
+                    <section class="recommendation-section">
+                    <h3>Who benefits with a statin?</h3>
+                    <ul class="sbg"> 
+                        <li style="background-color: #f4fcfc;" class="selected">
+                            <span class="red"
+                            <p><strong>YOU FIT IN THIS GROUP</strong></p>
+                            </span>
+                            <sub>GROUP 1</sub>
+                            <p>Age between 40-75, history of LDL-cholesterol level ranging between 70 to 189 mg/dL with a diagnosis of diabetes mellitus</p>
+                        </li>
+                        <li>
+                            <span class="red"
+                            <p><strong></strong></p>
+                            </span>
+                            <strong></strong>
+                            <sub>GROUP 2</sub>
+                            <p>Age between 40-75, history of LDL-cholesterol level ranging between 70 to 189 mg/dL with a diagnosis of diabetes mellitus</p>
+                        </li>
+                        <li>
+                            <sub>GROUP 3</sub>
+                            <p>Age between 40-75, history of LDL-cholesterol level ranging between 70 to 189 mg/dL with a diagnosis of diabetes mellitus</p>
+                        </li>
+                        <li>
+                            <sub>GROUP4 </sub>
+                            <p>Age between 40-75, history of LDL-cholesterol level ranging between 70 to 189 mg/dL with a diagnosis of diabetes mellitus</p>
+                        </li>
+                    </ul>
+                </section>
+            
+                    </td>
+                </tr> -->
+
+
+               
+
+    
+
+                
+                
+
+
+
+            </tbody>
+        </table>
+
+
+        <h3 class="red-heading">Discuss with your doctor</h3>
+        [DISCUSS]
+        <p>Here are some questions you may ask your doctor:</p>
+        <ul>    
+            <li>What are my specific risk factors that might raise my risk of developing heart attack, stroke or other cardiovascular disease?</li>
+            <li>Are there lifestyle changes I can make to prevent heart problems?</li>
+            <li>Am I on a preventive program to minimize my risk?</li>
+            <li>Do I need a medication to control blood cholesterol?</li>
+            <li>What are the benefits and risks of statins and other treatment options?</li>
+            <li>What does scientific evidence tell us?</li>
+            <li>How best can I monitor how I am doing?</li>
+        </ul>
+
+        
+        <h3 class="red-heading">Report generated by the Concord_</h3>
+    </div>
+</body>
+</html>

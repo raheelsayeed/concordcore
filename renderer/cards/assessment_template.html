@@ -1,0 +1,21 @@
+<div class="card">
+  <small>ID: {{ assessment.record.id }}</small>
+  <h3>{{ assessment.record.title or assessment.record.id }}</h3>
+  <h1>Value: {{ assessment.record.value or "N/A" }}</h1>
+  {% markdown %}
+  {{ assessment.record.sanitized_narrative or "--no--narrative--" }}
+  {% endmarkdown %}
+  {% if assessment.record.value_source %}
+  <hr>
+  <p>Value is derived from or based on:</p>
+  <ul>
+    {% for source in assessment.record.value_source %}
+    <li>{{ source.id }} --> {{ source.values }} dated: {{ source.dated }}<br/>
+      <em class="error">{{ source.error }}</em></li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  {{ assessment.record.as_dict() }}
+  <p class="error">Errors: {{ assessment.error }}</p>
+</div>
+

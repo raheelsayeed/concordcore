@@ -1,0 +1,38 @@
+{
+  "resourceType": "Condition",
+  "id": "hypertryglyceridemia-fhir-id",
+  "clinicalStatus": {
+    "coding": [
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+        "code": "active"
+      }
+    ]
+  },
+  "verificationStatus": {
+    "coding": [
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+        "code": "confirmed"
+      }
+    ]
+  },
+  "code": {
+    "coding": [
+      {
+        "system": "http://snomed.info/sct",
+        "code": "302870006",
+        "display": "Hypertriglyceridemia (disorder)"
+      }
+    ],
+    "text": "Hypertriglyceridemia (disorder)"
+  },
+  "subject": {
+    "reference": "Patient/87a339d0-8cae-418e-89c7-8651e6aab3c6"
+  },
+  "encounter": {
+    "reference": "Encounter/a5dcdde3-fa3c-4b54-a781-904f8782464a"
+  },
+  "onsetDateTime": "1988-06-02T19:17:40-04:00",
+  "recordedDate": "1988-06-02T19:17:40-04:00"
+}
