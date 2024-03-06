@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 # Mac env
+=======
+# Mac
+>>>>>>> dc457c8 (Create .gitignore)
 .DS_Store
 
 # Byte-compiled / optimized / DLL files
