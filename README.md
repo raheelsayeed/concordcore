@@ -15,7 +15,17 @@ Python framework to compute and yeild recommendations based on published evidenc
     - Recommendations: Personalized to the given `healthcontext`
 
 
-----
+# Installation
+
+```bash
+$ git clone https://github.com/concordhealth/concordcore.git
+$ cd concordcore
+$ python3 -m venv .venv
+$ source .venv/bin/activate
+$ pip install -r requirements.txt
+$ ./main.py -f cpgs/cholesterol.yaml
+```
+
 <!-- ### `concord_` modules and protocols -->
 
 
@@ -170,11 +180,11 @@ assessments:
           False: Your recent LDL is below 189 mg/dL
 ```
 
-## 3. Recommendations
+## 4. Recommendations
 
-Checks for the eligibility and applicability of `CPG` for a given `HealthContext` as specificed in the cpg definition file. See `concordcore.recommendations`
+To define a conditioned recommendation, use `RecommendationVar`. See `concordcore.recommendations` for more, including `EvaluatedRecommendation` that is the result of `concord.recommendations()`. 
 
-Policy: 
+Policy to define `RecommendationVar` 
 
 - `type=display` are notices only. `expression` for evaluation will be ignored
 - __Shall__ evaluate to resulting value-type of `boolean`
@@ -219,14 +229,39 @@ recommendations:
 
 # Under review - consideration
 
+- __HealthContext__:
+  - [ ] !!! Define method to include "persona" within the input healthcontext. This persona would be an enum of patient/practitioner
+  - [ ] launchcontext? something similar to SoF LaunchContext. check smart 2.00
+  - [ ] ? move persona to healthcontext? 
+  
+- __Variables__:
+  - [ ] !!! Variable.expression.evaluation Enums. Capture errorones contexts
+    - [ ] variableID: variable.value is None
+    - [ ] variableID: variable.value TypeError for expression
+  - [ ] `validation`: Specify checks for validity and plausibility of a given value for that variable. Usecase: LDL value must be less than or equal to the difference between total-cholesterol and HDL.
+  - [ ] `value-capture-method`: Custom cpg-module-function to define key-path or keymap to get data for a given data-model. Forexample: SBP-loinc within a BP Observation FHIR resource
+  - [ ] `Code` Hierarchy: 
+
+
+- __AssessmentVariables__:
+  - [ ] !!! write tests for pghd capture for an assessmentvar; value only returns .__assessment_value; must return pghd also.
+  
 - __Narratives__:
   - [ ] In-context QA data generation
+  - [ ] Enums for persona: Patient, Provider, Provider-Patient-Encounter, PHD (personal-health-device) based context? (maybe too complex)
+
 - __Rendering__:
+  - [ ] rendering.py: cache_proprty for all generic templates
   - [ ] practitioner, single cpg, default tempalte
   - [ ] patient, single cpg, default template
   - [ ] practitioner, combined cpgs, default template
   - [ ] patient, combined-cpgs, default template
-- __Variables__:
-  - [ ]`validation`: Specify checks for validity and plausibility of a given value for that variable. Usecase: LDL value must be less than or equal to the difference between total-cholesterol and HDL.
-  - [ ] `value-capture-method`: Custom cpg-module-function to define key-path or keymap to get data for a given data-model. Forexample: SBP-loinc within a BP Observation FHIR resource
-  - [ ] `Code` Hierarchy: 
+
+- __Evidence__:
+  - Non-compliance evidence capture
+  - [ ] provider-facing evidence capture module. To capture/suggest reasons behind why a guideline could not be executed for the given patient/population
+  - [ ] patient-facing evidence capture. Why patient thinks the guideline may not __apply__ or not be __executable__ for them. 
+  - [ ] `evidence_rejectioning_module`: LLM based suggestions for providers to quickly select/click/tap/reply reasons for the above
+
+- __FHIR__:
+  - [ ] direct-fhir-json to `concordcore.value` conversion. Skip `fhirclient` or `fhir.resource`
