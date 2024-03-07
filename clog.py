@@ -19,10 +19,10 @@ p = con.print
 
 
 def ht(*values: object):
-    con.print(f'[green] -- {values[0]}')
+    con.print(f'[green]{values[0]}')
     
 def pt(*values: object):
-    con.print(f' -- {",".join(values)}')
+    con.print(f'{",".join(values)}')
 
 
 def variables_table(variables: list[Var], title=None):
@@ -50,7 +50,7 @@ def print_variables(variables: list[Var], title=None):
     con.print(variables_table(variables, title))
 
 def print_records(records: list[Record], title=None):
-    table_ = table.Table(box=box.SIMPLE_HEAD, title_justify='left', highlight=True, title_style="bold blue", show_header=True, show_edge=False, header_style="dim", title=f'-- Records: {title} -- ')
+    table_ = table.Table(box=box.SIMPLE_HEAD, title_justify='left', highlight=True, title_style="bold blue", show_header=True, show_edge=False, header_style="dim", title=f'Records: {title} -- ')
     table_.add_column('No.', style="dim")
     table_.add_column('id', justify="left", style="white", no_wrap=False)
     table_.add_column('required', justify="left", style="white", no_wrap=False)
@@ -75,7 +75,7 @@ def print_evaluatedrecords(variables, title = None, subtitle = None):
     from concordcore.sufficiency import SufficiencyResultStatus
     from concordcore.evaluation import EvaluationResultStatus
 
-    table_ = table.Table(box=box.SIMPLE_HEAD, title_justify='left', highlight=True, title_style="bold blue", show_header=True, show_edge=False, header_style="dim", title=f'-- Evaluated: {title} -- ')
+    table_ = table.Table(box=box.SIMPLE_HEAD, title_justify='left', highlight=True, title_style="bold blue", show_header=True, show_edge=False, header_style="dim", title=f'Evaluated: {title} -- ')
     table_.add_column('No.', style="dim")
     table_.add_column('id', justify="left", style="white", no_wrap=False)
     table_.add_column('required', justify="left", style="white", no_wrap=False)

@@ -4,13 +4,13 @@ import inspect
 import logging
 
 from concordcore import concord
-
 from concordcore.healthcontext import HealthContext
 from concordcore.primitives.types import ValueTypePrimitives
 from concordcore.variables.record import Record
 from concordcore.variables.var import Var, VarType
 from concordcore.variables.value import Value
 from ontology.presets import *
+from clog import *
 
 
 
@@ -30,11 +30,11 @@ if __name__ == '__main__':
 
     from concordcore.cpg import BaseCPG
     cpg = BaseCPG.from_document_path('cpgs/cholesterol.yaml')
+    manager = concord.Concord(cpg)
 
 
-    exit()
 
-    print("Tests...")
+    logger.info("Tests...")
     ### ---- ONTOLOGY CHECK ---- 
     from ontology.codes import * 
     fcode = CodeGender.female_snomed.value
@@ -47,37 +47,37 @@ if __name__ == '__main__':
     ### ---- VALUE -------------
     from concordcore.variables import value, record, var
     val1 = value.Value(1, unit=None, code=fcode)
-    print(val1)
+    logger.info(val1)
     var1= var.Var('LDL', 'LDL', None, code=[fcode], category=VarType.vital_sign, type=ValueTypePrimitives.string)
     var2= var.Var.Sample()
     assert isinstance(var1, type(var2))
     assert isinstance(var1, var.Var)
 
     rec1= record.Record(var1, [val1])
-    print(rec1)
+    logger.debug(rec1)
     assert rec1.value
     rec2= record.Record(var1, None)
-    print(vars(rec2))
+    logger.debug(vars(rec2))
     assert rec2.value == None
     assert rec2.values == None
     val2 = value.Value(2, unit=None, code=fcode)
     rec2.attested_value = val2
     assert rec2.value != None
     assert rec2.values[0] == val2.value
-    print(rec2.value)
+    logger.debug(rec2.value)
 
 
 
     from concordcore.assessment import AssessmentRecord, AssessmentVar
     av1 = AssessmentVar('TG', expression='$LDL == 1')
-    print(vars(av1))
-    print(av1.expression)
+    logger.debug(vars(av1))
+    logger.debug(av1.expression)
 
     ar1= AssessmentRecord(av1, None)
     ar1.evaluate([rec1])
-    print(ar1.value, rec1.value)
+    logger.debug(f'{ar1.value}, {rec1.value}')
 
-    print('narrative', ar1.sanitized_narrative)
+    logger.debug('narrative={ar1.sanitized_narrative}')
 
 
 
@@ -102,10 +102,10 @@ if __name__ == '__main__':
     highldl_rec = AssessmentRecord(high_ldl, None)
     highldl_rec.evaluate([ldl_rec])
 
-    print(highldl_rec.value, highldl_rec.sanitized_narrative, ldl_rec.sanitized_narrative)
+    logger.debug(f'highldl_rec={highldl_rec.value}, narr={highldl_rec.sanitized_narrative}, ldlnarr={ldl_rec.sanitized_narrative}')
 
     import misc
-    hc = misc.sample_healthcontext
+    hc = misc.sample_healthcontext()
     # ---- Eligibility Record --- 
     from concordcore.eligibility import EligibilityVar, EligibilityRecord, EligibilityEvaluator
     e_var = EligibilityVar('Gender', expression='$Gender == 1')
@@ -116,26 +116,27 @@ if __name__ == '__main__':
     e_eval = EligibilityEvaluator([e_var])
     e_result = e_eval.evaluate(hc)
 
-    inspect(e_result)
-    
-    import cpgstore
-    from concordcore.cpg import BaseCPG
-    tup = cpgstore.read_cpg('cholesterol.yaml')
-    mycpg  = BaseCPG.from_document(tup[0], tup[1])
-
-
-    mycpg.validate()
-
-    con = concord.Concord(mycpg)
-    con.eligibility(None, hc)
-    con.sufficiency(user_context=hc)
-    con.assess()
-    con.recommendations()
     
 
 
 
-    print("passed..")
+
+    ht("""
+[black on green]# --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---[/black on green]
+[black on green]# --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- -concord_dateback_v0.1 [/black on green]""")
+    fhirvals = misc.sample_fhir_values()
+    for fhirval in fhirvals:
+        logger.debug(f'fhirvalue={fhirval}')
+    from datetime import date
+    until_2023 = date.today().replace(year=2015)
+    patientdata = HealthContext.from_values(fhirvals, manager.cpg.variables, until_2023)
+    # print_records(patientdata.records)
+
+    # latest = healthcontext.HealthContext.from_values(fhir, manager.cpg.variables)
+    # print_records(latest.records)
+
+
+    logger.info("tests=PASSED")
 
 
 
