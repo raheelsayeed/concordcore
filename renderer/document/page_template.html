@@ -16,9 +16,13 @@
         box-sizing: border-box;
         margin: 10px;
     }
-    input {
+    .var-has_value-True {
       background-color: #C1E1C1;
       color: green;
+    }
+    .var-has_value-False {
+        background-color: #F67280;
+        color: red;
     }
     .record {
       background-color: #F5F5F5;
@@ -68,7 +72,7 @@
                       <div class="pure-control-group record"> 
                         <small>id: {{ er. id }}</small>
                         <label for="{{ er.id }}"><strong>{{ loop.index }}. {{ er.record.title or er.id }}</strong> <small>source: {{ er.record.value.source }}</small>
-                        <input class="pure-u-1" id="{{ er.id }}" value="{{ er.record.value.representation }}" type="text" placeholder="No Value" /> 
+                            <input class="pure-u-1 var-has_value-{{er.record.has_value}}" id="{{ er.id }}" value="{{ er.record.value.representation }}" type="text" placeholder="No Value" /> 
                         </label>
 {% markdown %}
 {{ er.record.get_narrative() or ''}}
