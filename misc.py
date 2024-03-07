@@ -6,7 +6,6 @@ log = logging.getLogger(__name__)
 
 SAMPLE_FHIR_DATA_PATH = 'samples/fhir_r4/'
 SAMPLE_NDJSON_FILES = SAMPLE_FHIR_DATA_PATH + '/ndjson/'
-CPG_PATH = 'cpgs/'
 
 
 def sample_fhir_values():
@@ -26,7 +25,6 @@ def sample_fhir_values():
         try: 
             v = FHIRValue.from_fhir(jsn)
             fhir_values.append(v) 
-            log.debug(v)
         except Exception as e:
             errs.append(e) 
 

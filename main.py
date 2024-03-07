@@ -11,7 +11,8 @@ import logging
 from rich.logging import RichHandler
 
 
-logging.basicConfig(level="NOTSET", format="%(message)s", datefmt="[%X]", handlers=[RichHandler()])
+level = 'ERROR'
+logging.basicConfig(level=level, format="%(message)s", datefmt="[%X]", handlers=[RichHandler()])
 logger = logging.getLogger("tests")
 
 
@@ -19,6 +20,7 @@ logger = logging.getLogger("tests")
 
 parser = argparse.ArgumentParser("concordcore_")
 parser.add_argument('-f', dest='filepath', type=str, help='Path to Concord.CPG file')
+parser.add_argument('-t', dest='template_name', type=str, help='Name of the template')
 parser.add_argument('--inspect', action=argparse.BooleanOptionalAction, help='Inspect output')
 args = parser.parse_args()
 fp = args.filepath
@@ -113,7 +115,6 @@ try:
         inspect(result)
         
     print_evaluatedrecords(result.context.evaluation_list, 'Sufficiency Checked Variables')
-    # print_evaluatedrecords(concord.sufficiency_eval_result.context.evaluation_list, 'All Variables')
 except Exception as e:
     raise e
 
@@ -139,9 +140,9 @@ except NeedAttestationError as e:
         result = concord.assess()
 
 logger.info(f'Assessment Complete?={result.completed}')
+for e in result.errors:
+    logging.error(e)
 
-# for e in result.errors:
-    # con.print(e, e.errors)
 
 print_evaluatedrecords(result.context.evaluation_list, title="AssessmentVariables")
 # for assessment in result.context.evaluation_list:
@@ -204,39 +205,27 @@ if inspect_output:
 
 
     
+if args.template_name:
+    
 
-
-ht("""
+    ht("""
 [black on green]# --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---[/black on green]
 [black on green]# concord_rendering_v0.1--- --- --- --- --- --- --- --- --- --- --- --- --- --- ---  [/black on green]
-#""")
+""")
 
 
-from renderer.templates import Cards, Document
+    from renderer.templates import Cards, Document
+    temp = None 
+    if args.template_name == "cards":
+        temp = Cards("cards", persona, concord)
+    elif args.template_name == "document":
+        temp = Document("document", persona, concord)
+    else:
+        logger.error(f'Cannot find template={template_name}. Only "cards" and "document" supported')
+        exit()
+    page_html = temp.render_page()
 
-cards = Cards("cards", Persona.patient, concord)
-document = Document("document", Persona.patient, concord)
 
-logger.info(f'cards={cards.rendering_folder_path()}')
-# page_html = cards.render_page()
-page_html = document.render_page()
-
-
-
-
-
-ht("""
-[black on green]# --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---[/black on green]
-[black on green]# --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- -concord_dateback_v0.1 [/black on green]
-#""")
-fhirvals = misc.sample_fhir_values()
-from datetime import date
-until_2023 = date.today().replace(year=2015)
-patientdata = healthcontext.HealthContext.from_values(fhirvals, concord.cpg.variables, until_2023)
-# print_records(patientdata.records)
-
-# latest = healthcontext.HealthContext.from_values(fhir, concord.cpg.variables)
-# print_records(latest.records)
 
 
 

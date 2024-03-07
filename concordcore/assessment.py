@@ -90,9 +90,8 @@ class AssessmentRecord(record.Record):
          if nvars:
             records_for_filter = list(filter(lambda ea: ea.id in nvars, records))
             dict_record_values = {r.id: r.as_dict() for r in records_for_filter}
-            log.debug(f'nvars={nvars}; dict={dict_record_values}')
             self.sanitized_narrative = self.get_narrative(persona=persona, variable_data_dict=dict_record_values)
-            print(self.sanitized_narrative)
+            log.debug(f'nvars={nvars}; dict={dict_record_values} sanitized_narrative={self.sanitized_narrative}')
 
     @property
     def value(self):
@@ -153,18 +152,15 @@ class AssessmentEvaluator(AssessmentEvaluatorProtocol):
             assessment_record = AssessmentRecord(var=var)
             try:
                 success = assessment_record.evaluate(records + evaluated_assessment_records, persona=persona, functions_module=functions_module)
-                # add evaluated assessment record to list
+            
                 evaluated_assessment_records.append(assessment_record)
-
+                eval_context.add_evaluated(assessment_record)
             except VariableEvaluationError as e:
+                evaluated_assessment_records.append(assessment_record)
                 eval_context.add_unevaluated(assessment_record, e)
-
             except Exception as e:
                 raise e
                 
-        # add all successfully evaluated assessment_records to context
-        for assessed in evaluated_assessment_records:
-            eval_context.add_evaluated(assessed)
 
         return AssessmentResult(context=eval_context)
 

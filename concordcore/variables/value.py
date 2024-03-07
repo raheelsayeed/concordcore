@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 
-
+import logging
 from datetime import datetime
 from typing import Any
 
 from ..primitives import code, unit
+
+log = logging.getLogger(__name__)
 
 class Value:
 
@@ -23,7 +25,6 @@ class Value:
 
     @property
     def evaluation_val(self):
-        print(type(self.value), type(code.Code), self.value.__class__, code.Code)
         if isinstance(self.value, code.Code):
             return self.value.as_string
         else:
@@ -112,8 +113,6 @@ if __name__ == '__main__':
     assert decimal > lesser
     assert lesser < decimal
 
-    print(decimal)
-    print(decimal.date)
 
 
 

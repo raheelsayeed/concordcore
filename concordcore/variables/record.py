@@ -174,7 +174,6 @@ class Record:
             result_narrative = self.__get_narrative_for_value(persona_narrative)
 
         result_narrative = self.__sanitize_record_narrative(result_narrative)
-        logger.info(f'Narrative-sanitized for record={self.id} {result_narrative}')
 
         return result_narrative
     

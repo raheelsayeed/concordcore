@@ -9,6 +9,10 @@ import simpleeval, logging
 
 log = logging.getLogger(__name__)
 
+
+class ExpressionEvaluationError(Exception):
+    pass 
+
 @dataclass
 class Expression:
     
@@ -74,7 +78,6 @@ class Expression:
                 errors.append(KeyError(f'Cannot find Assessment={assessment_var_id} in {self.string}'))
         
         log.info(expression_values)
-        log.error(errors)
 
         if errors:
             raise VariableEvaluationError(errors, f'expression={self.string}')
@@ -99,6 +102,9 @@ class Expression:
         dependency_variables_nullValues = [] 
         not_found = []
         exceptions = []
+
+        expression_var_ids = list(set(expression_var_ids))
+        
         for exp_var_id in expression_var_ids:
             comps = exp_var_id.split('.')
             var_id = comps[0]
@@ -117,16 +123,16 @@ class Expression:
                     var_value = filtered_record.value.evaluation_val if filtered_record.value  else None
 
                 if var_value == None:
-                    
                     dependency_variables_nullValues.append(exp_var_id)
 
 
                 expression_values[var_id] = var_value
                 self.__expression_records.append(filtered_record)
 
-            # Cannot find the variable -- Undeclared
+            # Cannot find the variable: Raise ERROR!
             else:
-                not_found.append('$'+exp_var_id)              
+                log.error(f'variable={exp_var_id} not found in evaluation records for expression={self.string}')
+                raise Exception(f'variable={exp_var_id} not found in evaluation records for expression={self.string}')
 
 
         try:
@@ -136,14 +142,16 @@ class Expression:
             expression_result = evaluator.eval(expstr)
             self._result = Value(expression_result, source=self.records)
             log.debug(f'values={expression_values}, exp={expstr}, result={expression_result}')
-        except Exception as e:
-            # print(f'{e}; -null:{dependency_variables_nullValues}; undeclared:{dependency_variables_undeclared}, values:{dependency_variables_values}, exp_ids:{expression_var_ids}, exp: {expstr}')
+        except TypeError as te:
+            e = Exception(f'Cannot evaluate expression={expstr}, invalid value-type; exception={te}')
             log.error(e)
             exceptions.append(e)
+        except Exception as e:
+            log.error(f'values={expression_values}, exp={expstr}')
+            exceptions.append(e)
             # raise e
-        
+
         if exceptions:
-            # eg = ExceptionGroup('Unable to evaluate with errors', exceptions)
             raise VariableEvaluationError(exceptions, self.string)
 
         self.dependency_variables_values = expression_values

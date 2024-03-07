@@ -183,8 +183,6 @@ class Concord:
         # get all records
         all_variables = self.evaluated_records
         evaluated_records = self.__assessment_result.context.evaluation_list
-        # print(evaluated_records)
-        # print([er.id for er in evaluated_records])
         for er in evaluated_records + all_variables:
             log.debug(er.record.var.narrative_variables)
             ls = list(filter(lambda ev: ev.id in er.record.var.narrative_variables if er.record.var.narrative_variables else [], all_variables + evaluated_records))
