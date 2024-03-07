@@ -112,17 +112,7 @@ def optimal_tenyearriskscore(healthcontext):
         chol = 170
         hdl = 50
         isSmoker = False
-        print('optimal:',
-            isMale,
-            isAfricanAmerican,
-            isSmoker,
-            onHtnMeds,
-            dm,
-            age,
-            sbp,
-            chol,
-            hdl
-        )
+
         return compute_ten_year_score(
             isMale,
             isAfricanAmerican,
@@ -163,17 +153,7 @@ def tenyearriskscore(healthcontext):
         chol = healthcontext['Chol'].value
         hdl = healthcontext['HDL'].value
         isSmoker = healthcontext['is_smoker'].value
-        print(
-            isMale,
-            isAfricanAmerican,
-            isSmoker,
-            onHtnMeds,
-            dm,
-            age,
-            sbp,
-            chol,
-            hdl
-        )
+
         return compute_ten_year_score(
             isMale,
             isAfricanAmerican,
