@@ -4,7 +4,6 @@ from enum import Enum
 from .renderer import BaseRenderer
 
 
-
 class Cards(BaseRenderer):
 
     def rendering_folder_path(self):

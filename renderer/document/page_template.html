@@ -81,10 +81,10 @@
   Values: {{ er.record.values.representation }}<br/>
   Code: {{ er.record.code }}<br/>
   Error: <span class="error">{{ er.error }}</span><br/>
-  Value is derived from: {{ er.record.value_source }}
-  {% if er.record.value_source %}
+  Value is derived from: {{ er.record.value.source }}
+  {% if er.record.value.source %}
     <ul>
-      {% for source in er.record.value_source %}
+      {% for source in er.record.value.source %}
       <li>{{ source }}<br/><em class="error">{{source.error}}</em></li>
       {% endfor %}
     </ul>
@@ -114,11 +114,11 @@
 {{ ea.record.var.description or ''}}<br/>
 {{ ea.record.sanitized_narrative or '' }}
 {% endmarkdown %}
-{% if ea.record.value_source %}
+{% if ea.record.value.source %}
   <hr>
   <p>Value is derived from or based on:</p>
   <ul>
-    {% for source in ea.record.value_source %}
+    {% for source in ea.record.value.source %}
     
     <li><small><code>{{ source.sanitized_narrative }}<br/>{{ source.id }} val={{ source.values }} date={{ source.dated }}<br/>
           <em class="error">{{ source.error }}</em></code></small></li>

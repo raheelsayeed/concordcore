@@ -5,11 +5,11 @@
   {% markdown %}
   {{ assessment.record.sanitized_narrative or "--no--narrative--" }}
   {% endmarkdown %}
-  {% if assessment.record.value_source %}
+  {% if assessment.record.value.source %}
   <hr>
   <p>Value is derived from or based on:</p>
   <ul>
-    {% for source in assessment.record.value_source %}
+    {% for source in assessment.record.value.source %}
     <li>{{ source.id }} --> {{ source.values }} dated: {{ source.dated }}<br/>
       <em class="error">{{ source.error }}</em></li>
     {% endfor %}
