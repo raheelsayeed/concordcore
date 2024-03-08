@@ -1,7 +1,7 @@
 `Concord_`
 =========
 
---- not ready for use ---
+--- note: not ready for use, check `main.py` for latest on init ---
 
 Python framework to compute and yeild recommendations based on published evidence, clinical practice guideline(s),for a given longitudinal health record. 
 
@@ -93,16 +93,31 @@ print_variables(cpg.variables)
 << insert picture >>
 ```
 
-## 2. Initialize a cpg-manager class 
+## 2. User data 
+
+```python
+from concordcore.healthcontext import HealthContext
+from concordcore.primitives.types import Persona
+
+# interaction-context is that a `Patient` is launching the app 
+persona = Persona.patient 
+# init healthcontext with user data: a list of "records". 
+user_context = HealthContext(records=<# list of records #>, persona=persona)
+# alternatively: healthcontext can be created from a list of values
+# user_context = HealthContext.from_values(values: list[Value], for_variables: list[Var], persona: Persona, until_date: date = None):
+```
+
+## 3. Initialize a cpg-manager class 
 
 `concordcore.concord.Concord` is the core management class that takes in user data `healthcontext` and `CPG` and parses through eligibility check, sufficiency check, assessment evaluation and recommendations.
 
 ```python
 from concordcore.concord import Concord
-manager = Concord(statin_cholesterol_cpg)
+
+manager = Concord(statin_cholesterol_cpg, healthcontext=user_context)
 ```
 
-## 2. Eligibility variables
+## 4. Eligibility variables
 
 Checks for the eligibility and applicability of `CPG` for a given `HealthContext` as specificed in the cpg definition file. See `concordcore.eligibility`
 
@@ -118,12 +133,12 @@ eligibility:
       expression: $Age > 39 and $Age < 76
       # only applicable for individuals with age over 39 and less than 76
 ```
-Use `Concord` to check parse eligibility check
+Use `Concord` to check eligibility check
 
 ```python
 try:
     
-    result = concord.eligibility(user_context= <`healthcontext.HealthContext`> )
+    result = concord.eligibility()
     print(f'IS_Eligibility: {result.is_eligible}')
 
 except Exception as e:
@@ -148,7 +163,7 @@ class SufficiencyResultStatus(Enum):
 ```python
 
 try:
-    result = concord.sufficiency(user_context=<`healthcontext.HealthContext`>)
+    result = concord.sufficiency()
     print(f'SufficiencyResult: IS_EXECUTABLE={result.is_executable}')
 
 except Exception as e:
@@ -238,6 +253,7 @@ recommendations:
     - [x] variableID: variable.value is None
     - [x] variableID: variable.value TypeError for expression
   - [ ] `validation`: Specify checks for validity and plausibility of a given value for that variable. Usecase: LDL value must be less than or equal to the difference between total-cholesterol and HDL.
+    - [ ] validator-conformance-level: Failed evaluation maybe ignored if strict=False
   - [ ] `value-capture-method`: Custom cpg-module-function to define key-path or keymap to get data for a given data-model. Forexample: SBP-loinc within a BP Observation FHIR resource
   - [ ] `Code` Hierarchy: 
 

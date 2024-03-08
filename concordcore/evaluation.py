@@ -90,7 +90,6 @@ class EvaluationContext:
     def errors(self):
         errs = [] 
         for ev in self.evaluation_list:
-            
             if ev.error:
                 errs.append(ev.error) 
 

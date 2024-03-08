@@ -196,6 +196,10 @@ class Record:
         self.sanitized_narrative = narrative_text
         return narrative_text
 
+    def test_narratives(self):
+        narrative_dict = self.var.narrative 
+        assert (self.sanitized_narrative == None) == (narrative_dict == None), f'record={self} narr={narrative_dict} _must_have_narrative'
+        return 'PASSED'
 
         
 

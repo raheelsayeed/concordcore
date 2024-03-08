@@ -80,8 +80,9 @@ class EligibilityEvaluator(EligibilityEvaluatorProtocol):
             except Exception as e:
                 eval_ctx.add_unevaluated(criteria_record, e)
 
+        # Raise eligibility erros immediately
         if eval_ctx.errors:
-            raise ExceptionGroup('Error evaluating Eligibility', eval_ctx.errors)
+            raise ExceptionGroup('EligibilityEvaluationError', eval_ctx.errors)
 
         result = EligibilityResult(eval_ctx)
         return result

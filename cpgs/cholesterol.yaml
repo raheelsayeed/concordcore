@@ -41,6 +41,9 @@ variables:
       user_attestable: False
       code:
        loinc: *ldl_code
+      validator:
+        value: '$value < 23 and $value < 400 and $value < $HDL + $Chol'
+        
 
     - id: HDL
       title: High density lipoprotein
@@ -240,7 +243,6 @@ assessments:
     - id: persistant_tg
       title: Persistantly elevated triglycerides
       expression: $elevated_tg.count > 2 if $triglycerides.count > 2 else None
-      user_attestable: False
       required: False
       description: Persistently elevated triglycerides (175 mg/dL or greater on three or more occasions)
       narrative: 
@@ -255,13 +257,11 @@ assessments:
     # simple_eval
     - id: lowHDL
       title: Low HDL
-      user_attestable: False
       required: False
       expression: '($HDL < 40) if ($Gender == "248153007|http://snomed.info/sct") else ($HDL < 50)'
 
     - id: elevated_glucose
       title: Elevated glucose
-      user_attestable: False
       required: False
       expression: '$glu > 160'
 
@@ -270,7 +270,6 @@ assessments:
 
     - id: Elevated_hsCRP
       title: Is hsCRP elevated?
-      user_attestable: False
       required: False
       expression: $hsCRP > 1.99
       narrative:
@@ -282,7 +281,6 @@ assessments:
 
     - id: elevated_apoB
       title: Elevated apolipoprotein B
-      user_attestable: False
       required: False
       expression: $ApoB > 130
       narrative:
@@ -294,7 +292,6 @@ assessments:
       title: Persistantly elevated LDL
       description: LDL is elevated at three or more occasions
       expression: $elevated_LDL_list.count > 2 if $LDL.count > 2 else None
-      user_attestable: False
       required: False
       narrative: 
         patient:
@@ -306,10 +303,14 @@ assessments:
     - id: chronicConditions
       title: Chronic inflammatory conditions
       expression: ($RA + $Psoriasis + $ckd) > 1
+      required: False
     #2._RR_Female risk enhancing factors
     - id: Femaleriskfactors
       title: Female-specific risk-enhancing factors
       expression: ($Preeclampsia + $PrematureMenopause) > 1
+      required: False
+
+
     #3._Metabolic risk factors
     #
     - id: metabolic_syndrome
@@ -328,6 +329,7 @@ assessments:
     - id: multiple_risk_factors
       title: Multiple risk-enhancing factors
       expression: ($FamilyHxPrematureASCVD + $sa_ancestry + $Femaleriskfactors) > 2
+      required: True
       narrative:
         patient:
           False: Atleast __3__ factors are needed to be positive.
@@ -401,6 +403,7 @@ assessments:
       narrative:
         patient:
           True: Ten Year risk score is $ascvd_ten_year_risk_score. It is considered Low Risk (less than 5.0)
+          False: Ten Year risk score is $ascvd_ten_year_risk_score. As it is more than 5.0, it is not considered "Low risk" 
       
     - id: borderline_risk
       title: Borderline Risk
@@ -412,6 +415,7 @@ assessments:
             
             Out of a 100 people, there is a higher risk of a cardiovascular event for $ascvd_ten_year_risk_score.clean
             of the individuals
+          False: Ten Year risk score is $ascvd_ten_year_risk_score. It is not considered "Low risk" 
 
     - id: intermediate_risk
       title: Ten year risk score is categorizes as "Intermediate Risk"
@@ -422,6 +426,7 @@ assessments:
             Ten Year risk score is $ascvd_ten_year_risk_score. It is considered Intermediate.
           
             Out of a 100 people, there is a higher risk of a cardiovascular event for {{ascvd_ten_year_risk_score.clean}} of the individuals
+          False: Ten Year risk score is $ascvd_ten_year_risk_score. It is not considered "Intermediate risk" 
 
     - id: high_risk
       title: Ten Year risk score categorized as "High"
@@ -432,6 +437,8 @@ assessments:
             Ten Year risk score is $ascvd_ten_year_risk_score. It is considered High.
           
             Out of a 100 people, there is a higher risk of a cardiovascular event for {{ascvd_ten_year_risk_score.clean}} of the individuals
+          False: Ten Year risk score is $ascvd_ten_year_risk_score. It is not considered "Low risk" 
+            
 
 recommendations:
 

@@ -10,7 +10,7 @@ import logging
 from rich.logging import RichHandler
 
 
-level = 'ERROR'
+level = 'DEBUG'
 logging.basicConfig(level=level, format="%(message)s", datefmt="[%X]", handlers=[RichHandler()])
 logger = logging.getLogger("tests")
 
@@ -136,7 +136,10 @@ except NeedAttestationError as e:
     if session.run():
         result = concord.assess()
 
-logger.info(f'Assessment Complete?={result.completed}')
+logger.info(f'Assessment Complete?={result.successful}')
+if not result.successful:
+    logger.error(f'Assessment could not be completed, is insufficient. Must stop here.')
+    exit()
 
 print_evaluatedrecords(result.context.evaluation_list, title="AssessmentVariables")
 # for assessment in result.context.evaluation_list:
@@ -195,6 +198,13 @@ if inspect_output:
     inspect(result.recommendations)
 
 
+
+## Narrative tests 
+for record in concord.sufficiency_result.context.evaluation_list:
+    logger.debug(f'narrative test record={record.record.test_narratives()}')
+## Narrative tests 
+for record in concord.assessment_result.context.evaluation_list:
+    logger.debug(f'narrative test record={record.record.test_narratives()}')
 
     
 if args.template_name:

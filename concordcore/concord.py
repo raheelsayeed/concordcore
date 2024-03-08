@@ -47,7 +47,7 @@ class Concord:
     def recommendation_result(self):
         return self.__recommendations_result
     @property
-    def evaluated_records(self):
+    def evaluated_records(self):            
         return self.__evaluated_records
     @property
     def sufficiency_result(self):
