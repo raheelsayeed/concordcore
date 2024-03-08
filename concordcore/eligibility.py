@@ -7,7 +7,6 @@ from typing import Any, Protocol
 from .assessment import AssessmentVar, AssessmentRecord
 from .healthcontext import HealthContext
 from .evaluation import EvaluationResult, EvaluationContext
-from .persona import Persona
 
 
 class EligbilityValueAbstract(Protocol):
@@ -63,7 +62,6 @@ class EligibilityEvaluator(EligibilityEvaluatorProtocol):
 
     def evaluate(self, 
                 healthcontext: HealthContext, 
-                persona: Persona = Persona.patient,
                 context: EvaluationContext = None) -> EligibilityResult:
 
         if not self.criterias:
@@ -77,7 +75,7 @@ class EligibilityEvaluator(EligibilityEvaluatorProtocol):
 
             try:
                 criteria_record = EligibilityRecord(criteria)
-                criteria_record.evaluate(records=healthcontext.records, persona=persona)
+                criteria_record.evaluate(records=healthcontext.records, persona=healthcontext.persona)
                 eval_ctx.add_evaluated(criteria_record)
             except Exception as e:
                 eval_ctx.add_unevaluated(criteria_record, e)

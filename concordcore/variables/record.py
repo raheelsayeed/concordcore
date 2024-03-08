@@ -12,7 +12,7 @@ from unittest import result
 from ..variables import var
 from ..variables.value import Value
 from ..primitives.vlist import vlist
-from ..persona import Persona
+from ..primitives.types import Persona
 from ..expression import Expression
 
 
@@ -139,7 +139,7 @@ class Record:
     def __get_narrative_for_bool_value(self, persona_narrative):
         return persona_narrative.get(self.value.value, None)
     def __get_narrative_for_value(self, personal_narrative):
-        return personal_narrative.get('HasValue', None) or personal_narrative.get(str(self.value.value), None)
+        return personal_narrative.get('HasValue', None) or personal_narrative.get(True, None) or personal_narrative.get(str(self.value.value), None)
 
     def __sanitize_record_narrative(self, n):
         if not n:
@@ -177,7 +177,7 @@ class Record:
 
         return result_narrative
     
-    def get_narrative(self, persona: Persona = Persona.patient, variable_data_dict: dict = None):
+    def set_narrative(self, persona: Persona = Persona.patient, variable_data_dict: dict = None):
 
         if not self.var.narrative:
             return None
@@ -192,6 +192,8 @@ class Record:
                 narrative_text = narrative_text.replace('$'+n_var, str(val))
 
         logger.debug(f'narrative for {self.id} from variable_dict={variable_data_dict}, sanitized={narrative_text}')
+
+        self.sanitized_narrative = narrative_text
         return narrative_text
 
 

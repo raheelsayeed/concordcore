@@ -6,7 +6,6 @@ from typing import Protocol
 from concordcore.assessment import EvaluatedAssessmentRecord
 from concordcore.recommendation import EvaluatedRecommendation
 from concordcore.evaluation import EvaluatedRecord
-from concordcore.persona import Persona
 from concordcore.concord import Concord
 
 log = logging.getLogger(__name__)
@@ -26,7 +25,6 @@ class RenderingModal(Enum):
 class RenderingProtocol(Protocol):
 
     id: str
-    persona: Persona
     concord: Concord
     base_template = None
     modal: RenderingModal = RenderingModal.ehr
@@ -41,7 +39,6 @@ class RenderingProtocol(Protocol):
 class BaseRenderer(RenderingProtocol):
 
     id: str 
-    persona: Persona
     concord: Concord
     base_template = None
     modal: RenderingModal = RenderingModal.ehr

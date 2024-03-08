@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-from cmath import log
 from dataclasses import dataclass, field
 from datetime import datetime, date
 from functools import cached_property
@@ -27,6 +26,7 @@ class NeedAttestationError(Exception):
 class Concord:
 
     cpg: CPG
+    healthcontext: HealthContext
     until_year: int = None
     __eligibility_result: EligibilityResult = field(init=False) 
     __assessment_result: AssessmentResult = field(init=False)
@@ -54,8 +54,6 @@ class Concord:
         return self.__sufficiency_result
 
     def eligibility(self, 
-                    user_values: list[Value] = None,
-                    user_context: HealthContext = None,
                     evaluator: EligibilityEvaluatorProtocol = None,
                     context: EvaluationContext = None) -> EligibilityResult:
 
@@ -63,17 +61,13 @@ class Concord:
             raise Exception('Concord: no criterias defined to evaluate for this CPG')
         
         eligibility_eval = evaluator or EligibilityEvaluator(self.cpg.eligibility_criterias)
-        # patient data: use healthcontext or create one from values
-        healthcontext =  user_context or HealthContext.from_values(values=user_values, for_variables=self.cpg.variables)
         # evalute eligibility
-        self.__eligibility_result = eligibility_eval.evaluate(healthcontext, context=context)
+        self.__eligibility_result = eligibility_eval.evaluate(self.healthcontext, context=context)
 
         return self.__eligibility_result
 
 
     def sufficiency(self, 
-                    user_values: list[Value] = None,
-                    user_context: HealthContext = None,
                     sufficiency_evaluator: SufficiencyEvaluatorProtocol = None, 
                     context: EvaluationContext = None) -> SufficiencyResult:
         
@@ -82,10 +76,8 @@ class Concord:
 
         # initialize an evaluator 
         sufficiency_eval = sufficiency_evaluator or SufficiencyEvaluator('se', cpg_variables=self.cpg.variables)
-        # create healthcontext
-        healthcontext = user_context or HealthContext.from_values(user_values, self.cpg.variables, until_date=self.until_date)
         # evaluate sufficiency
-        self.__sufficiency_result = sufficiency_eval.evaluate(healthcontext, context)
+        self.__sufficiency_result = sufficiency_eval.evaluate(self.healthcontext, context)
 
         return self.__sufficiency_result
 

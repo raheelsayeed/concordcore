@@ -13,7 +13,7 @@
 <ol>
 <strong>Based on the following <em>assessments</em></strong>:
 {% for b in recommendation.based_on %}
-<li><em>{{ b.record.sanitized_narrative or b.record.get_narrative() or b.record.title or b.record.id }}</em></li>
+<li><em>{{b.record.title or b.record.id}}<br/>Narrative: {{ b.record.sanitized_narrative }}</em></li>
 {% endfor %}
 </ol>
 {% endif %}

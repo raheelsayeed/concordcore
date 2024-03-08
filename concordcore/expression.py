@@ -3,15 +3,11 @@
 from dataclasses import dataclass
 from functools import cached_property
 from re import findall
-from concordcore.primitives.errors import VariableEvaluationError
+from concordcore.primitives.errors import ExpressionVariableNotFound, ExpressionEvaluationError
 from .variables.value import Value
 import simpleeval, logging
 
 log = logging.getLogger(__name__)
-
-
-class ExpressionEvaluationError(Exception):
-    pass 
 
 @dataclass
 class Expression:
@@ -131,10 +127,13 @@ class Expression:
 
             # Cannot find the variable: Raise ERROR!
             else:
-                log.error(f'variable={exp_var_id} not found in evaluation records for expression={self.string}')
-                raise Exception(f'variable={exp_var_id} not found in evaluation records for expression={self.string}')
+                raise VariableNotFound(exp_var_id, self.string)
 
-
+        # record
+        self.dependency_variables_values = expression_values
+        self.dependency_variables_nullValues = dependency_variables_nullValues
+        self.dependency_variables_undeclared = not_found
+        
         try:
             expstr = self.string.replace('$', '')
             evaluator = simpleeval.SimpleEval(names=expression_values)
@@ -142,34 +141,20 @@ class Expression:
             expression_result = evaluator.eval(expstr)
             self._result = Value(expression_result, source=self.records)
             log.debug(f'values={expression_values}, exp={expstr}, result={expression_result}')
-        except TypeError as te:
-            e = Exception(f'Cannot evaluate expression={expstr}, invalid value-type; exception={te}')
-            log.error(e)
-            exceptions.append(e)
+        except TypeError as e:
+            ve = ExpressionEvaluationError(expstr, expression_values,  str(e))
+            raise ve
+            exceptions.append(ve)
         except Exception as e:
-            log.error(f'values={expression_values}, exp={expstr}')
-            exceptions.append(e)
-            # raise e
+            ve = ExpressionEvaluationError(expstr, expression_values,  str(e))
+            raise ve
+            exceptions.append(ve)
+
 
         if exceptions:
             raise VariableEvaluationError(exceptions, self.string)
 
-        self.dependency_variables_values = expression_values
-        self.dependency_variables_nullValues = dependency_variables_nullValues
-        self.dependency_variables_undeclared = not_found
 
         return self._result
 
 
-
-
-
-
-
-
-
-
-
-
-
-        

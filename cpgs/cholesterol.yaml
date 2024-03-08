@@ -148,7 +148,7 @@ variables:
         patient:
           True: 'Tests with Triglyceride over 175: $values'
           False: 'There are no tests with triglycerides over 175 in your data ($values)'
-          None: Triglyceride tests were found in your data
+          None: Triglyceride tests were __not__ found in your data
 
    
       
@@ -509,6 +509,7 @@ recommendations:
     expression: $borderline_risk == True
     narrative:
       patient:
+        False: 'borderline-This does not apply to you!'
         True: For people with a ten-year risk score between, ACC/AHA make recommendations for a medication to control blood cholesterol to prevent developing of a heart attack or stroke or other cardiovascular event.
     citations: a list of citations supporting this
     class_of_recommendation: II_B
@@ -519,6 +520,7 @@ recommendations:
     narrative:
       patient:
         True: For people with a ten-year risk score between, ACC/AHA make recommendations for a medication to control blood cholesterol to prevent developing of a heart attack or stroke or other cardiovascular event.
+        False: 'This does not apply to you!'
     citations: a list of citations supporting this
     class_of_recommendation: II_B
 
@@ -527,6 +529,7 @@ recommendations:
     expression: $high_risk == True
     narrative:
       patient:
+        False: 'This does not apply to you!'
         True: For people with a ten-year risk score between, ACC/AHA make recommendations for a medication to control blood cholesterol to prevent developing of a heart attack or stroke or other cardiovascular event.
     citations: a list of citations supporting this
     class_of_recommendation: II_B

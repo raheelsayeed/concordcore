@@ -17,8 +17,8 @@ from .assessment import EvaluatedAssessmentRecord
 from .evaluation import EvaluatedRecord
 from .expression import Expression
 from .evaluation import EvaluationContext
-from .persona import Persona
 from .primitives import vlist
+from .primitives.types import Persona
 
 
 # ------ USPSTF Classifications -------
@@ -152,7 +152,7 @@ class EvaluatedRecommendation:
 
         if self.recommendation.type and self.recommendation.type.value == RecommendationType.display.value:
             self.applies = True 
-            self.sanitized_narrative = self.get_narrative(persona=persona)
+            self.sanitized_narrative = self.set_narrative(persona=persona)
             return
 
         if not self.expression:
@@ -168,7 +168,7 @@ class EvaluatedRecommendation:
         self.based_on = self.expression.records
 
         n_vars = self.recommendation.narrative_variables
-        self.sanitized_narrative = self.get_narrative()
+        self.sanitized_narrative = self.set_narrative(persona=persona)
         
         if not n_vars:       
             return 
@@ -177,7 +177,7 @@ class EvaluatedRecommendation:
         try:
             records = list(filter(lambda ea: ea.id in n_vars, evaluated_assessments + (variables or [])))
             dict_record_values = {r.id: r.record.as_dict() for r in records}
-            self.sanitized_narrative = self.get_narrative(variable_data_dict=dict_record_values)
+            self.sanitized_narrative = self.set_narrative(variable_data_dict=dict_record_values)
             
         except Exception as e:
             raise e
@@ -195,7 +195,7 @@ class EvaluatedRecommendation:
     def title(self):
         return self.recommendation.title
 
-    def get_narrative(self, persona: Persona = Persona.patient, variable_data_dict: dict = None):
+    def set_narrative(self, persona: Persona = Persona.patient, variable_data_dict: dict = None):
 
         if not self.recommendation.narrative:
             return None

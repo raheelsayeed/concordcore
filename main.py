@@ -2,7 +2,6 @@
 
 import argparse
 from concordcore import cpg, healthcontext
-from concordcore.persona import Persona
 from concordcore.concord import Concord, NeedAttestationError
 from clog import *
 import misc
@@ -40,8 +39,8 @@ ht("""
 
 
 
-person_data = misc.sample_healthcontext()
-print_records(person_data.records)
+user_context = misc.sample_healthcontext()
+print_records(user_context.records)
 
 if not fp:
     logger.error('Please enter CPG file `-f <path/to/cpg.yaml>`, exiting..')
@@ -55,10 +54,8 @@ ht(
        
 
 """)
-# tup = misc.read_cpg(fp)
-# mycpg  = cpg.BaseCPG.from_document(tup[0], tup[1])
 mycpg = cpg.BaseCPG.from_document_path(fp)
-concord = Concord(mycpg)
+concord = Concord(mycpg, user_context)
 logger.info(f'Initialized with with cpg: [bold]{mycpg.title}')
 logger.info(f'Publisher={mycpg.publisher}')
 logger.info(f'doi ={mycpg.publisher}')
@@ -81,7 +78,7 @@ ht("""
 #               Why Not? (collect exceptions)
 """)
 try:
-    result = concord.eligibility(user_context=person_data)
+    result = concord.eligibility()
     logger.info(f'IS_Eligibility: {result.is_eligible}')
     print_evaluatedrecords(result.context.evaluation_list)
     if inspect_output:
@@ -109,7 +106,7 @@ ht("""
     # Get all evaluated records.
 try:
 
-    result = concord.sufficiency(user_context=person_data)
+    result = concord.sufficiency()
     logger.info(f'SufficiencyResult: IS_EXECUTABLE={result.is_executable}')
     if inspect_output:
         inspect(result)
@@ -140,9 +137,6 @@ except NeedAttestationError as e:
         result = concord.assess()
 
 logger.info(f'Assessment Complete?={result.completed}')
-for e in result.errors:
-    logging.error(e)
-
 
 print_evaluatedrecords(result.context.evaluation_list, title="AssessmentVariables")
 # for assessment in result.context.evaluation_list:
@@ -173,7 +167,6 @@ ht("""
     """)
 
 result = concord.recommendations()
-persona = Persona.patient
 logger.debug([er if er.error else None for er in result.recommendations])
 logger.info(f'There are {len(result.recommendations)} RECOMMENDATION(s) for this `Person`')
 
@@ -184,14 +177,13 @@ if result.recommendations:
     for i, applied in enumerate(result.recommendations):
 
         # inspect(applied)
-        narrative = applied.get_narrative(persona) if applied.get_narrative(persona) else ''
         based_on_text = ", ".join([f'{ev.record.var.id}:{ev.record.value}' for ev in applied.based_on]) if applied.based_on else ''
         
         
         panel = Panel(
 f'''{i+1}. id: {applied.recommendation.id}
 [b]Recommendation: {applied.recommendation.title}[/b]
-[yellow]{narrative}[/yellow]
+[yellow]Narrative: {applied.sanitized_narrative or ""}[/yellow]
 COR: {applied.recommendation.class_of_recommendation}
 LOE: {applied.recommendation.level_of_evidence}
 Based-On: {based_on_text}''',style="on deep_sky_blue4")
@@ -217,9 +209,9 @@ if args.template_name:
     from renderer.templates import Cards, Document
     temp = None 
     if args.template_name == "cards":
-        temp = Cards("cards", persona, concord)
+        temp = Cards("cards",  concord)
     elif args.template_name == "document":
-        temp = Document("document", persona, concord)
+        temp = Document("document",  concord)
     else:
         logger.error(f'Cannot find template={template_name}. Only "cards" and "document" supported')
         exit()

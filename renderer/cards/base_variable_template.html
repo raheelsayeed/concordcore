@@ -3,7 +3,7 @@
     <h3>{{ record.record.title }}:</h3>
     <h1>{{ record.record.value or "N/A" }}</h1> 
     {% markdown %}
-    <p>{{ record.record.get_narrative() or "" }}</p>
+    <p>{{ record.record.sanitized_narrative or "" }}</p>
     {% endmarkdown %}
     <p>Values: {{ record.record.values.representation }} </p>
     {% if record.record.value_source %}

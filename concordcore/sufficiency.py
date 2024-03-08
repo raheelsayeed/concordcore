@@ -93,6 +93,8 @@ class SufficiencyEvaluator(SufficiencyEvaluatorProtocol):
             else:
                 record = Record(var, None)
 
+            # set narrative, using the persona
+            record.set_narrative(persona=user_context.persona)
             # --- EVALUATE RECORD VALUES in another loop
             eval_ctx.add_evaluated(record=record)
             

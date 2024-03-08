@@ -223,18 +223,18 @@ class BaseCPG():
                     for idn in identifiers:
 
                         if idn not in all_vars_Identifiers:
-                            err = KeyError(f'CPG.Var: {vr.id} expression variable \"{idn}\" undefined')
+                            err = ExpressionVariableNotFound(vr.id, idn, vr.expression)
                             errors.append(err)
 
         if dups:
             errors.append(
-                    KeyError('CPG.variables cannot have duplicate variable `id`s: ', dups)
+                    Exception('CPG.variables cannot have duplicate variable `id`s: ', dups)
                  )
 
 
         if not self.assessments_variables:
             errors.append(
-                    KeyError('CPG.assessment_variables not found;  all CPGs must have risk `assessment` variables defined')
+                    Exception('CPG.assessment_variables not found;  all CPGs must have risk `assessment` variables defined')
             )
 
         for assessment in self.assessments_variables:
@@ -246,7 +246,7 @@ class BaseCPG():
 
         if not self.recommendation_variables:
             errors.append(
-                    KeyError('CPG.recommendations not found;  all CPGs must have recommendation variables defined')
+                    Exception('CPG.recommendations not found;  all CPGs must have recommendation variables defined')
             )
 
 

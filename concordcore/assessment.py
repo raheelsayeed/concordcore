@@ -7,9 +7,9 @@ import logging
 from typing import Any, Protocol
 
 from concordcore.expression import Expression
-from .persona import Persona
 from .evaluation import EvaluatedRecord, EvaluationContext, EvaluationResult
 from .primitives.errors import VariableEvaluationError
+from .primitives.types import Persona 
 from .primitives.vlist import vlist
 from .variables import record, var, value
 
@@ -75,22 +75,26 @@ class AssessmentRecord(record.Record):
 
         # has evaluating `expression`
         elif self.__expression:
-            res = self.__expression.evaluate(records)
-            log.debug(f'Evaluating {self.id} expression {self.var.expression} result={res}')
-            if res:
-                self.__assessed_value = self.__expression.result
+            try:
+                res = self.__expression.evaluate(records)
+                log.debug(f'ExpressionEvaluated record={self.id} expression={self.var.expression} result={res}')
+                if res:
+                    self.__assessed_value = self.__expression.result
+            except Exception as e:
+                raise VariableEvaluationError([e], self.id)
                 
         self.__sanitize_assessment_narrative(records, persona)
         return self.__assessed_value
 
+    
     def __sanitize_assessment_narrative(self, records, persona: Persona = Persona.patient):
 
          nvars = self.var.narrative_variables
-         self.sanitized_narrative = self.get_narrative()
+         self.sanitized_narrative = self.set_narrative(persona=persona)
          if nvars:
             records_for_filter = list(filter(lambda ea: ea.id in nvars, records))
             dict_record_values = {r.id: r.as_dict() for r in records_for_filter}
-            self.sanitized_narrative = self.get_narrative(persona=persona, variable_data_dict=dict_record_values)
+            self.sanitized_narrative = self.set_narrative(persona=persona, variable_data_dict=dict_record_values)
             log.debug(f'nvars={nvars}; dict={dict_record_values} sanitized_narrative={self.sanitized_narrative}')
 
     @property
@@ -152,7 +156,6 @@ class AssessmentEvaluator(AssessmentEvaluatorProtocol):
             assessment_record = AssessmentRecord(var=var)
             try:
                 success = assessment_record.evaluate(records + evaluated_assessment_records, persona=persona, functions_module=functions_module)
-            
                 evaluated_assessment_records.append(assessment_record)
                 eval_context.add_evaluated(assessment_record)
             except VariableEvaluationError as e:

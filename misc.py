@@ -72,7 +72,7 @@ def sample_data():
 
 def sample_healthcontext():
 
-    from concordcore.healthcontext import HealthContext
+    from concordcore.healthcontext import HealthContext, Persona
     from concordcore.variables.record import Record
     from concordcore.variables.value import Value
     from concordcore.variables.var import Var 
@@ -133,7 +133,7 @@ def sample_healthcontext():
         bp
     ]
 
-    return HealthContext(recs)
+    return HealthContext(recs, Persona.patient)
 
 
 if __name__ == '__main__':
