@@ -3,10 +3,11 @@ from dataclasses import dataclass
 from enum import Enum, auto
 from typing import Protocol
 
-from concordcore.assessment import EvaluatedAssessmentRecord
-from concordcore.recommendation import EvaluatedRecommendation
-from concordcore.evaluation import EvaluatedRecord
-from concordcore.concord import Concord
+from core.assessment import EvaluatedAssessmentRecord
+from core.recommendation import EvaluatedRecommendation
+from core.evaluation import EvaluatedRecord
+from core.concord import Concord
+from outomes.outcome import Advisory
 
 log = logging.getLogger(__name__)
 
@@ -132,6 +133,9 @@ class BaseRenderer(RenderingProtocol):
         import datetime 
         d['dated'] = datetime.datetime.now()
 
+        # from ..outomes import Advisory
+        # d['advisories'] = Advisory.All()
+
         base_template = self.template_env.get_template('page_template.html')
         html = base_template.render(**d)
         
@@ -142,28 +146,3 @@ class BaseRenderer(RenderingProtocol):
             os.system('open output/output.html')
         return html
         
-
-
-
-
-
-
-        
-
-
-
-
-                
-
-        
-        
-
-
-
-
-
-
-    
-    
-
-

@@ -3,12 +3,11 @@
 import inspect
 import logging
 
-from concordcore import concord
-from concordcore.healthcontext import HealthContext
-from concordcore.primitives.types import ValueTypePrimitives
-from concordcore.variables.record import Record
-from concordcore.variables.var import Var, VarType
-from concordcore.variables.value import Value
+from core import concord
+from core.healthcontext import HealthContext
+from variables.record import Record
+from variables.var import Var, VarType
+from variables.value import Value
 from ontology.presets import *
 from clog import *
 
@@ -28,9 +27,10 @@ logger = logging.getLogger("tests")
 
 if __name__ == '__main__':
 
-    from concordcore.cpg import BaseCPG
+    from core.cpg import BaseCPG
     cpg = BaseCPG.from_document_path('cpgs/cholesterol.yaml')
-    manager = concord.Concord(cpg)
+    import misc
+    manager = concord.Concord(cpg, misc.sample_healthcontext())
 
 
 
@@ -40,15 +40,15 @@ if __name__ == '__main__':
     fcode = CodeGender.female_snomed.value
 
     # check
-    from concordcore.primitives.code import Code
+    from primitives.code import Code
     assert isinstance(fcode, Code)
 
 
     ### ---- VALUE -------------
-    from concordcore.variables import value, record, var
+    from variables import value, record, var
     val1 = value.Value(1, unit=None, code=fcode)
     logger.info(val1)
-    var1= var.Var('LDL', 'LDL', None, code=[fcode], category=VarType.vital_sign, type=ValueTypePrimitives.string)
+    var1= var.Var('LDL', 'LDL', None, code=[fcode], category=VarType.vital_sign, type=None)
     var2= var.Var.Sample()
     assert isinstance(var1, type(var2))
     assert isinstance(var1, var.Var)
@@ -68,7 +68,7 @@ if __name__ == '__main__':
 
 
 
-    from concordcore.assessment import AssessmentRecord, AssessmentVar
+    from core.assessment import AssessmentRecord, AssessmentVar
     av1 = AssessmentVar('TG', expression='$LDL == 1')
     logger.debug(vars(av1))
     logger.debug(av1.expression)
@@ -81,7 +81,7 @@ if __name__ == '__main__':
 
 
 
-    ldl_var = var.Var('LDL', 'LDL', None, code=[fcode], category=VarType.vital_sign, type=ValueTypePrimitives.string,
+    ldl_var = var.Var('LDL', 'LDL', None, code=[fcode], category=VarType.vital_sign, type=None,
                       narrative= {
                             'patient': {
                                     'HasValue': 'we have val $value',
@@ -107,7 +107,7 @@ if __name__ == '__main__':
     import misc
     hc = misc.sample_healthcontext()
     # ---- Eligibility Record --- 
-    from concordcore.eligibility import EligibilityVar, EligibilityRecord, EligibilityEvaluator
+    from core.eligibility import EligibilityVar, EligibilityRecord, EligibilityEvaluator
     e_var = EligibilityVar('Gender', expression='$Gender == 1')
     eligibility_record = EligibilityRecord(e_var)
     # eligibility_record.evaluate([ldl_rec])

@@ -19,3 +19,21 @@ class Document(BaseRenderer):
         return path
 
 
+class Sheet(BaseRenderer):
+
+    def rendering_folder_path(self):
+        import os
+        path = os.path.dirname(__file__) + '/sheet'
+        return path
+
+
+class Tree(BaseRenderer):
+
+    def rendering_folder_path(self):
+        import os
+        path = os.path.dirname(__file__) + '/tree'
+        return path
+
+
+
+    

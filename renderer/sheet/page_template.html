@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.0/build/pure-min.css"
+        integrity="sha384-nn4HPE8lTHyVtfCBi5yW9d20FjT8BJwUXyWZT9InLYax14RDjBj46LmSztkmNP9w" crossorigin="anonymous" />
+        <style>
+            td .basedon { width: 5px; } 
+            td .basedon-title { width: 100px; } 
+            td .basedon-value { width: 10px; } 
+            /* td .basedon-narrative{ width: 5px; }  */
+
+            td { vertical-align: top;}
+            table h2 { padding: 0%; margin: 0;}
+            table p {padding: 0; margin-bottom: 2pt; margin-top: 2pt;}
+            table .description { width: 50%;}
+            table .sno { width: 5px; font-size: xx-large;}
+            .tablehead { font-size: x-large; color: white;}
+            .recommendations { background-color:  rgb(52, 82, 233);}
+            .assessments { background-color:  rgb(130, 0, 110);}
+            .variables { background-color:  rgb(3, 97, 3);}
+            .pure-g > div { 
+                box-sizing: border-box; 
+                padding: 6px; 
+                border: 0.6px dotted rgb(220, 219, 219); 
+                background-color: rgb(246, 246, 246); 
+             } 
+        </style>
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+</head>
+<body style="margin: 20px;">
+    <div id="layout" class="pure-g">
+        <div id="cpg" class="pure-u-1-3"">
+              <h1>{{ cpg_title }}</h1>
+        </div>
+        <div class=" pure-u-2-3">
+            <p>Published by American College of Cardiology and American Heart Association</p>
+            <ul>
+                <li>USPSTF</li>
+                <li>DOI link</li>
+            </ul>
+        </div>
+    </div>
+    <div class="pure-g">
+        <div id="recommendations" class="pure-u-1"">
+        
+              <table style=" width: 100%;" class="pure-table pure-table-bordered">
+            <thead>
+                <tr class="tablehead recommendations">
+                    <td>SNo.</td>
+                    <td class="description">Recommendations
+                        <p style="font-size: medium; font-weight: lighter;"><em>
+                            CPG recommendations rely on evaluation of assessment-variables
+                        </em></p>
+                    </td>
+                    <td>Applies</td>
+                    <td class="">Basis</td>
+                </tr>
+            </thead>
+            {% for r in recommendations %}
+            <tr>
+                <td class="sno">{{ loop.index }}.</td>
+                <td>
+                    <h2>{{ r.title }}</h2>
+{% markdown %}
+{{ r.recommendation.description or ''}}
+Narraive: {{ r.sanitized_narrative }}
+{% endmarkdown %}
+</td>
+<td>
+{{ r.applies }}
+</td>
+                <td>
+                        {% if r.based_on %}
+                        <table class="pure-table-striped">
+                            <thead>
+                                <tr>
+                                    <td>a.ID</td>
+                                    <td>Title</td>
+                                    <td>Result</td>
+                                    <td>Narrative</td>
+                                </tr>
+                            </thead>
+                        {% for b in r.based_on %}
+                        <tr>
+                            <td class="basedon"><small>{{b.record.id}}</small></td>
+                            <td class="basedon-title">{{b.record.title }}</td>
+                            <td class="basedon-value">{{b.record.value}}</td>
+                            <td class="basedon-narrative"><small>
+{% markdown %}
+{{b.record.sanitized_narrative}}
+{% endmarkdown %}
+                            </small></td>
+                        </tr>
+                        {% endfor %}
+                        </table>
+                        {% else %}
+                        <p>---</p>
+                        {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+            </table>
+        </div>
+
+<!-- Assessments-->
+<div id="subhead" class="pure-u-1 subhead">
+</div>
+
+<div id="assessments" class="pure-u-1">
+        
+    <table style=" width: 100%;" class="pure-table pure-table-bordered">
+  <thead>
+      <tr class="tablehead assessments">
+          <td>SNo.</td>
+          <td class="description">Assessments
+            <p style="font-size: medium; font-weight: lighter;"><em>Assessments are variables that have been evaluated as per CPG definitions.</em></p>
+          </td>
+          <td>Value</td>
+          <td class="">Basis</td>
+      </tr>
+  </thead>
+  {% for ea in assessments %}
+  <tr>
+      <td class="sno">{{ loop.index }}.</td>
+      <td>
+          <h2>{{ ea.record.title or ea.id }}</h2>
+{% markdown %}
+{{ ea.record.var.description or '_no description_'}}
+{{ ea.record.sanitized_narrative or '_no narrative_' }}
+{% endmarkdown %}
+      </td>
+      <td>{{ ea.record.value.representation }}</td>
+
+        <td>
+        {% if ea.record.value.source %}
+        <table class="pure-table-striped">
+        {% for source in ea.record.value.source %}
+        <tr>
+            <td class="basedon">{{ loop.index }}.</td>
+            <td class="basedon-title">{{ source.title or source.id}}</td>
+            <td class="basedon-value">{{ source.value}}</td>
+            <td class="basedon-narrative"><small>
+{% markdown %}
+{{source.sanitized_narrative}}
+{% endmarkdown %}
+                    </small></td>
+        </tr>
+        {% endfor %}
+        </table>
+        {% else %}
+        <p>---</p>
+        {% endif %}
+        </td>
+  </tr>
+  {% endfor %}
+  </table>
+</div>
+<div id="variables" class="pure-u-1">
+        
+    <table style=" width: 100%;" class="pure-table pure-table-bordered">
+  <thead>
+      <tr class="tablehead variables">
+          <td>SNo.</td>
+          <td class="description">User Health Record
+            <p style="font-size: medium; font-weight: lighter;">
+                <em>User records are created by grouping of user health record using CPG or concord defined ontologies.</em></p>
+          </td>
+          <td class="">Values</td>
+      </tr>
+  </thead>
+  {% for er in records %}
+  <tr>
+      <td class="sno">{{ loop.index }}.</td>
+      <td>
+          <h3>{{ er.record.title or er.record.id }}</h3>
+{% markdown %}
+{{ er.record.var.description or 'No description' }}
+{{ er.record.sanitized_narrative or 'No narrative'}}
+{% endmarkdown %}
+          <small>Codes: {{ er.record.var.code }} </small>
+      </td>
+      <td>
+
+        {% if er.record.values %}
+        <table class="pure-table-striped">
+        <h4>All Values in record:</h4>
+
+        {% for val in er.record.values %}
+            <tr>
+            <td class="basedon">{{ loop.index }}.</td>
+            <td class="basedon-title">{{ val.date }}</td>
+            <td class="basedon-value">{{ val.representation }}</td>
+            <td class="basedon-narrative"><small>{{val.source}}</small></td>
+        </tr>
+        {% endfor %}
+        </table>
+        {% else %}
+        <p>No values found</p>
+        {% endif %}
+      </td>
+  </tr>
+  {% endfor %}
+  </table>
+</div>
+
+
+        </div>
+</body>
+<footer>
+</footer>
+
+</html>

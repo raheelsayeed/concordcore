@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
-from concordcore.primitives.definitions import CodeType
-from concordcore.variables.record import Record
-from concordcore.variables.value import Value
+from primitives.definitions import CodeType
+from variables.record import Record
+from variables.value import Value
 from .codes import *
 
 class Age(Record):

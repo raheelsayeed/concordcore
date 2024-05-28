@@ -7,12 +7,13 @@ from typing import Any, Protocol
 from .assessment import AssessmentVar, AssessmentRecord
 from .healthcontext import HealthContext
 from .evaluation import EvaluationResult, EvaluationContext
+from primitives.types import YMLStrEnum
 
 
 class EligbilityValueAbstract(Protocol):
     ...
 
-@dataclass
+@dataclass(frozen=True)
 class EligibilityResult(EvaluationResult):
 
     @cached_property
@@ -22,7 +23,7 @@ class EligibilityResult(EvaluationResult):
         return True
             
 
-class EligbilityCriteriaType(Enum):
+class EligbilityCriteriaType(YMLStrEnum):
     inclusion = 'inclusion'
     exclusion = 'exclusion'
 
@@ -30,7 +31,8 @@ class EligbilityCriteriaType(Enum):
 
 @dataclass(frozen=True)
 class EligibilityVar(AssessmentVar):
-    pass 
+    type: str = 'boolean'
+    criteria_type: EligbilityCriteriaType = None
 
 @dataclass
 class EligibilityRecord(AssessmentRecord):
@@ -76,9 +78,9 @@ class EligibilityEvaluator(EligibilityEvaluatorProtocol):
             try:
                 criteria_record = EligibilityRecord(criteria)
                 criteria_record.evaluate(records=healthcontext.records, persona=healthcontext.persona)
-                eval_ctx.add_evaluated(criteria_record)
+                eval_ctx.successful_evaluation(criteria_record)
             except Exception as e:
-                eval_ctx.add_unevaluated(criteria_record, e)
+                eval_ctx.failed_evaluation(criteria_record, e)
 
         # Raise eligibility erros immediately
         if eval_ctx.errors:

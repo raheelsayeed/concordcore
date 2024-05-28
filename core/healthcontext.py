@@ -1,26 +1,23 @@
 #!/usr/bin/env python3
 
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
-from enum import Enum, auto
+from datetime import date
 
-from .primitives.types import Persona
-from .primitives.code import Code 
-from .variables.value import Value
-from .variables.var import Var
-from .variables.record import Record
+
+from primitives.types import Persona
+from variables import var, value, record
 
 
 @dataclass(frozen=True)
 class HealthContext:
 
-    records: list[Record]
-    persona: Persona 
+    records: list[record.Record]
+    persona: Persona
 
     @classmethod
-    def from_values(cls, values: list[Value], for_variables: list[Var], persona: Persona, until_date: date = None):
+    def from_values(cls, values: list[value.Value], for_variables: list[var.Var], persona: Persona, until_date: date = None):
         
-        var_values = [[Var('-',code=v.code), v] for v in values]
+        var_values = [[var.Var('-',code=v.code), v] for v in values]
         till_date = until_date or date.today().replace(month=12, day=31)
         # FOR EACH VAR, BUILD A RECORD WITH VALUES
         records = [] 
@@ -32,8 +29,8 @@ class HealthContext:
             if vals:
                 vals = list(filter(lambda v: v.date.date() <= till_date, vals))
 
-            record = Record(variable, vals if vals else None)
-            records.append(record)
+            rec = record.Record(variable, vals if vals else None)
+            records.append(rec)
        
         return HealthContext(records=records, persona=persona)
 

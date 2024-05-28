@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from datetime import datetime, date, timedelta
-from concordcore.primitives.errors import VariableEvaluationError
+from primitives.errors import VariableEvaluationError
 
 today = datetime.now().date()
 

@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 
-from csv import DictReader
 from dataclasses import dataclass, field
 from datetime import datetime
 import logging
 from typing import Any, Protocol
 
-from concordcore.expression import Expression
+
+
+from .expression import Expression
 from .evaluation import EvaluatedRecord, EvaluationContext, EvaluationResult, SufficiencyResultStatus
-from .primitives.errors import VariableEvaluationError
-from .primitives.types import Persona 
-from .primitives.vlist import vlist
-from .variables import record, var, value
+from primitives.errors import VariableEvaluationError
+from primitives.types import Persona 
+from primitives.vlist import vlist
+from variables import record, var, value
 
 
 log = logging.getLogger(__name__)
@@ -19,7 +20,9 @@ log = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class AssessmentVar(var.Var):
-
+    
+    # default: boolean type value expected
+    # type: str = 'boolean'
     show_if_negative: bool = False 
     expression: str = None
     function: str = None 
@@ -58,45 +61,42 @@ class AssessmentRecord(record.Record):
 
     def evaluate(self, records, persona: Persona = Persona.patient, functions_module=None):
 
+        record_dict = {r.id: r.value if r.value else None for r in records}
         try:
             if self.var.function:
-                function_input_context = {r.id: r.value if r.value else None for r in records}
-                log.debug(f'Evaluating record={self.id} function_input={function_input_context}')
                 func = getattr(functions_module, self.var.function)
-                result = func(function_input_context)
-                log.debug(f'Evaluating record={self.id} function={self.var.function} result={result}')
-                if result != None:
-                    self.__assessed_value = value.Value(result)
-                else:
+                result = func(record_dict)
+                if result == None:
                     ve =  ValueError(f'EvaluationFunction failed for AssessmentVar:{self.var.id}')
-                    log.error(ve)
                     raise ve 
+                else:
+
+                    self.__assessed_value = value.Value(result)
+
+
             elif self.__expression:
-                res = self.__expression.evaluate(records)
-                log.debug(f'ExpressionEvaluated record={self.id} expression={self.var.expression} result={res}')
-                if res:
+                result = self.__expression.evaluate(records)
+                if result:
+                    # already result is a value.Value type
                     self.__assessed_value = self.__expression.result
         except Exception as e:
             raise VariableEvaluationError([e], self.id)
         finally:
-
-            self.set_sanitized_narrative(records, persona)
-            log.debug(f'finally: narr={self.sanitized_narrative}')
-       
+            # assign narrative
+            var_dict = None
+            if self.var.narr:
+                var_dict = None 
+                if self.var.narr.variables:
+                    records_for_filter = list(filter(lambda ea: ea.id in self.var.narr.variables, records))
+                    var_dict = {r.id: r.as_dict() for r in records_for_filter}
+            
+            self.set_narrative(persona=persona, variable_data_dict=var_dict)
+                
+            log.debug(f'AssessmentEval={self.id} expression={self.var.expression} function={self.var.function} result={self.value} narrative={self.narrative}')
+            # if self.id == "metabolic_syndrome":
+            #     exit()
         return self.__assessed_value
 
- 
-    
-    def set_sanitized_narrative(self, records, persona: Persona = Persona.patient):
-
-         nvars = self.var.narrative_variables
-         self.sanitized_narrative = self.set_narrative(persona=persona)
-             
-         if nvars:
-            records_for_filter = list(filter(lambda ea: ea.id in nvars, records))
-            dict_record_values = {r.id: r.as_dict() for r in records_for_filter}
-            self.sanitized_narrative = self.set_narrative(persona=persona, variable_data_dict=dict_record_values)
-            log.debug(f'nvars={nvars}; dict={dict_record_values} sanitized_narrative={self.sanitized_narrative}')
 
     @property
     def value(self):
@@ -114,7 +114,7 @@ class EvaluatedAssessmentRecord(EvaluatedRecord):
 
 
 
-@dataclass
+@dataclass(frozen=True)
 class AssessmentResult(EvaluationResult):
     
     @property
@@ -122,7 +122,7 @@ class AssessmentResult(EvaluationResult):
         # successful only when no records have Insufficient status 
         log.info('AssessmentResult is successful only when no evaluated assessment records are designated=Insufficient')
         for eval_record in self.context.evaluation_list:
-            is_success = (eval_record.status != SufficiencyResultStatus.Insufficient)
+            is_success = (eval_record.sufficiency_status != SufficiencyResultStatus.Insufficient)
             if not is_success:
                 return False
 
@@ -135,8 +135,11 @@ class AssessmentEvaluatorProtocol(Protocol):
 
     def assess(self, 
                 assessment_variables: list[AssessmentVar], 
-                evaluated_records: list[EvaluatedRecord], 
+                evaluated_records: list[EvaluatedRecord],
+                persona: Persona = Persona.patient,
+                functions_module=None,
                 context: EvaluationContext = None) -> AssessmentResult:
+        
         ...
 
 class AssessmentEvaluator(AssessmentEvaluatorProtocol):
@@ -162,10 +165,10 @@ class AssessmentEvaluator(AssessmentEvaluatorProtocol):
             try:
                 success = assessment_record.evaluate(records + evaluated_assessment_records, persona=persona, functions_module=functions_module)
                 evaluated_assessment_records.append(assessment_record)
-                eval_context.add_evaluated(assessment_record)
+                eval_context.successful_evaluation(assessment_record)
             except VariableEvaluationError as e:
                 evaluated_assessment_records.append(assessment_record)
-                eval_context.add_unevaluated(assessment_record, e)
+                eval_context.failed_evaluation(assessment_record, e)
             except Exception as e:
                 raise e
                 

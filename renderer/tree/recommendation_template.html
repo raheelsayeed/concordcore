@@ -1,0 +1,55 @@
+<details open>
+    <summary>
+      <span class="summary-title">{{ recommendation.title }}</span></br/>
+      <small>Recommendation Applies: {{ recommendation.applies }}</small></br/>
+        <small>Compliant: {{ recommendation.compliant }}</small>
+        {% markdown %}
+        {{ recommendation.narrative or "-" }} <span class="citation">({{recommendation.recommendation.class_of_recommendation}}, {{recommendation.recommendation.level_of_evidence}})</span>
+        {{ recommendation.compliance_narrative }}
+        {% endmarkdown %}
+    </summary>
+{% markdown %}
+{{ recommendation.recommendation.description or "" }}
+{% endmarkdown %}
+
+        {% if recommendation.based_on %}
+        <h2>BASED ON THE FOLLOWING ASSESSMENT OF YOUR DATA</h2>
+        <table class="">
+            <tbody>
+        {% for record in recommendation.based_on_records %}
+        <tr>
+            <td>{{ loop.index }}.</td>
+            <td class="basedon-narrative">
+{% if record.title %} 
+<p>{{ record.title or '' }}</p>
+{% endif %}
+{% markdown %}
+{{ record.narrative}}<br/>
+<small>{{record.id}}</small>
+{% endmarkdown %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+        </table>
+        {% else %}
+        <p>-- based_on_records: empty</p>
+        {% endif %}
+        
+        <!-- 
+        <h2>WHERE TO GO FROM HERE</h2>
+        <div class="buttons">
+        <button class="button">Send this to my doctor</button>
+        <button class="button">Book an appointment</button>
+        <button class="button">Book a Lab Test</button>
+        <button class="button">What did others like me do?</button>
+        <button class="button">Tell me more about statins</button>
+        <button class="button">Cost of statins</button>
+        </div>
+        <hr>
+        <p class="footer">rec_id: {{ recommendation.recommendation.id}}</p>
+        <p class="footer">issues: {{ recommendation.error or 'none'}}</p>
+        <p class="footer">type: {{ recommendation.recommendation.type or 'none'}}</p>
+        -->
+
+</details>

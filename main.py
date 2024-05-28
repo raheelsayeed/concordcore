@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 
 import argparse
-from concordcore import cpg, healthcontext
-from concordcore.concord import Concord, NeedAttestationError
+from typing import final
+from core import cpg, healthcontext
+from core.concord import Concord, NeedAttestationError
 from clog import *
 import misc
 
 import logging
 from rich.logging import RichHandler
+
+from renderer.templates import Sheet
 
 
 level = 'DEBUG'
@@ -17,10 +20,13 @@ logger = logging.getLogger("tests")
 
 
 
+
 parser = argparse.ArgumentParser("concordcore_")
 parser.add_argument('-f', dest='filepath', type=str, help='Path to Concord.CPG file')
 parser.add_argument('-t', dest='template_name', type=str, help='Name of the template')
+parser.add_argument('-p', dest='persona', type=str, help='patient or provider persona')
 parser.add_argument('--inspect', action=argparse.BooleanOptionalAction, help='Inspect output')
+
 args = parser.parse_args()
 fp = args.filepath
 inspect_output = args.inspect
@@ -39,7 +45,7 @@ ht("""
 
 
 
-user_context = misc.sample_healthcontext()
+user_context = misc.sample_healthcontext(args.persona)
 print_records(user_context.records)
 
 if not fp:
@@ -51,8 +57,6 @@ ht(
 [white on blue]# I. Initialise Concord - --- --- --- --- --- --- --- --- --- --- --- --- --- [/white on blue]
 #       IN:     CPG
 #       OUT:    Checks(Validity, Eligibility, Sufficiency, Execution, Recommendations)
-       
-
 """)
 mycpg = cpg.BaseCPG.from_document_path(fp)
 concord = Concord(mycpg, user_context)
@@ -60,12 +64,17 @@ logger.info(f'Initialized with with cpg: [bold]{mycpg.title}')
 logger.info(f'Publisher={mycpg.publisher}')
 logger.info(f'doi ={mycpg.publisher}')
 logger.info(f'doi ={mycpg.publisher}')
+is_cpg_valid = None
 try:
     is_cpg_valid = concord.cpg.validate()
-    logger.info(f'CPG Validation: {"[bold]PASSED" if is_cpg_valid else "[bold]FAILED"}')
     print_variables(concord.cpg.variables)
 except Exception as e:
+        logger.error(e)
         raise e
+finally:
+    logger.debug(f'CPG Validation={"PASSED" if is_cpg_valid else "[bold]FAILED"}')
+
+
 
         
 
@@ -133,17 +142,16 @@ try:
 except NeedAttestationError as e:
     from inputsession.cli import CLI
     session = CLI(concord)
-    if session.run():
+    if session.run(debug_skip=True):
         result = concord.assess()
 
 logger.info(f'Assessment Complete?={result.successful}')
+print_evaluatedrecords(result.context.evaluation_list, title="AssessmentVariables")
 if not result.successful:
     logger.error(f'Assessment could not be completed, is insufficient. Must stop here.')
+    for insuff_record in result.insufficient_variables:
+        logger.error(insuff_record)
     exit()
-
-print_evaluatedrecords(result.context.evaluation_list, title="AssessmentVariables")
-# for assessment in result.context.evaluation_list:
-#     print_assessment(assessment.record)
 
 
 if inspect_output:
@@ -154,7 +162,6 @@ if inspect_output:
     # for a in concord.assessment_result.context.evaluation_list:
         # con.print(a.record.var.evaluation_function)
         # con.print(vars(a.record.var))
-
 
 
 
@@ -180,13 +187,13 @@ if result.recommendations:
     for i, applied in enumerate(result.recommendations):
 
         # inspect(applied)
-        based_on_text = ", ".join([f'{ev.record.var.id}:{ev.record.value}' for ev in applied.based_on]) if applied.based_on else ''
+        based_on_text = ", ".join([f'{record.var.id}:{record.value}' for record in applied.based_on]) if applied.based_on else ''
         
         
         panel = Panel(
 f'''{i+1}. id: {applied.recommendation.id}
 [b]Recommendation: {applied.recommendation.title}[/b]
-[yellow]Narrative: {applied.sanitized_narrative or ""}[/yellow]
+[yellow]Narrative: {applied.narrative or ""}[/yellow]
 COR: {applied.recommendation.class_of_recommendation}
 LOE: {applied.recommendation.level_of_evidence}
 Based-On: {based_on_text}''',style="on deep_sky_blue4")
@@ -201,10 +208,10 @@ if inspect_output:
 
 ## Narrative tests 
 for record in concord.sufficiency_result.context.evaluation_list:
-    logger.debug(f'narrative test record={record.record.test_narratives()}')
+    logger.debug(f'VARIABLE:narrative test record={record.record.test_narratives()}')
 ## Narrative tests 
 for record in concord.assessment_result.context.evaluation_list:
-    logger.debug(f'narrative test record={record.record.test_narratives()}')
+    logger.debug(f'ASSESSMENT:narrative test record={record.record.test_narratives()}')
 
     
 if args.template_name:
@@ -216,18 +223,23 @@ if args.template_name:
 """)
 
 
-    from renderer.templates import Cards, Document
+    from renderer.templates import Cards, Document, Sheet, Tree
     temp = None 
     if args.template_name == "cards":
         temp = Cards("cards",  concord)
     elif args.template_name == "document":
         temp = Document("document",  concord)
+    elif args.template_name == "sheet":
+        temp = Sheet("sheet", concord)
+    elif args.template_name == 'tree':
+        temp = Tree("tree", concord)
     else:
-        logger.error(f'Cannot find template={template_name}. Only "cards" and "document" supported')
+        logger.error(f'Cannot find template={args.template_name}. Only "cards" and "document" supported')
         exit()
     page_html = temp.render_page()
 
 
 
+from outomes.outcome import Advisory
 
-
+print(Advisory.All())

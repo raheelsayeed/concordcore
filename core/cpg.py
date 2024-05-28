@@ -11,8 +11,8 @@ from typing_extensions import Self
 from .assessment import AssessmentVar
 from .eligibility import EligibilityVar
 from .recommendation import RecommendationVar
-from .primitives.code import Code
-from .variables import var
+from primitives.code import Code
+from variables import var
 from .expression import Expression
 
 log = logging.getLogger(__name__)
@@ -207,6 +207,7 @@ class BaseCPG():
 
             # Vars with expressions or functions must have var.identifiers already defined 
         distinct_vars = set()
+        from primitives.errors import ExpressionVariableNotFound
         for vr in (self.eligibility_criterias + self.assessments_variables + self.recommendation_variables):
 
             # Two variables cavnnot have same `id`
@@ -223,14 +224,13 @@ class BaseCPG():
                     for idn in identifiers:
 
                         if idn not in all_vars_Identifiers:
-                            err = ExpressionVariableNotFound(vr.id, idn, vr.expression)
+                            err = ExpressionVariableNotFound( idn, vr.expression)
                             errors.append(err)
 
         if dups:
             errors.append(
                     Exception('CPG.variables cannot have duplicate variable `id`s: ', dups)
                  )
-
 
         if not self.assessments_variables:
             errors.append(
@@ -242,7 +242,6 @@ class BaseCPG():
                 errors.append(
                     ValueError(f'CPG.assessment {assessment.id} cannot have both `expression` and `function`')
                 )
-
 
         if not self.recommendation_variables:
             errors.append(
@@ -267,9 +266,10 @@ class BaseCPG():
                         )
 
         if errors:
-            log.debug('Error validating CPG definition')
             raise ExceptionGroup('Error validating CPG definition', errors)
-        
+
+
+
         log.debug('CPG Validation successful')
         return True
         

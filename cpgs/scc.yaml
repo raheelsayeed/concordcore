@@ -22,7 +22,8 @@ define: &hysterectomy_no_residual_cervix_ICD-10PCS ['0UTC0ZZ', '0UTC4ZZ','0UTC7Z
 define: &absence_cervix_ICD-10CM ['Q51.5', 'Z90.710', 'Z90.712']
 
 # https://vsac.nlm.nih.gov/valueset/expansions?pr=ecqm&rel=eCQM%20Update%202022-05-05&q=CMS124v11
-
+# REFER CMS Measurement
+# https://ecqi.healthit.gov/ecqm/ec/2022/cms0124v10
 
 CPG:
 
@@ -38,8 +39,7 @@ CPG:
 eligibility:
 
   - id: EligibleAge 
-    expression: $Age > 12 and $Age < 66
-    type: inclusion
+    expression: $Age > 21 and $Age < 66
 
   - id: IndividualsWithCervix
     expression: $Gender != "248152007|http://snomed.info/sct"
@@ -55,9 +55,10 @@ variables:
     code:
       concord: ['Gender']
 
-
-  # Cytology/PAP TEST ===========================================
-  - id: cervical_cytology_labtest
+  # =============================================================
+  # Cytology/PAP TEST 
+  # =============================================================
+  - id: cervicalcytology_order
     title: Cervical cytology lab test
     code:
       snomed: *cervical_cytology_labtest_snomed
@@ -65,16 +66,16 @@ variables:
       cpt: *cervical_cytology_lab_test_cpt
       hcpcs: *cervical_cytology_lab_test_hcpcs
     filter: 
-      after: 1095
+      after: 1095 # Within the last 3 years
 
-  - id: cervical_cytology_result
+  - id: cervicalcytology_result
     title: Cervical cytology result
     code:
       snomed: *cervical_cytology_result_snomed
     filter:
       after: 1095
 
-  - id: hpv_test
+  - id: hpv_order
     title: HPV Test
     code:
       loinc: *hpv_test_high_risk_loinc
@@ -84,7 +85,7 @@ variables:
     filter:
       after: 1095
     
-  - id: hpv_test_result
+  - id: hpv_result
     title: HPV Test Result
     code:
       snomed: *hpv_result_snomed
@@ -93,8 +94,19 @@ variables:
 
   - id: cotesting
     title: Pap and HrHPV Co-Tests
+    code: 
+      concord: ['concord-cotesting']
 
-  # Signs ===========================================
+  # ============================================================================================
+  # Symptoms and Signs 
+  # ============================================================================================
+  - id: symptoms_and_signs
+    required: True
+    code:
+      snomed: *scc_loinc
+  # ============================================================================================
+  # Procedures
+  # ============================================================================================
   - id: hysterectemy_no_cervix
     title: Undergone hysterectomy with no residual cervix? 
     code: 
@@ -104,20 +116,20 @@ variables:
   - id: individuals_without_cervix
     code:
       icd10cm: *absence_cervix_ICD-10CM
-
-
-  # Symptoms and Signs
-
-  - id: symptoms_cervicalcancer
-    required: False
-    code:
-      snomed: *scc_loinc
-
+  # ============================================================================================
+  # Conditions
+  # ============================================================================================
   - id: condition_hpv
     title: HPV infection
     code:
       snomed: ['240532009']
-
+  #https://www.flhealthcharts.gov/ChartsDashboards/_SupportFiles/CHSS_ICD_CODES.pdf
+  - id: condition_cervicalcancer
+    type: boolean
+    title: Diagnosis of cervical cancer or precancerous lesions
+    code:
+      icd10cm: ['C53', 'C53.1', 'N87.1', 'N87.2', 'D06.0', 'D06.1', 'D06.7', 'D06.9', 'N87.9']
+      snomed:  ["M74007", "M74008", "M81402", "M74009", "M80702", "M80102", "M80772"]
 
 # # adequate: ========================================
   - id: cervical_cytology_labtest_last10Years_recent3
@@ -143,6 +155,7 @@ variables:
 
   - id: hrHPV_negative_recent_2_tenyears
     title: Recent 2 hrHPV Tests within last 10 years
+    type: boolean
     code:
       snomed: *hpv_result_snomed
     filter: 
@@ -150,15 +163,17 @@ variables:
       after: 3650
       upper: 2
 
-      
-
-
-
 assessments:
+
+
+  - id: Existing_ca
+    expression: $condition_cervicalcancer == False
+    title: Diagnosis of a cervical condition 
 
   - id: Adequately_Screened_10Years
     title: Adequately screened with Pap Tests
     expression: ($cervical_cytology_result_last10Years_recent3.count == 3 or $hrHPV_negative_recent_2_tenyears.count == 2)
+    type: boolean
     narrative:
       patient:
         True: Adequately screened
@@ -168,25 +183,28 @@ assessments:
 # None if no test done
   - id: recentPapTestDate
     title: Pap Test date
-    expression: $cervical_cytology_labtest.date
+    type: date
+    expression: $cervicalcytology_order.date
     required: False
     narrative:
       patient:
-        HasValue: Your last Pap test was on $cervical_cytology_labtest.date
+        HasValue: Your last Pap test was on $cervicalcytology_order.date
         None: A pap test was not found in your record
 
   - id: recentHrHPVTestDate
     title: Pap Test date
-    expression: $hpv_test.date
+    expression: $hpv_order.date
+    type: date
     narrative:
       patient:
-        HasValue: Your last Pap test was on $cervical_cytology_labtest.date
+        HasValue: Your last Pap test was on $cervicalcytology_order.date
         None: HrHPV test was not found in your record
 
   # what is the code for co-testing?
   - id: recentCoTestDate
     title: Recent CoTesting (Pap/HrHPV) date
     expression: $cotesting.date
+    type: date
     narrative:
       patient:
         HasValue: Last co-testing done on date
@@ -212,7 +230,7 @@ assessments:
 
 
   - id: PriorPapTests
-    expression: $cervical_cytology_labtest == 0 and $cervical_cytology_result == 0
+    expression: $cervicalcytology_order == 0 and $cervicalcytology_result == 0
     title: No prior Pap tests recorded
     user_attestable: True
     narrative:
@@ -231,7 +249,9 @@ assessments:
 
   - id: date_for_next_Pap_Age21_29
     function: nextDate_PapTest_Age21_29
+    required: False
     title: Date for the next Pap test for women aged 21 - 29 years
+
 
 
 # For ages 30-65
@@ -322,21 +342,23 @@ recommendations:
           
 
     
-# 5. RECOMMENDATION FOR WOMEN AGED > 65 WITH ADEQUATE PRIOR SCREENING
+  # ============================================================================================
+  # NO RECOMMENDATION: 
+  # ============================================================================================
+    # RECOMMENDATION FOR WOMEN AGED > 65 WITH ADEQUATE PRIOR SCREENING
     # women ager appropriate
     # if done test-P, then recommend date for test-P
     # if done test-H, then recommend date for test-H
     # if done test-C, then recommend date for test-C
     # if no-test-found, recommend choices for P,H,C
+
   - id: Age_65_Above_PriorAdequateScreened_Recommendation
     title: Recommendation for Women over 65 years with adequate prior screening
-    expression: $Age_65_Above == True $Adequately_Screened_10Years == True
+    expression: ($Age_65_Above == True) and ($Adequately_Screened_10Years == True)
     narrative:
       patient:
         True: USPSTF recommends against screening for women who are above 65 years of age and had been adequately screened
     
-
-
   - id: Women_With_Hysterectomy
     title: Women with hysterectomy
     expression: $undergone_hysterectemy_no_cervix == True
@@ -344,3 +366,5 @@ recommendations:
     narrative:
       patient:
         True: USPSTF recommends against screening for women who have had a hysterectomy
+
+

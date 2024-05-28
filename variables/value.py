@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 
-import logging
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
+import logging
 
-from ..primitives import code, unit
+from primitives import code, unit
 
 log = logging.getLogger(__name__)
 
+
+# ------------- WORKING MODEL ------------ #
+
+# ------------- VALUE ------------ #
 class Value:
 
     def __init__(self, value, unit: unit.Unit = None, code: list[code.Code] = None, date: datetime = None, source: list[Any] = None):
@@ -23,6 +27,7 @@ class Value:
         if source and type(source) is not list:
             raise KeyError(f'value.source must be a list-type. found={type(source)}')
 
+
     @property
     def evaluation_val(self):
         if isinstance(self.value, code.Code):
@@ -32,16 +37,11 @@ class Value:
 
     @property
     def representation(self):
-        return self.__str__()
-
-    def __str__(self):
         if isinstance(self.value, bool):
             return 'Yes' if self.value == True else 'No'
         return str(self.value) + (f' {self.unit}' if self.unit else '')
-
-    def __repr__(self):
-        if isinstance(self.value, bool):
-            return 'Yes' if self.value == True else 'No'
+        
+    def __repr__(self) -> str:
         return str(self.value)
 
 

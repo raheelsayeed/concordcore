@@ -70,13 +70,13 @@ def sample_data():
 
 
 
-def sample_healthcontext():
+def sample_healthcontext(persona_text = 'patient'):
 
-    from concordcore.healthcontext import HealthContext, Persona
-    from concordcore.variables.record import Record
-    from concordcore.variables.value import Value
-    from concordcore.variables.var import Var 
-    from concordcore.primitives.code import Code
+    from core.healthcontext import HealthContext, Persona
+    from variables.record import Record
+    from variables.value import Value
+    from variables.var import Var 
+    from primitives.code import Code
     from ontology.presets import Age
     from ontology.codes import ConcordDefinition, CodeRaceEthnicity, CodeGender, Code_LabLoinc
     from datetime import datetime, timedelta
@@ -87,12 +87,12 @@ def sample_healthcontext():
     race    = ConcordDefinition.code_Ethnicity.as_record(CodeRaceEthnicity.White.value)
 
     dm      = Record(Var('DM',code=[Code.snomed('44054006')]), [Value(True)])
-    chol    = Record(Var('Chol', code=[Code_LabLoinc.cholesterol.value]), [Value(200),Value(198),Value(231)])
+    chol    = Record(Var('Chol', code=[Code_LabLoinc.cholesterol.value]), [Value(300),Value(311),Value(310)])
     bp    = Record(Var('BP', code=[Code.loinc('55284-4')]), [Value((130, 90))])
 
     ldl     = Record(Var('LDL', code=[Code.loinc('13457-7')]), [
         Value(123, date=datetime.today() - timedelta(days=1200)),
-        Value(222),
+        Value(122),
         Value(155),
         Value(122),
         Value(232),
@@ -132,8 +132,10 @@ def sample_healthcontext():
         tg, 
         bp
     ]
+    
+    p = Persona(persona_text)
 
-    return HealthContext(recs, Persona.patient)
+    return HealthContext(recs, p)
 
 
 if __name__ == '__main__':

@@ -147,7 +147,7 @@ def tenyearriskscore(healthcontext):
         isMale = healthcontext['Gender'].value.as_string == "248153007|http://snomed.info/sct"
         isAfricanAmerican = healthcontext['Race_Is_Black_AfricanAmerican'].value == True
         onHtnMeds = healthcontext['med_for_htn'].value
-        dm   = healthcontext['is_diabetic'].value
+        dm   = healthcontext['diabetesMellitus'].value
         age = healthcontext['Age'].value
         sbp = healthcontext['bloodpressure'].value[0]
         chol = healthcontext['Chol'].value

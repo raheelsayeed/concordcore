@@ -3,9 +3,9 @@
 import logging
 
 from fhir.resources import observation, procedure, condition, medication, medicationrequest, questionnaire, questionnaireresponse
-from concordcore.variables.value import Value
-from concordcore.primitives.unit import Unit
-from concordcore.primitives.code import Code
+from variables.value import Value
+from primitives.unit import Unit
+from primitives.code import Code
 
 log = logging.getLogger(__name__)
 

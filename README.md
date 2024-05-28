@@ -1,4 +1,4 @@
-`Concord_`
+`concord_`
 =========
 
 --- note: not ready for use, check `main.py` for latest on init ---
@@ -23,26 +23,8 @@ $ cd concordcore
 $ python3 -m venv .venv
 $ source .venv/bin/activate
 $ pip install -r requirements.txt
-$ ./main.py -f cpgs/cholesterol.yaml -t document
+$ ./main.py -f cpgs/cholesterol.yaml -t document -p patient
 ```
-
-<!-- ### `concord_` modules and protocols -->
-
-
-| concord_modules_ | description |
-| --- | --- |
-| `concordcore.primitives` | list of primitives types `code`,`unit` |
-| `concordcore.variables` | list of variables– `value`,`var`,`record` |
-| `concordcore.eligibility` | eligibility evaluation `eligibilityVar` |
-| `concordcore.sufficiency`| Checks all `var(s) and record(s)` for sufficiency |
-| `concordcore.assessment`| `AssessmentVar`, `AssessmentRecord`, `AssessmentResult` |
-| `concordcore.recommendation` | Recommendation protocol module 
-| `inputsession`| Patient-Reported Health Data caputuring protocol |
-| `ontology`| convinience `presets`, `codes` for ontological codes |
-| `renderer`|`jinja` based templating module for creating mutli-modal data (apps,voice, in-context LLM data) |
-| `fhir_variables`| `FHIRValue`, `FHIRRecommendation` for FHIR packaging |
-| `outcomes`| Todo |
-
 
 
 # defining_ clinical practise guideline
@@ -55,10 +37,21 @@ Sample versions of a defined cpg are in `cpgs/`
 variables:
     - id: LDL
       title: Low density lipoprotein
-      user_attestable: False
+      user_attestable: True
       required: True
+      category: laboratory
       code:
         loinc: ['13457-7']
+      validator:
+        plausible: '$value > 40'
+        panel: '$value <= ($Chol - $HDL)'
+        attestable_type: integer
+
+
+
+# validator.plausible, IF_SET: validates `value` to be more than 40. Else raises Exception
+# validator.panel: IF_SET: validates the value in relation to other tests within the user record
+# validator.attestable_type: IF_SET: validates the `attested_value` with the given `value_type`
 ```
 
 Creating variables in py:
@@ -240,32 +233,64 @@ recommendations:
 
 
 
+| concord_modules_ | description |
+| --- | --- |
+| concordcore.primitives | list of primitives types `code`,`unit` |
+| concordcore.variables | list of variables– `value`,`var`,`record` |
+| concordcore.eligibility | eligibility evaluation `eligibilityVar` |
+| concordcore.sufficiency| Checks all `var(s) and record(s)` for sufficiency |
+| concordcore.assessment| `AssessmentVar`, `AssessmentRecord`, `AssessmentResult` |
+| concordcore.recommendation | Recommendation protocol module 
+| inputsession| Patient-Reported Health Data caputuring protocol |
+| ontology| convinience `presets`, `codes` for ontological codes |
+| renderer|`jinja` based templating module for creating mutli-modal data (apps,voice, in-context LLM data) |
+| fhir_variables| `FHIRValue`, `FHIRRecommendation` for FHIR packaging |
+| outcomes| Todo |
+
+
+# Resources 
+
+- ValueSets from --> https://ecqi.healthit.gov/ecqm/ec/2022/cms0124v10?qt-tabs_hybrid_measure=measure-information
 
 
 # Under review - consideration
 
+- __Package__
+  - [x] !!! Reorganize package, move outcomes into concordcore
+
 - __HealthContext__:
   - [x] !!! Define method to include "persona" within the input healthcontext. This persona would be an enum of patient/practitioner
-  - [ ] launchcontext? something similar to SoF LaunchContext. check smart 2.00
+  - [x] launchcontext? something similar to SoF LaunchContext. check smart 2.00
   
 - __Variables__:
   - [x] !!! Variable.expression.evaluation Enums. Capture errorones contexts
     - [x] variableID: variable.value is None
     - [x] variableID: variable.value TypeError for expression
-  - [ ] `validation`: Specify checks for validity and plausibility of a given value for that variable. Usecase: LDL value must be less than or equal to the difference between total-cholesterol and HDL.
-    - [ ] validator-conformance-level: Failed evaluation maybe ignored if strict=False
-  - [ ] `value-capture-method`: Custom cpg-module-function to define key-path or keymap to get data for a given data-model. Forexample: SBP-loinc within a BP Observation FHIR resource
+  - [x] `validation`: Specify checks for validity and plausibility of a given value for that variable. Usecase: LDL value must be less than or equal to the difference between total-cholesterol and HDL.
+    - [x] validator-conformance-level: Failed evaluation maybe ignored if strict=False
+    - [x] Use `attestable-type` IF_FOUND for `attestable_value`
+  - [ ] !!! `value-capture-method`: Custom cpg-module-function to define key-path or keymap to get data for a given data-model. Forexample: SBP-loinc within a BP Observation FHIR resource
   - [ ] `Code` Hierarchy: 
+  - [x] [limited: only done for recommendations] !!! Collate Record.value.sources. Recommendation-LDl should list: ldl_over_189 AND ldl_values. For now-- only recommendations have the complete based_on_records call.
 
 - __AssessmentVariables__:
-  - [ ] !!! write tests for pghd capture for an assessmentvar; value only returns .__assessment_value; must return pghd also.
+  - [x] !!! Write tests for pghd capture for an assessmentvar; value only returns .__assessment_value__; must return pghd also.
+  - [-] Abort---- _AssessmentVar, if attestable can have its own attestable.value_type_:
+
+- __RecommendationVar__:
+  - [X] !!! Comlpiance expression
+  - [X] !!! Comlpiance narrative?
+  - [ ] Non-compliance evidence capture
+
+- __PGHD__
+  - [ ] !!! Module to isolate attestable values into a concord.pghd_data()
   
 - __Narratives__:
   - [ ] In-context QA data generation
-  - [ ] Enums for persona: Patient, Provider, Provider-Patient-Encounter, PHD (personal-health-device) based context? (maybe too complex)
-  - [ ] Tests for narratives with Persona
+  - [X] Enums for persona: Patient, Provider, Provider-Patient-Encounter, PHD (personal-health-device) based context? (maybe too complex)
+  - [X] Tests for narratives with Persona
 
-- __Rendering__:
+- __Rendering and Templates__:
   - [ ] rendering.py: cache_proprty for all generic templates
   - [ ] practitioner, single cpg, default tempalte
   - [ ] patient, single cpg, default template
@@ -273,7 +298,6 @@ recommendations:
   - [ ] patient, combined-cpgs, default template
 
 - __Evidence__:
-  - [ ] Non-compliance evidence capture
   - [ ] provider-facing evidence capture module. To capture/suggest reasons behind why a guideline could not be executed for the given patient/population
   - [ ] patient-facing evidence capture. Why patient thinks the guideline may not __apply__ or not be __executable__ for them. 
   - [ ] `evidence_rejectioning_module`: LLM based suggestions for providers to quickly select/click/tap/reply reasons for the above
@@ -285,4 +309,9 @@ recommendations:
   - [ ] Enums for VariableActionRecommendation: Eg. variable.stale --> ActionRecommendation('get new lab test done), AR1('go here..'), AR2('notify your doctor for a new test')
   - [ ] Enums for Recommendation
   - [ ] Enums for Assessment
+  - [ ] If Provider.persona == print handOut for patient
   
+- __Ontology__:
+  - [ ] concord.valueSet.store = single location to lookup codes (temporarily)
+  - [ ] Permanent: FHIR_ValueSet lookup API design
+

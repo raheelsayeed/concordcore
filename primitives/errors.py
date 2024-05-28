@@ -1,6 +1,3 @@
-
-
-
 import logging
 
 log = logging.getLogger(__name__)
@@ -16,11 +13,24 @@ class ExpressionEvaluationError(ExpressionError):
         super(ExpressionEvaluationError, self).__init__(expression, msg)
 
 class ExpressionVariableNotFound(ExpressionError):
-    def __init__(self, expression, expression_var):
-        msg = f'expression_var=`{expression_var}` not found or undefined'
+    def __init__(self, expression_var, expression):
+        msg = f'var_id={expression_var} not found or undefined'
         super(ExpressionVariableNotFound, self).__init__(expression, msg)
 
 
+
+class VarError(Exception):
+
+    def __init__(self, message, variable_id):
+
+        message =  message + f' variable_id={variable_id}'
+        super(VarError, self).__init__(message)
+        self.variable_id = variable_id
+        log.error(f'{self.__class__}: {message}')
+
+
+
+        
 class VariableEvaluationError(Exception):
 
     def __init__(self, errors, variable_id):
@@ -35,6 +45,7 @@ class VariableEvaluationError(Exception):
 
         self.variable_id = variable_id
 
-
         log.error(f'VariableEvaluationError variable_id={self.variable_id} error={message}')
+
+
 

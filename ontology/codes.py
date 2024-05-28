@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
-from concordcore.primitives.code import Code
-from concordcore.primitives.definitions import CodeType
-from concordcore.variables.var import Var
-from concordcore.variables.value import Value
-from concordcore.variables.record import Record
+from primitives.code import Code
+from primitives.definitions import CodeType
+from variables.var import Var
+from variables.value import Value
+from variables.record import Record
 from enum import Enum
 
 class CodeRaceEthnicity(Enum):

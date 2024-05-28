@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 import logging
+from primitives.types import ValueType            
+from datetime import datetime
 
-from concordcore.evaluation import EvaluatedRecord
-from concordcore.concord import Concord
-from concordcore.variables.value import Value
+from core.evaluation import EvaluatedRecord
+from core.concord import Concord
+from variables.value import Value
 from .inputprotocol import InputProtocol
 
 log = logging.getLogger(__name__)
@@ -14,7 +16,7 @@ class CLI(InputProtocol):
     def __init__(self, concord: Concord):
         self.concord = concord
         
-    def run(self, default=True, debug_skip=True):
+    def run(self, default=True, debug_skip=False):
 
         self.prepare()
 
@@ -27,31 +29,32 @@ class CLI(InputProtocol):
             # if not av.record.var.required:
             #     continue
             if debug_skip:
-                self.get_input(av, default, True)
-                log.warning(f' DebugMode: Assigned {av.record.var.id} value:{default} recordtype={type(av.record)}')
-                # assert av.record.value
+                _val = True
+                if av.record.var.value_type == ValueType.date:
+                    _val = datetime.today()
+                val = Value(_val, source=['attested-force-debug'])
+                av.record.attested_value = val
+                log.warning(f' DebugMode: Assigned record_id={av.record.var.id} value={_val} recordtype={type(av.record)}')
+            else:
+                log.warning(f'Please enter values for the attestable user records:')
+                self.get_input(av, None)
         return True
 
         
-    def get_input(self, av: EvaluatedRecord, default, force=False):
+    def get_input(self, av: EvaluatedRecord, default):
 
-        if force:
-            av.record.attested_value = Value(True, source=['attested-force-debug'])
-            # av.record.values = [Value(True, source=['attested-force-debug'])]
-            
-            return 
+        while True:
+            input_value = input(f'Enter value {av.record.var.value_type or ""} or {av.record.var.title or av.record.id}: ')
+            try: 
+                av.record.attested_value = Value(input_value, source=['attested'])
+                assert av.record.has_value
+                return True
+            except Exception as e:
+                log.error(e)
+                print('Please try again')
+                
+        return True
 
-        try:
-            input_value = input(f'Enter True or False--> {av.record.var.title or av.record.var.id}: ')
-            if not input_value:
-                input_value = default
-                log.warning(f' defaulting to {default}')
-            # add a method to validate answer from CLI 
-            # method should be in ... 
-            
-            av.record.values = [Value(input_value, source='attested')]
-            # return input_value
-        except Exception as e:
-                log.error(e, 'Please try again: ')
-                return self.get_input(av)
-        
+
+
+

@@ -3,23 +3,23 @@
 from dataclasses import dataclass
 from functools import cached_property
 from re import findall
-from concordcore.primitives.errors import ExpressionVariableNotFound, ExpressionEvaluationError
-from .variables.value import Value
+from primitives.errors import ExpressionVariableNotFound, ExpressionEvaluationError, VariableEvaluationError
+from primitives.varstring import VarString
+from variables.value import Value
 import simpleeval, logging
 
 log = logging.getLogger(__name__)
 
-@dataclass
-class Expression:
-    
-    Operators = ['and', 'or', 'if', 'else', 'True', 'False']
-    string: str
-    value_dict = None
-    _result = None
-    __expression_records = []
 
+class Expression:
+
+    def __init__(self, expression_string: str):
+        self.string = VarString(expression_string)
+        self.__expression_records =  []
+        self._result = None
+    
     @property
-    def records(self):
+    def expression_records(self):
         return self.__expression_records
 
     @property
@@ -27,31 +27,15 @@ class Expression:
         return self._result
 
     def __str__(self) -> str:
-        return self.string
+        return f'Expression({self.string})'
 
-    def __repr__(self) -> str:
-        return f'<Expression({self.string})>'
-
-    @cached_property
+    @property
     def variable_identifiers(self):
-        matches = self.__get_variable_identifiers 
-        return [m.split('.')[0] for m in matches] if matches else None 
-
-
-    @cached_property
-    def __get_variable_identifiers(self):
-
-        if not self.string:
-            return None 
-        
-        pattrn = r"\$([A-Za-z][A-Za-z_.0-9]+)"
-        matches = findall(pattrn, self.string)
-        return matches if matches else None
-        
+        return self.string.variable_identifiers
 
     def evaluate_recommendation(self, evaluated_records):
 
-        assessment_ids = self.__get_variable_identifiers
+        assessment_ids = self.string.variable_identifiers
         if not assessment_ids:
             raise ValueError(f'Expression must have AssessmentVariable identifiers, none fouund in {self.string}')
         
@@ -63,10 +47,12 @@ class Expression:
             if filtered:
                 if filtered.record.value:
                     if not isinstance(filtered.record.value.value, bool):
-                        errors.append(ValueError(f'Assessments in a recommendation must have bool-type value, found:{type(filtered.value.value)}')) 
-                        continue 
+                        message = f'POLICY CHANGE WARNING, Assessments are not just Boolean. Assessments in a recommendation must have bool-type value, found:{type(filtered.record.value.value)}'
+                        log.warning(message)
+                        # errors.append(ValueError(f'Assessments in a recommendation must have bool-type value, found:{type(filtered.record.value.value)}')) 
+                        # continue 
                     expression_values[assessment_var_id] = filtered.record.value.value
-                    self.__expression_records.append(filtered)
+                    self.__expression_records.append(filtered.record)
                 else:
                     errors.append(KeyError(f'No value for Assessment={filtered.id} in {self.string}'))
                     continue
@@ -87,26 +73,27 @@ class Expression:
         except Exception as e:
             raise e
 
-    def evaluate(self, records, filter_by=None):
+    def evaluate(self, records):
 
         self.__expression_records = []  
-        expression_var_ids = self.__get_variable_identifiers
-        if not expression_var_ids:
+        expression_tags = self.string.tags
+        if not expression_tags:
             raise ValueError(f'Expressions must have variable-identifiers, none found in {self.string}')
 
         expression_values = {}
         dependency_variables_nullValues = [] 
-        not_found = []
-        exceptions = []
-
-        expression_var_ids = list(set(expression_var_ids))
         
-        for exp_var_id in expression_var_ids:
+        
+
+        
+        for exp_var_id in expression_tags:
             comps = exp_var_id.split('.')
             var_id = comps[0]
             func = comps[1] if len(comps) == 2 else None 
             filtered_record = next(filter(lambda record: record.id == var_id, records), None)
+            
             if filtered_record:
+                expression_values.update({filtered_record.id: filtered_record.as_dict()})
                 var_value = None
                 # 1. count of values
                 if func == 'count':
@@ -127,34 +114,21 @@ class Expression:
 
             # Cannot find the variable: Raise ERROR!
             else:
-                raise VariableNotFound(exp_var_id, self.string)
-
-        # record
-        self.dependency_variables_values = expression_values
-        self.dependency_variables_nullValues = dependency_variables_nullValues
-        self.dependency_variables_undeclared = not_found
-        
+                raise ExpressionVariableNotFound(exp_var_id, self.string)
         try:
             expstr = self.string.replace('$', '')
             evaluator = simpleeval.SimpleEval(names=expression_values)
             # evaluator.ATTR_INDEX_FALLBACK=True 
             expression_result = evaluator.eval(expstr)
-            self._result = Value(expression_result, source=self.records)
-            log.debug(f'values={expression_values}, exp={expstr}, result={expression_result}')
+            self._result = Value(expression_result, source=self.__expression_records)
+            log.debug(f'Evaluatingvalues={expression_values}, expression={expstr}, result={expression_result}')
         except TypeError as e:
             ve = ExpressionEvaluationError(expstr, expression_values,  str(e))
             raise ve
-            exceptions.append(ve)
         except Exception as e:
             ve = ExpressionEvaluationError(expstr, expression_values,  str(e))
             raise ve
-            exceptions.append(ve)
-
-
-        if exceptions:
-            raise VariableEvaluationError(exceptions, self.string)
-
-
+            
         return self._result
 
 

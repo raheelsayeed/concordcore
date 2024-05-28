@@ -42,8 +42,15 @@ variables:
       code:
        loinc: *ldl_code
       validator:
-        value: '$value < 23 and $value < 400 and $value < $HDL + $Chol'
-        
+        plausible: '$value > 40'
+        panel: '$Chol - $HDL >= $value'
+      narrative:
+        patient: 
+          HasValue: Your LDL results are $self.values
+          NoValue: Not found in record
+        provider: 
+          HasValue: 'Values $self.values'
+          NoValue: Not found
 
     - id: HDL
       title: High density lipoprotein
@@ -59,7 +66,9 @@ variables:
   
     - id: Chol
       title: Serum Cholesterol
-      user_attestable: False 
+      user_attestable: False
+      validator: 
+        plausible: '$value > 129 and $value < 321'
       code: 
         loinc: ["2093-3"] 
 
@@ -96,11 +105,20 @@ variables:
 
 #--------------------------------------------------------
     # DIAGNOSIS/CONDITIONS
-    - id: is_diabetic
-      title: Diabetes Mellitus
+    - id: diabetesMellitus
       user_attestable: True
       code: 
         snomed: ["44054006"]
+      narrative: 
+        patient:
+          True: Condition Type 2 Diabetes Mellitus recorded $self.date. Self-Attested|EHR
+        provider:
+          True: | 
+            __Type 2 Diabetes Mellitus__ 
+
+            Source: Self-Attested | Hospital Name
+
+            Date: $self.date
 
     - id: htn
       title: Hypertension
@@ -199,7 +217,7 @@ variables:
     - id: sa_ancestry
       title: South asian ancestry
       required: False
-      type: bool
+      type: boolean
 
 
   #Other riskfactors
@@ -274,7 +292,7 @@ assessments:
       expression: $hsCRP > 1.99
       narrative:
         patient:
-          None: Could not ascertain value for elevated hsCRP
+          NoValue: Could not ascertain value for elevated hsCRP
           False: hsCRP is not elevated
           True: Your hsCRP is elevated $value (more than 1.99 mg/dL)
       
@@ -286,7 +304,7 @@ assessments:
       narrative:
         patient:
           True: ApoB is quite high bro!
-          None: ApoB values could not found in your data
+          NoValue: ApoB values could not found in your data
 
     - id: persistant_Elevated_LDL
       title: Persistantly elevated LDL
@@ -297,7 +315,7 @@ assessments:
         patient:
           True: 'Your LDL is elevated in atleast 3 occasions: $values'
           False: 'You do not have high LDL in atleast 3 ocasions $values'
-          None: 'Not enough data. Need atleast 3 tests to determine risk $LDL.count' 
+          NoValue: 'Not enough data. Need atleast 3 tests to determine risk $LDL.count' 
 
     #1._RR_ChronicConditions
     - id: chronicConditions
@@ -324,16 +342,19 @@ assessments:
       narrative:
         patient:
           True: Atleast 3 are needed to to be positive. 
-          False: $count riskfactors(s) found. Atleast 3 are needed for this to be classified as a risk-factor, __however__, there may be additional factors but not in your data
+          False: '$self.count riskfactors(s) found. Atleast 3 are needed for this to be classified as a risk-factor, __however__, there may be additional factors but not in your data'
     #FINAL_RR
     - id: multiple_risk_factors
       title: Multiple risk-enhancing factors
-      expression: ($FamilyHxPrematureASCVD + $sa_ancestry + $Femaleriskfactors) > 2
+      expression: ($FamilyHxPrematureASCVD + $sa_ancestry + $Femaleriskfactors)
       required: True
       narrative:
         patient:
           False: Atleast __3__ factors are needed to be positive.
-          True: There were atleast __3__ risk enhancing factors found in your data. ACC/AHA guidance suggests that these factors, _if found_, can enhance the risk of developing heart attack, stroke or other cardiovascular event.
+          True: There are atleast __3__ risk enhancing factors found in your data. ACC/AHA guidance suggests that these factors, _if found_, can enhance the risk of developing heart attack, stroke or other cardiovascular event.
+        provider:
+          False: Need three factors for this to count as a single risk factor.
+          True: Atleast __$self.value__ risk-enhancing factors found in your data. ACC/AHA guidance suggests that these factors, _if found_, can enhance the risk of developing heart attack, stroke or other cardiovascular event.
             
 
     # ------------------------------------------------------------------------------------
@@ -342,17 +363,27 @@ assessments:
       description: The ten year risk score estimates the likelihood of an individual having a cardiovascular event like a heart attack, stroke in the next 10 years.
       function: tenyearriskscore
       narrative:
+        provider:
+          HasValue: |
+              ASCVD Ten Year Risk Score: $self.value
+
+              Calculated from:
+
+                - Demographics: $Age years, Gender: $Gender, Ethnicity: $Ethnicity
+                - Vitals: Blood Pressure: $bloodpressure
+                - Choleseterol: $Chol
+                - HDL: $HDL
+                - Have diabetes: $diabetesMellitus
+                - History of smoking: $is_smoker
+                - Taking Hypertension medications: $med_for_htn
         patient:
           HasValue: |
             
-            Your ten-year heart disease risk score is: 
-            ------------------------------------------
-            
-            # $value
+            ### Your ten-year heart disease risk score is: 
 
             This score was calculated from your medical history and lab results.
 
-            - The  __$value__  score is an estimation of your chance of having a heart attack or stroke or other cardiovascular event __within the next ten years__.
+            - The  __$self.value__  score is an estimation of your chance of having a heart attack or stroke or other cardiovascular event __within the next ten years__.
             - __x out of 100__ individuals _like you_ would be predicted to have a heart attack, stroke or other cardiovascular event within the next ten years.
             - __x out of 100__ individuals _like you_ would be predicted to __not__ have a heart attack, stroke or other cardiovascular event within the next ten years.
 
@@ -362,7 +393,7 @@ assessments:
               - Vitals: Blood Pressure: $bloodpressure
               - Choleseterol: $Chol
               - HDL: $HDL
-              - Have diabetes: $is_diabetic
+              - Have diabetes: $diabetesMellitus
               - History of smoking?: $is_smoker
               - Taking Hypertension medications?: $med_for_htn
 
@@ -380,30 +411,38 @@ assessments:
     # ------------------------------------------------------------------------------------
       
     - id: ldl_over_189
-      title: LDL is greater than 189
-      expression: $LDL > 189
+      title: LDL is 190 mg/dL or greater
+      expression: $LDL >= 189
       narrative: 
         patient:
           True: |
-            Your LDL-Cholesterol is __$LDL mg/dL dated $LDL.date__. 
+            Your LDL-Cholesterol is __$LDL mg/dL recorded $LDL.date__. 
             A value of __190 mg/dL or more__ is a high risk state that increases the risk of developing heart attack or stroke or other cardiovascular event.
           None: Could not be determined.
-          False: Your recent LDL is below 189 mg/dL
+          False: Most recent LDL in your record is $LDL mg/dL record $LDL.date
+        provider:
+          True: Most recent $LDL recorded $LDL.date
+          False: Most recent is below 190 ($LDL $LDL.date)
 
-    - id: is_diabetic
-      title: Diabetes Mellitus is a high risk condition for development of ascvd
-      expression: $is_diabetic == 1
+    - id: has_diabetes
+      expression: $diabetesMellitus == 1
       narrative: 
         patient:
-          True: Statin Benefit Group- Diabetes Mellitus is a high risk condition for development of ascvd.
+          True: You have Type 2 diabetes (elevated sugar)
+          False: You are not diabetic
+        provider: 
+          True: Patient __has__ a diagnosis of type 2 diabetic mellitus
+          False: Patient __does not__ have a diagnosis of type 2 diabetes mellitus
+
 
     - id: low_riskscore
       title: Low Risk
       expression: $ascvd_ten_year_risk_score < 5.0 
       narrative:
         patient:
-          True: Ten Year risk score is $ascvd_ten_year_risk_score. It is considered Low Risk (less than 5.0)
-          False: Ten Year risk score is $ascvd_ten_year_risk_score. As it is more than 5.0, it is not considered "Low risk" 
+          True: |
+            Your calculated Ten-Year risk score is __$ascvd_ten_year_risk_score__. It is considered _low_ risk (less than 5.0). Out of a 100 people, there is a higher risk of a cardiovascular event for $ascvd_ten_year_risk_score of the individuals
+          False: 'Your ten year risk score is $ascvd_optimal_risk_score'
       
     - id: borderline_risk
       title: Borderline Risk
@@ -411,46 +450,167 @@ assessments:
       narrative:
         patient:
           True: >
-            Ten Year risk score is $ascvd_ten_year_risk_score. It is considered borderline (between 5.0 and 7.5)
-            
-            Out of a 100 people, there is a higher risk of a cardiovascular event for $ascvd_ten_year_risk_score.clean
-            of the individuals
-          False: Ten Year risk score is $ascvd_ten_year_risk_score. It is not considered "Low risk" 
+            Your calculated Ten-Year risk score is __$ascvd_ten_year_risk_score__. It is considered _borderline_ (between 5.0 - 7.5). 
+            Out of a 100 people, there is a higher risk of a cardiovascular event for $ascvd_ten_year_risk_score of the individuals
 
     - id: intermediate_risk
-      title: Ten year risk score is categorizes as "Intermediate Risk"
       expression: $ascvd_ten_year_risk_score > 7.49 and $ascvd_ten_year_risk_score < 20.0
       narrative:
+        provider:
+          True: |
+            
+            ASCVD Ten-Year risk score is __$ascvd_ten_year_risk_score__. 
+            
+            __Intermediate__ risk (between 7.5 - 20.0)
+ 
+            Out of a 100 people, there is a higher risk of a cardiovascular event for $ascvd_ten_year_risk_score of the individuals
         patient:
-          True: >
-            Ten Year risk score is $ascvd_ten_year_risk_score. It is considered Intermediate.
+          True: |
+            Your calculated Ten-Year risk score is __$ascvd_ten_year_risk_score__. It is considered _intermediate_ (between 7.5 - 20.0). 
+            Out of a 100 people, there is a higher risk of a cardiovascular event for $ascvd_ten_year_risk_score of the individuals
           
-            Out of a 100 people, there is a higher risk of a cardiovascular event for {{ascvd_ten_year_risk_score.clean}} of the individuals
-          False: Ten Year risk score is $ascvd_ten_year_risk_score. It is not considered "Intermediate risk" 
 
     - id: high_risk
       title: Ten Year risk score categorized as "High"
       expression: $ascvd_ten_year_risk_score > 20.0
       narrative:
         patient:
-          True: >
-            Ten Year risk score is $ascvd_ten_year_risk_score. It is considered High.
-          
-            Out of a 100 people, there is a higher risk of a cardiovascular event for {{ascvd_ten_year_risk_score.clean}} of the individuals
-          False: Ten Year risk score is $ascvd_ten_year_risk_score. It is not considered "Low risk" 
+          True: |
+            Your calculated Ten-Year risk score is __$ascvd_ten_year_risk_score__. It is considered _high_ (over 20.0). 
+            Out of a 100 people, there is a higher risk of a cardiovascular event for $ascvd_ten_year_risk_score of the individuals
+          False: Not applicable to you
+        provider:
+          False: Not applicable to this patient
+
+
+
             
 
 recommendations:
 
+  - id: ldl_recommendation
+    title: Risk reduction for high LDL-cholesterol (190 mg/dL or more)
+    type: medication
+    description: LDL-cholesterol 190 mg/dL or over enhances the risk of developing a heart attack, stroke or other cardiovascular event.
+    expression: $ldl_over_189 == True
+    compliance_expression: $med_statins == True
+    narrative:
+      compliance:
+        patient:
+          True: You are taking a medication
+          False: You are not taking the medication
+        provider: 
+          True:  Patient is on a statin medication 
+          False: This patient is __not__ on a statin medication
+      patient:
+        True: |
+          
+          Your most recent LDL is __$LDL__ mg/dL, recorded $LDL.date.
 
+          People similar to you, with your age ($Age years) and an elevated LDL-cholesterol of over 190 mg/dL, __have benefited__ from a statin medication to prevent development of cardiovascular events like heart attack, stroke.
+        False: Not applicable to you
+      provider:
+        True: |
+
+          LDL-C: $LDL ($LDL.date)
+
+          In patients 20 to 75 years of age with an __LDL-C level of 190 mg/dL__ (&ge;4.9 mmol/L) or higher, maximally tolerated statin therapy is recommended.S4.3-2,S4.3-20-S4.3-25. Included from recommendations in the 2018 Cholesterol Clinical Practice Guidelines.S4.3-1
+        False: Not applicable to this patient
+    citations: a list of citations supporting this
+    level_of_evidence: B-R
+    class_of_recommendation: I
+
+    
+  - id: dm_recommendation_multiple_risk_factors
+    title: Recommendation based on the diagnosis of diabetes mellitus with multiple risk factors
+    type: medication 
+    expression: $has_diabetes == True and $multiple_risk_factors > 3
+    narrative:
+      patient:
+        True: People similar to you, with a diagnosis of __diabetes mellitus__ with multiple risk factors ($multiple_risk_factors), __have benefitted from a statin medication__ to control blood cholesterol.
+      provider:
+        True: |
+
+          This patient has T2 diabetes mellitus, with $multiple_risk_factors ASCVD risk-enhancing factor(s) in record.
+
+          In patients with diabetes mellitus who have multiple ASCVD risk factors, it is reasonable to prescribe high-intensity statin therapy with the aim to reduce LDL-C by 50% or more.
+    citations: a list of citations supporting this
+    level_of_evidence: B-R
+    class_of_recommendation: IIa
+
+  - id: dm_recommendation
+    title: Therapy recommendation based on the diagnosis of diabetes mellitus
+    expression: $has_diabetes == True
+    type: medication 
+    narrative:
+      patient:
+        True: You have a diagnosis of diabetes mellitus. People similar to you, aged $Age years with a diagnosis of diabetes mellitus, __have benefitted from a statin medication__ to control blood cholesterol.
+      provider:
+        True: In adults 40 to 75 years of age with diabetes, regardless of estimated 10-year ASCVD risk, moderate-intensity statin therapy is indicated.S4.3-11-S4.3-19. Included from recommendations in the 2018 Cholesterol Clinical Practice Guidelines.S4.3-1
+    citations: a list of citations supporting this
+    level_of_evidence: A
+    class_of_recommendation: IIb
+
+  - id: lowrisk_recommendation
+    title: Therapy recommendation based on ASCVD Ten Year Risk Score
+    expression: $low_riskscore == True
+    narrative:
+      patient:
+        True: For people with a ten-year risk score between, ACC/AHA make recommendations for a medication to control blood cholesterol to prevent developing of a heart attack or stroke or other cardiovascular event.
+        False: ACC/AHA classifies your ten-year score $ascvd_optimal_risk_score as __low risk__
+    citations: a list of citations supporting this
+    # level_of_evidence: Some
+    class_of_recommendation: IIb
+
+
+  - id: borderlinerisk_recommendation
+    title: Therapy recommendation based on ASCVD Ten Year Risk Score
+    expression: $borderline_risk == True and $multiple_risk_factors > 2
+    narrative:
+      patient:
+        False: Not applicable to you
+        True: In patients at borderline risk (5% to <7.5% 10- year ASCVD risk), in risk discussion, the presence of risk-enhancing factors may justify initiation of moderate-intensity statin therapy.S4.3-28,S4.3-35 Adapted from recommendations in the 2018 Cholesterol Clinical Practice Guidelines.S4.3-1
+      provider:
+        True:  In patients at borderline risk (5% to <7.5% 10- year ASCVD risk), in risk discussion, the presence of risk-enhancing factors may justify initiation of moderate-intensity statin therapy.S4.3-28,S4.3-35 Adapted from recommendations in the 2018 Cholesterol Clinical Practice Guidelines.S4.3-1
+        False: Not applicable to this patient
+    citations: a list of citations supporting this
+    class_of_recommendation: IIb
+    level_of_evidence: B-R
+
+  - id: intermediaterisk_recommendation
+    title: Therapy recommendation based on ASCVD Ten Year Risk Score
+    type: medication 
+    expression: $intermediate_risk == True
+    narrative:
+      patient:
+        True: People that match your profile, with an intermediate risk score of $ascvd_ten_year_risk_score, __have benefitted from a statin medication__ to control blood cholesterol to prevent developing of a heart attack or stroke or other cardiovascular event.
+        False: 'This does not apply to you!'
+      provider:
+        True: In intermediate-risk (&ge; 7.5% to <20% 10-year ASCVD risk) adults or selected borderline-risk (5% to <7.5% 10-year ASCVD risk) adults in whom a coronary artery calcium score is measured for the purpose of making a treatment decision, AND If the coronary artery calcium score is zero, it is reasonable to withhold statin therapy and reassess in 5 to 10 years, as long as higher-risk conditions are absent (eg, diabetes, family history of premature CHD, cigarette smoking); If coronary artery calcium score is 1 to 99, it is reasonable to initiate statin therapy for patients &ge;55 years of age; If coronary artery calcium score is 100 or higher or in the 75th percentile or higher, it is reasonable to initiate statin therapy.S4.3-28,S4.3-34. Adapted from recommendations in the 2018 Cholesterol Clinical Practice Guidelines.S4.3-1
+    citations: a list of citations supporting this
+    class_of_recommendation: IIa
+    level_of_evidence: B-NR
+
+
+  - id: highrisk_recommendation
+    title: Therapy recommendation based on ASCVD Ten Year Risk Score
+    expression: $high_risk == True
+    type: medication 
+    narrative:
+      patient:
+        False: 'This does not apply to you!'
+        True: For people with a ten-year risk score between, ACC/AHA make recommendations for a medication to control blood cholesterol to prevent developing of a heart attack or stroke or other cardiovascular event.
+    citations: a list of citations supporting this
+    class_of_recommendation: IIb
 
   - id: display_uc
-    type: display
-    title: Understanding Cholesterol
+    type: display_patient
+    title: Understanding cholesterol
+    description: Know how to read cholesterol lab tests
     narrative:
       patient:
         True: |
-
+        
           Elevated cholesterol (a fat-like substance that comes from animal foods or is made in your body) can clog arteries that reduce blood flow to the organs and may lead to heart attack or stroke or other cardiovascular event.
 
           - __HDL = Good__
@@ -462,14 +622,16 @@ recommendations:
             is equal to your HDL + LDL + 1/5th Triglyceride level
 
   - id: managing_cholesterol
-    type: display
-    title: Managing Cholesterol
+    type: display_patient
+    title: General advice for managing cholesterol
+    description: Lifestyle modification can have a great impact on blood cholesterol
     narrative:
       patient:
         True: |
+          
           The following lifestyle measures can help manage blood cholesterol
 
-          - __Eating healthy__ • A diet high in saturated fat (red meat, poultry, butter, cheese) can raise LDL cholesterol. Balancing your diet with  lean meat, skinless poultry, whole grain, fruits and vegetables can help lower risk of heart attack or stroke or other cardiovascular event.
+          - __Eating healthy__ A diet high in saturated fat (red meat, poultry, butter, cheese) can raise LDL cholesterol. Balancing your diet with  lean meat, skinless poultry, whole grain, fruits and vegetables can help lower risk of heart attack or stroke or other cardiovascular event.
           - __Being physically active__
             Sedentary lifestyle is a risk factor for developing heart disease. A good starting point is at least 150 minutes of physical activity a week.
           - __Track Levels__
@@ -478,66 +640,29 @@ recommendations:
             Smoking raises blood pressure and lowers HDL (good cholesterol) which raises the risk of clot formation and heart attack or stroke or other cardiovascular event.
 
 
-  - id: sbp_1_ldl
-    title: Recommendation based on High LDL
-    type: medication
-    description: LDL over 189 enhances the risk of developing a heart attack, stroke or other cardiovascular event.
-    expression: $ldl_over_189 == True
+  - id: statin_risk_benefits
+    type: display
+    title: Discussion
+    description: Discuss risk and benefits of Statin therapy
     narrative:
-      patient:
-        True: Evidence suggests that starting a __high intensity statin__ medication to control blood cholesterol has been helpful. Your LDL is $LDL
-    citations: a list of citations supporting this
-    # loe: Some
-    class_of_recommendation: II_B
+      patient: 
+        True: Discuss with your doctor about the risk and benefits of starting a medication to control blood cholesterol.
+      provider:
+        True: If a statin therapy is decided, __discuss__ with the patient the risk and benefits _before_ initiation. Statin types and intensities
 
-    
-  - id: sbg_2_dm
-    title: Diabetes Mellitus is a high risk factor for ASCVD
-    expression: $is_diabetic == True
+  - id: evaluate_risk_factors
+    type: display_provider
+    title: Evaluation of risk factors
     narrative:
-      patient:
-        True: For people with diabetes mellitus, evidence suggests that starting a igh intensity statin medication to control blood cholesterol has been helpful
-    citations: a list of citations supporting this
-    class_of_recommendation: II_B
+      patient: 
+        True: |
+          Ask your doctor to evaluate risk enhancing factors, here's a list of items to discuss
+      provider:
+        True: |
 
-  - id: sbg_3_riskscore_less_than_5
-    title: Recommendation based on "Low Risk" ten-year score
-    expression: $low_riskscore == True
-    narrative:
-      patient:
-        True: For people with a ten-year risk score between, ACC/AHA make recommendations for a medication to control blood cholesterol to prevent developing of a heart attack or stroke or other cardiovascular event.
-    citations: a list of citations supporting this
-    # level_of_evidence: Some
-    class_of_recommendation: II_B
+          Clinicians should evaluate risk enhancing factors.
 
-
-  - id: sbg_3_riskscore_boderline
-    title: Recommendation based on Borderline Risk ten-year score
-    expression: $borderline_risk == True
-    narrative:
-      patient:
-        False: 'borderline-This does not apply to you!'
-        True: For people with a ten-year risk score between, ACC/AHA make recommendations for a medication to control blood cholesterol to prevent developing of a heart attack or stroke or other cardiovascular event.
-    citations: a list of citations supporting this
-    class_of_recommendation: II_B
-
-  - id: sbg_3_riskscore_over_7
-    title: Intermediate Risk
-    expression: $intermediate_risk == True
-    narrative:
-      patient:
-        True: For people with a ten-year risk score between, ACC/AHA make recommendations for a medication to control blood cholesterol to prevent developing of a heart attack or stroke or other cardiovascular event.
-        False: 'This does not apply to you!'
-    citations: a list of citations supporting this
-    class_of_recommendation: II_B
-
-  - id: sbg_3_riskscore_over_20
-    title: High Risk
-    expression: $high_risk == True
-    narrative:
-      patient:
-        False: 'This does not apply to you!'
-        True: For people with a ten-year risk score between, ACC/AHA make recommendations for a medication to control blood cholesterol to prevent developing of a heart attack or stroke or other cardiovascular event.
-    citations: a list of citations supporting this
-    class_of_recommendation: II_B
+          - _Overall list of risk enhancing factors_
+          - _Additional risk factors for diabetes patients_
+          - _Race/ethnic specific factors in assessing and treating ASCVD risk_
 

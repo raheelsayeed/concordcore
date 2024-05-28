@@ -7,24 +7,26 @@
 
 
 from dataclasses import dataclass, field
-from email.policy import default
-
-from enum import Enum, auto
+from enum import Enum, auto, StrEnum
+from functools import cached_property
 
 from typing import Any, Protocol
-from .variables import var, value
+from variables import var
 from .assessment import EvaluatedAssessmentRecord
 from .evaluation import EvaluatedRecord
 from .expression import Expression
 from .evaluation import EvaluationContext
-from .primitives import vlist
-from .primitives.types import Persona
+from primitives import vlist
+from primitives.types import Persona, YMLStrEnum
 
+import logging
+
+log = logging.getLogger(__name__)
 
 # ------ USPSTF Classifications -------
 # https://www.uspreventiveservicestaskforce.org/uspstf/about-uspstf/methods-and-processes/grade-definitions
 
-class RecommendationType(Enum):
+class RecommendationType(YMLStrEnum):
     medication              = 'medication'
     behavioral              = 'behavioral'
     moreEvaluation          = 'evaluation_needed'
@@ -32,6 +34,7 @@ class RecommendationType(Enum):
     display_provider        = 'display_provider'
     display_person          = 'display_person'
     evaluation              = 'evaluation'
+    patient_facing          = 'patient_facing'
 
 class ProviderDirective(Enum):
     # Do this, do that, ??
@@ -42,22 +45,33 @@ class UserDirective(Enum):
     information = auto()
 
 # --- Strength of evidence
-class ClassOfRecommendation(Enum):
-    one             = 'I'               # benefit >>> risk 
-    two_A           = 'II_A'             # benefit >> risk
-    two_B           = "II_B"             # benefit >= risk
-    three_Moderate  = "III_Moderate"    # benefit = risk
-    three_Strong    = "III_Strong"      # risk > 
-    
+class ClassOfRecommendation(StrEnum):
+    I             = 'I'               # benefit >>> risk 
+    II_A           = 'IIa'             # benefit >> risk
+    II_B            = "IIb"             # benefit >= risk
+    III             = 'III: Harm'
+    III_Moderate  = "III Moderate"    # benefit = risk
+    III_Strong    = "III Strong"      # risk > 
+
+    def color_code_html(self):
+        if self == 'I':
+            return 'green'
+        if self == 'IIb':
+            return 'orange'
+        if self == 'IIa':
+            return 'yellow'
+        if self == 'III: Harm':
+            return 'red'
+        
     @classmethod
     def from_yaml(cls, cor):
         return ClassOfRecommendation(cor) if cor else None
 
 
 # ---- Quality of evidence ---- 
-class LevelOfEvidence(Enum):
+class LevelOfEvidence(StrEnum):
     A       = "A"           # high quality
-    B_R     = "BR"          # Moderate - Randomized
+    B_R     = "B-R"          # Moderate - Randomized
     B_NR    = "B-NR"        # Moderate - Nonrandomized 
     C_LD    = "C-LD"        # Limited data
     C_EO    = "C_EO"        # Consensus of expert opinion
@@ -65,6 +79,17 @@ class LevelOfEvidence(Enum):
     @classmethod
     def from_yaml(cls, loe):
         return LevelOfEvidence(loe) if loe else None
+    
+    def color_code_html(self):
+        if self == 'A':
+            return 'blue'
+        if self == 'B-R':
+            return 'light-blue'
+        if self == 'B-NR':
+            return 'light-blue'
+        return 'purple'
+
+    
 
 class USPSTFQualityOfEvidence(Enum):
     Good = auto() 
@@ -100,14 +125,14 @@ class USPSTFGrading(Enum):
 class RecommendationVar(var.Var):
 
     expression: str = None
-    class_of_recommendation: str = None 
-    level_of_evidence: str = None 
+    class_of_recommendation: ClassOfRecommendation = None 
+    level_of_evidence: LevelOfEvidence = None 
     uspstf_grade: USPSTFGrading = None 
     type: str = None
     citations: list = field(default_factory=list)
     references: Any = None
-
-
+    comliance_narrative: str = None
+    compliance_expression: str = None
    
     def __hash__(self):
         return super().__hash__()
@@ -115,19 +140,19 @@ class RecommendationVar(var.Var):
     @classmethod
     def instantiate_from_yaml(cls, yml, InstantiationContext=None):
 
-        rec_type = yml.get('type', None)
-        if rec_type:
-            yml['type'] = RecommendationType(rec_type)
         yml['class_of_recommendation'] = ClassOfRecommendation.from_yaml(yml.get('class_of_recommendation', None))
         yml['level_of_evidence'] = LevelOfEvidence.from_yaml(yml.get('level_of_evidence', None))
         yml['uspstf_grade'] = USPSTFGrading.from_yaml(yml.get('uspstf_grade', None))
+        yml['type'] = RecommendationType.YAML(yml.get('type', None))
+
         return super(RecommendationVar, cls).instantiate_from_yaml(yml)
 
     def as_dict(self):
 
         d = super().as_dict()
         d.update({
-            'class_of_recommendation': self.class_of_recommendation.value if self.class_of_recommendation else None,
+            'level_of_evidence': self.level_of_evidence or None,
+            'class_of_recommendation': self.class_of_recommendation or None,
             'uspstf_grade': self.uspstf_grade or None 
         })
         return d
@@ -141,7 +166,31 @@ class EvaluatedRecommendation:
     expression: Expression = None 
     applies: bool = None 
     error: Exception = None
-    sanitized_narrative: str = None
+    narrative: str = None
+
+    @cached_property
+    def based_on_records(self):
+        """Returns nested record of all assessment records for which this recommendation was based on."""
+        all_records = []
+
+        for record in self.based_on:
+            
+            # rec = record.record if isinstance(record, EvaluatedRecord) else record
+            rec = record.record 
+            while rec:
+                all_records.append(rec)
+                for recd in rec.value.source:
+                    rec = recd 
+            
+            # all_records.append(rec)
+            # all_records.extend(rec.value.source)
+            print(all_records)
+            exit()
+        
+        return all_records
+            
+        
+            
 
     def __post_init__(self):
         
@@ -150,65 +199,30 @@ class EvaluatedRecommendation:
 
     def evaluate(self, evaluated_assessments: vlist.vlist[EvaluatedAssessmentRecord], variables: list[EvaluatedRecord] = None, persona: Persona = Persona.patient):
 
-        if self.recommendation.type and self.recommendation.type.value == RecommendationType.display.value:
+        if self.recommendation.type and self.recommendation.type.value == RecommendationType.patient_facing.value:
             self.applies = True 
-            self.sanitized_narrative = self.set_narrative(persona=persona)
-            return
+        elif not self.expression:
+            raise Exception(f'Cannot evaluate, no expression found for recommendation={self.recommendation.id}') 
+        else:
+            try:
+                eval_result =  self.expression.evaluate_recommendation(evaluated_assessments)
+                self.applies = eval_result
+                self.based_on = self.expression.evaluated_records
+            except Exception as e:
+                raise e
 
-        if not self.expression:
-            self.error = Exception('Cannot evaluate, no expression found')
-            return 
-
-        try:
-            eval_result =  self.expression.evaluate_recommendation(evaluated_assessments)
-            self.applies = eval_result
-        except Exception as e:
-            self.error = e
+        # get text for recommendation
+        varible_value_dict = None 
+        if self.recommendation.narr.variables:
+            records = list(filter(lambda ea: ea.id in self.recommendation.narr.variables, evaluated_assessments + (variables or [])))
+            varible_value_dict = {r.id: r.record.as_dict() for r in records}
+            log.info(varible_value_dict)
+        self.narrative = self.recommendation.narr.get_text(self.applies, persona=persona, sanitization_dict=varible_value_dict)
         
-        self.based_on = self.expression.records
-
-        n_vars = self.recommendation.narrative_variables
-        self.sanitized_narrative = self.set_narrative(persona=persona)
-        
-        if not n_vars:       
-            return 
-        
-        # sanitize text?
-        try:
-            records = list(filter(lambda ea: ea.id in n_vars, evaluated_assessments + (variables or [])))
-            dict_record_values = {r.id: r.record.as_dict() for r in records}
-            self.sanitized_narrative = self.set_narrative(variable_data_dict=dict_record_values)
-            
-        except Exception as e:
-            raise e
-        
-
-
-        
-
-
-        
-
-
         
     @property
     def title(self):
         return self.recommendation.title
-
-    def set_narrative(self, persona: Persona = Persona.patient, variable_data_dict: dict = None):
-
-        if not self.recommendation.narrative:
-            return None
-        txt = self.recommendation.narrative.get(persona.value, {}).get(self.applies, None)
-        if not txt:
-            return None
-        if variable_data_dict and self.recommendation.narrative_variables:
-            for n_var in self.recommendation.narrative_variables:
-                val = variable_data_dict.get(n_var, {}).get('value', '<>')
-                txt = txt.replace('$'+n_var, str(val))
-            
-        return txt
-
 
 
 

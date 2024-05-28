@@ -8,10 +8,10 @@ import logging
 from .cpg import CPG
 from .eligibility import EligibilityResult, EligibilityEvaluator, EligibilityEvaluatorProtocol
 from .assessment import AssessmentEvaluatorProtocol, AssessmentResult, AssessmentEvaluator, AssessmentEvaluatorProtocol
-from .recommendation import EvaluatedRecommendation, RecommendationResult, RecommendationEvaluatorProtocol, BaseRecommendationEvaluator
+from .recommendation import EvaluatedRecommendation, RecommendationResult
 from .sufficiency import SufficiencyResult, SufficiencyEvaluator, SufficiencyEvaluatorProtocol
 from .evaluation import EvaluatedRecord, EvaluationContext
-from .variables.value import Value
+from variables.value import Value
 from .healthcontext import HealthContext
 
 log = logging.getLogger(__name__)
@@ -94,19 +94,19 @@ class Concord:
         """
         errs = []
         if self.__eligibility_result == None:
-            errs.append(Exception('Eligibility evaluation should be completed before risk assessment'))
+            errs.append(Exception('Eligibility evaluation must be completed before risk assessment'))
 
         if self.__eligibility_result.is_eligible == False: 
             errs.append(Exception('Eligibility criteria not met, cannot execute CPG'))
         
         if self.__sufficiency_result.result == None:
-            errs.append(Exception('Userdata sufficiency not evaluated'))
+            errs.append(Exception(f'Sufficiency not evaluated for CPG={self.cpg,identifier}'))
 
         if self.__sufficiency_result.is_executable == False:
             suff_errors = [ev.error for ev in self.__sufficiency_result.insufficient_variables]
-            errs.append(ExceptionGroup(f'Userdata is insufficient to execute CPG<{self.cpg.identifier}', suff_errors))
+            errs.append(ExceptionGroup(f'Userdata is insufficient to execute CPG={self.cpg.identifier}', suff_errors))
 
-        log.debug(f'Sufficiency check complete; IS-Executable={self.__sufficiency_result.is_executable}')
+        log.debug(f'Sufficiency check complete; IS_Executable={self.__sufficiency_result.is_executable}')
         if errs:
             raise ExceptionGroup('Cannot Execute CPG', errs)
 
@@ -130,10 +130,11 @@ class Concord:
         ctx = EvaluationContext()
 
         self.__assessment_result = evaluator.assess(
-            self.cpg.assessments_variables,
-            self.evaluated_records,
-            functions_module=self.cpg.functions_module,
-            context=ctx
+            assessment_variables= self.cpg.assessments_variables,
+            evaluated_records= self.evaluated_records,
+            persona= self.healthcontext.persona,
+            functions_module= self.cpg.functions_module,
+            context= ctx
         )
 
         return self.__assessment_result
@@ -149,7 +150,7 @@ class Concord:
         for recommendation in self.cpg.recommendation_variables:
 
             eval_rec = EvaluatedRecommendation(recommendation=recommendation)
-            eval_rec.evaluate(self.assessment_result.context.evaluation_list, variables=self.evaluated_records)
+            eval_rec.evaluate(self.assessment_result.context.evaluation_list, variables=self.evaluated_records, persona=self.healthcontext.persona)
             evaluated_recommendations.append(eval_rec)
             log.debug(eval_rec)
 
