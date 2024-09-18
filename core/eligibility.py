@@ -16,6 +16,12 @@ class EligbilityValueAbstract(Protocol):
 @dataclass(frozen=True)
 class EligibilityResult(EvaluationResult):
 
+    def __repr__(self) -> str:
+        return f"""
+        IS_Eligibile: {self.is_eligible}
+        {super().__repr__()}
+        """
+
     @cached_property
     def is_eligible(self) -> bool:
         if False in [ev.record.value.value if ev.record.value else False for ev in self.context.evaluation_list]:

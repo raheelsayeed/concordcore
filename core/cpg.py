@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
 
-
-
-
 from dataclasses import dataclass
 import logging
 
@@ -17,45 +14,8 @@ from .expression import Expression
 
 log = logging.getLogger(__name__)
 
-
-class CPG(Protocol):
-
-    variables: list[var.Var] = None
-    
-    eligibility_criterias: list[EligibilityVar] = None
-
-    assessments_variables: list[AssessmentVar] = None
-
-    recommendation_variables: list[RecommendationVar] = None
-
-    name: str 
-
-    publisher_code: Code = None 
-
-    rendering_template_path: str = None
-
-    def validate(self) -> bool:
-        ...
-
-    def publisher_identifier(self):
-        ... 
-
-    def non_optional_variables(self):
-        ... 
-
-    def optional_variables(self):
-        ... 
-
-    def attestable_variables(self):
-        ... 
-
-
-    # for rendering reasons
-    def as_dict(self):
-        ...
-
 @dataclass
-class BaseCPG():
+class CPG():
 
     identifier: str
     title: str
@@ -273,6 +233,21 @@ class BaseCPG():
         log.debug('CPG Validation successful')
         return True
         
+
+    # HELPERS
+    
+    def lab_test_codes(self):
+        codes = [v.code_string for v in self.variables if v.code_string is not None and 'loinc' in v.code_string]
+        return codes
+
+    def conditions_codes(self):
+        codes = [v.code_string for v in self.variables if v.code_string is not None and 'snomed' in v.code_string]
+        return codes
+
+
+    def medication_codes(self):
+        codes = [v.code_string for v in self.variables if v.code_string is not None and 'rxnorm' in v.code_string]
+        return codes
 
 
 

@@ -2,22 +2,26 @@
 
 import logging
 
-from fhir.resources import observation, procedure, condition, medication, medicationrequest, questionnaire, questionnaireresponse
-from variables.value import Value
+from fhirclient.models import observation, procedure, condition, medication, medicationrequest, questionnaire, questionnaireresponse, patient
+from variables import value
 from primitives.unit import Unit
 from primitives.code import Code
 
+
+
 log = logging.getLogger(__name__)
 
-class FHIRValue(Value):
+
+class FHIRValue(value.Value):
 
     @property
     def fhirtype(self):
         return self.source[0].resource_type
+    
 
     @classmethod
     def from_medicationRequest(cls, mr: medicationrequest.MedicationRequest):
-        date = mr.authoredOn.date
+        date = mr.authoredOn.date.date()
         coding = mr.medicationCodeableConcept.coding
         codes = [Code(c.coding,c.system,c.display) for c in coding]
         return cls(value=codes, date=date, source=mr)
@@ -28,7 +32,7 @@ class FHIRValue(Value):
 
     @classmethod 
     def from_observation(cls, ob:observation.Observation):
-        date = ob.effectiveDateTime or ob.issued or ob.meta.lastUpdate.date
+        date = ob.effectiveDateTime.date or ob.issued.date or ob.meta.lastUpdate.date.date
         unit = None
         cd = None
         if ob.code.coding:
@@ -67,6 +71,7 @@ class FHIRValue(Value):
             value = cod
         else:
             raise Exception(f'FHIRValue: Observation value not assigned {ob.id}')
+
 
         instance = cls(value=value, unit=unit, date=date, source=[ob])
         instance.code = cd
@@ -157,3 +162,5 @@ class FHIRValue(Value):
 
         else:
             raise ValueError(f'Unknown FHIR resource type: {resource_type}')
+
+

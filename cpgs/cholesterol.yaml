@@ -37,7 +37,7 @@ variables:
 #--------------------------------------------------------
     # Laboratory tests
     - id: LDL
-      title: Low density lipoprotein
+      title: LDL
       user_attestable: False
       code:
        loinc: *ldl_code
@@ -359,7 +359,7 @@ assessments:
 
     # ------------------------------------------------------------------------------------
     - id: ascvd_ten_year_risk_score
-      title: Ten Year Risk score
+      title: ASCVD risk score
       description: The ten year risk score estimates the likelihood of an individual having a cardiovascular event like a heart attack, stroke in the next 10 years.
       function: tenyearriskscore
       narrative:
@@ -398,9 +398,9 @@ assessments:
               - Taking Hypertension medications?: $med_for_htn
 
     - id: ascvd_optimal_risk_score
-      title: Optimal Ten Year risk score
+      title: Optimal Ten Year ASCVD risk score
       function: optimal_tenyearriskscore
-      narrative:
+      narrative: 
         patient:
           True: optimal_risk_score_interpreter.md
         patient:
@@ -425,6 +425,7 @@ assessments:
           False: Most recent is below 190 ($LDL $LDL.date)
 
     - id: has_diabetes
+      title: Has diabetic mellitus?
       expression: $diabetesMellitus == 1
       narrative: 
         patient:
@@ -616,7 +617,7 @@ recommendations:
           - __HDL = Good__
             High density lipoprotein (HDL) is known as good cholesterol
           - __LDL = Bad__
-            Low density lipoprotein is known as bad cholesterol
+            LDL is known as bad cholesterol
           - __Triglycerides__ is the most common type of fat in the body
           - __Total Cholesterol__
             is equal to your HDL + LDL + 1/5th Triglyceride level

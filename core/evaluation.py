@@ -122,7 +122,12 @@ class EvaluationContext:
 class EvaluationResult:
 
     context: EvaluationContext
-    
+
+    def __repr__(self) -> str:
+        return f"""
+        CannotEval={len(self.insufficient_variables)}
+        SuccessfulEval={len(self.sufficient_variables)}
+        """
     @property
     def errors(self):
         return self.context.errors

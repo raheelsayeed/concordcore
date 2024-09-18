@@ -197,7 +197,12 @@ class EvaluatedRecommendation:
         if self.recommendation.compliance_expression:
             self.compliance = Expression(self.recommendation.compliance_expression)
 
-    def evaluate(self, evaluated_assessments: vlist.vlist[EvaluatedAssessmentRecord], variables: list[EvaluatedRecord] = None, persona: Persona = Persona.patient):
+    def evaluate(self, evaluated_assessments: vlist.vlist[EvaluatedAssessmentRecord], evaluated_records: list[EvaluatedRecord] = None, persona: Persona = Persona.patient):
+        """Evaluates recommendations
+
+        evaluated_assessments: List of EvaluatedAssessmentRecords 
+        evaluated_records: List of evaluated Patient Records `EvaluatedRecord`  
+        """
         rectype = self.recommendation.type
         show_if_patient = rectype == RecommendationType.DISPLAY_PATIENT
         show_if_provider = rectype == RecommendationType.DISPLAY_PROVIDER
@@ -216,14 +221,14 @@ class EvaluatedRecommendation:
                 self.applies =  self.expression.evaluate_recommendation(evaluated_assessments)
                 self.based_on = self.expression.expression_records
                 if self.compliance:
-                    self.compliant = self.compliance.evaluate([v.record for v in variables])
+                    self.compliant = self.compliance.evaluate([v.record for v in evaluated_records])
                     self.based_on.extend(self.compliance.expression_records)
             except Exception as e:
                 raise e
 
         varible_value_dict = None 
         if self.recommendation.narr.variables:
-            records = list(filter(lambda ea: ea.id in self.recommendation.narr.variables, evaluated_assessments + (variables or [])))
+            records = list(filter(lambda ea: ea.id in self.recommendation.narr.variables, evaluated_assessments + (evaluated_records or [])))
             varible_value_dict = {r.id: r.record.as_dict() for r in records}
             log.info(varible_value_dict)
         self.narrative = self.recommendation.narr.get_text(self.applies, persona=persona, sanitization_dict=varible_value_dict)

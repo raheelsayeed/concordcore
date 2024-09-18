@@ -43,6 +43,10 @@ class Record:
         # debug purpose:
         self.__persona = None
 
+    
+    def __repr__(self) -> str:
+        return f'Record={self.var.id}\tvals={self.values or ''}'
+
 
     @cached_property
     def __must_filter_values(self):
@@ -255,3 +259,4 @@ class Record:
 
         assert (self.narrative == None) == (narrative_dict == None), f'record={self} narr={narrative_dict} _must_have_narrative'
         return 'PASSED'
+

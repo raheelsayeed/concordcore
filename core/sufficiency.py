@@ -14,6 +14,12 @@ log = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class SufficiencyResult(EvaluationResult):
+  
+    def __repr__(self) -> str:
+            return f"""
+            is_executable: {self.is_executable}
+            {super().__repr__()}
+            """
 
     @cached_property
     def result(self):

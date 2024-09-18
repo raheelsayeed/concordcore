@@ -1,0 +1,3 @@
+{% for er in assessments -%}
+- {{ er.record.title or er.record.id }}: {%- if er.record.values -%} {% for val in er.record.values %} {{val.representation}} ({{val.date}}), {% endfor %} {% else %} value not found {% endif %}
+{% endfor %}

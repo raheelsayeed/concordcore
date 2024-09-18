@@ -13,6 +13,7 @@ from primitives.errors import VarError
 from primitives.types import Persona, ValueType, YMLStrEnum
 from primitives.code import Code
 from primitives.varstring import VarString
+from primitives.valuedate import ValueDate
 
 log = logging.getLogger(__name__)
 
@@ -120,6 +121,8 @@ class Narrative:
                     val = sanitization_dict.get(split[0], {}).get(split[1] if len(split) > 1 else 'value', '-n/a-')
                     if isinstance(val, datetime):
                         val = humanize.naturaldate(val)
+                    if isinstance(val, ValueDate):
+                        val = humanize.naturaldate(val.date)
 
                     val = self.formatted_value(str(val)) if self.FORMAT_VALUE else str(val)
                     text = text.replace('$'+n_var, val)
@@ -232,6 +235,28 @@ class Var:
                 'required': self.required, 
                 'attestable': self.user_attestable,
             }
+    
+    @staticmethod 
+    def Age():
+        from ontology.codes import Concord_Code_Age, CodeSystemType
+        return Var(id=Concord_Code_Age, 
+                   code=[Code(Concord_Code_Age,CodeSystemType.concord.value,Concord_Code_Age)]
+                )
+    @staticmethod 
+    def Gender():
+        from ontology.codes import Concord_Code_Gender, CodeSystemType
+        return Var(id=Concord_Code_Gender, 
+                    code=[Code(Concord_Code_Gender,CodeSystemType.concord.value,Concord_Code_Gender)]
+                )
+
+    
+    @staticmethod 
+    def RaceEthnicity():
+        from ontology.codes import Concord_Code_Ethnicity, CodeSystemType
+        return Var(id=Concord_Code_Ethnicity, 
+                    code=[Code(Concord_Code_Ethnicity,CodeSystemType.concord.value,Concord_Code_Ethnicity)]
+                )
+
 
 
 

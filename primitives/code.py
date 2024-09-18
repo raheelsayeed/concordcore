@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from .definitions import CodeType
+from ontology.definitions import CodeSystemType
 from dataclasses import dataclass
 from functools import cached_property
 
@@ -22,7 +22,7 @@ class Code:
     def YAML(c, s):
         sys = None 
         try:
-            sys = CodeType[s].value
+            sys = CodeSystemType[s].value
         except Exception:
             sys = s 
         return Code(c, sys)
@@ -40,25 +40,25 @@ class Code:
     
     @classmethod
     def loinc(cls, code, display = None):
-        return Code(code, CodeType.loinc.value, display)
+        return Code(code, CodeSystemType.loinc.value, display)
 
     @classmethod
     def snomed(cls, code, display = None):
-        return Code(code, CodeType.snomed.value, display)
+        return Code(code, CodeSystemType.snomed.value, display)
 
     @classmethod
     def cpt(cls, code, display = None):
-        return Code(code, CodeType.cpt.value, display)
+        return Code(code, CodeSystemType.cpt.value, display)
     
     @classmethod
     def rxnorm(cls, code, display = None):
-        return Code(code, CodeType.rxnorm.value, display)
+        return Code(code, CodeSystemType.rxnorm.value, display)
 
     @classmethod
     def race_ethnicity(cls, code, display = None):
-        return Code(code, CodeType.cdc_re.value, display)
+        return Code(code, CodeSystemType.CDC_RaceEthnicity.value, display)
 
     @classmethod
     def concord(cls, code, display = None):
-        return Code(code, CodeType.concord.value, display)                
+        return Code(code, CodeSystemType.concord.value, display)                
     

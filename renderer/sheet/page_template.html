@@ -30,10 +30,10 @@
 </head>
 <body style="margin: 20px;">
     <div id="layout" class="pure-g">
-        <div id="cpg" class="pure-u-1-3"">
+        <div id="cpg" class="pure-u-2-3"">
               <h1>{{ cpg_title }}</h1>
         </div>
-        <div class=" pure-u-2-3">
+        <div class=" pure-u-1-3">
             <p>Published by American College of Cardiology and American Heart Association</p>
             <ul>
                 <li>USPSTF</li>
@@ -83,12 +83,12 @@ Narraive: {{ r.sanitized_narrative }}
                             </thead>
                         {% for b in r.based_on %}
                         <tr>
-                            <td class="basedon"><small>{{b.record.id}}</small></td>
-                            <td class="basedon-title">{{b.record.title }}</td>
-                            <td class="basedon-value">{{b.record.value}}</td>
+                            <td class="basedon"><small>{{b.id}}</small></td>
+                            <td class="basedon-title">{{b.title }}</td>
+                            <td class="basedon-value">{{b.value}}</td>
                             <td class="basedon-narrative"><small>
 {% markdown %}
-{{b.record.sanitized_narrative}}
+{{b.sanitized_narrative}}
 {% endmarkdown %}
                             </small></td>
                         </tr>
@@ -162,9 +162,9 @@ Narraive: {{ r.sanitized_narrative }}
   <thead>
       <tr class="tablehead variables">
           <td>SNo.</td>
-          <td class="description">User Health Record
+          <td class="description">Patient Health Record
             <p style="font-size: medium; font-weight: lighter;">
-                <em>User records are created by grouping of user health record using CPG or concord defined ontologies.</em></p>
+                <em>Patient records are created by grouping of health record using CPG or concord defined ontologies.</em></p>
           </td>
           <td class="">Values</td>
       </tr>
@@ -203,9 +203,7 @@ Narraive: {{ r.sanitized_narrative }}
   {% endfor %}
   </table>
 </div>
-
-
-        </div>
+</div>
 </body>
 <footer>
 </footer>

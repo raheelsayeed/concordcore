@@ -10,10 +10,9 @@ import misc
 import logging
 from rich.logging import RichHandler
 
-from renderer.templates import Sheet
 
 
-level = 'DEBUG'
+level = 'INFO'
 logging.basicConfig(level=level, format="%(message)s", datefmt="[%X]", handlers=[RichHandler()])
 logger = logging.getLogger("tests")
 
@@ -58,7 +57,7 @@ ht(
 #       IN:     CPG
 #       OUT:    Checks(Validity, Eligibility, Sufficiency, Execution, Recommendations)
 """)
-mycpg = cpg.BaseCPG.from_document_path(fp)
+mycpg = cpg.CPG.from_document_path(fp)
 concord = Concord(mycpg, user_context)
 logger.info(f'Initialized with with cpg: [bold]{mycpg.title}')
 logger.info(f'Publisher={mycpg.publisher}')
@@ -223,20 +222,11 @@ if args.template_name:
 """)
 
 
-    from renderer.templates import Cards, Document, Sheet, Tree
-    temp = None 
-    if args.template_name == "cards":
-        temp = Cards("cards",  concord)
-    elif args.template_name == "document":
-        temp = Document("document",  concord)
-    elif args.template_name == "sheet":
-        temp = Sheet("sheet", concord)
-    elif args.template_name == 'tree':
-        temp = Tree("tree", concord)
-    else:
-        logger.error(f'Cannot find template={args.template_name}. Only "cards" and "document" supported')
-        exit()
-    page_html = temp.render_page()
+    from renderer.templates  import LocalRenderer
+    temp = None
+    template_name = args.template_name
+    renderingTemplate = LocalRenderer(id=template_name, concord=concord)
+    page_html = renderingTemplate.render_page()
 
 
 

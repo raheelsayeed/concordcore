@@ -5,6 +5,9 @@ from .code import Code
 class Unit(Code):
 
     def __str__(self):
+        return self.display or self.code
+
+    def __repr__(self):
         return f'Unit: {self.code}|{self.system} display:{self.display}'
 
     @classmethod

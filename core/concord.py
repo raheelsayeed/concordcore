@@ -26,17 +26,22 @@ class NeedAttestationError(Exception):
 class Concord:
 
     cpg: CPG
+    """Instance of CPG()"""
     healthcontext: HealthContext
+    """HealthContext"""
     until_year: int = None
-    __eligibility_result: EligibilityResult = field(init=False) 
+    __eligibility_result: EligibilityResult = field(init=False)
     __assessment_result: AssessmentResult = field(init=False)
     __recommendations_result: RecommendationResult = field(init=False)
     __sufficiency_result: SufficiencyResult = field(init=False)
-    __evaluated_records: list[EvaluatedRecord] = field(init=False)
 
     @cached_property
     def until_date(self) -> date|None:
         return datetime(self.until_year, 12, 31).date if self.until_year else None
+    @property
+    def records(self):
+        """Patient data, from HealthContext"""
+        return self.healthcontext.records
     @property
     def eligibility_result(self):
         return self.__eligibility_result
@@ -47,8 +52,9 @@ class Concord:
     def recommendation_result(self):
         return self.__recommendations_result
     @property
-    def evaluated_records(self):            
-        return self.__evaluated_records
+    def sufficiency_evaluated_records(self):
+        """Sufficiency evaluated records"""
+        return self.sufficiency_result.context.evaluation_list
     @property
     def sufficiency_result(self):
         return self.__sufficiency_result
@@ -110,8 +116,7 @@ class Concord:
         if errs:
             raise ExceptionGroup('Cannot Execute CPG', errs)
 
-        # --> Get all evaluated records
-        self.__evaluated_records = self.__sufficiency_result.context.evaluation_list
+
 
         # --> check if they need Input
         need_attestation = self.__sufficiency_result.attestation_variables
@@ -131,7 +136,7 @@ class Concord:
 
         self.__assessment_result = evaluator.assess(
             assessment_variables= self.cpg.assessments_variables,
-            evaluated_records= self.evaluated_records,
+            evaluated_records= self.sufficiency_evaluated_records,
             persona= self.healthcontext.persona,
             functions_module= self.cpg.functions_module,
             context= ctx
@@ -150,7 +155,8 @@ class Concord:
         for recommendation in self.cpg.recommendation_variables:
 
             eval_rec = EvaluatedRecommendation(recommendation=recommendation)
-            eval_rec.evaluate(self.assessment_result.context.evaluation_list, variables=self.evaluated_records, persona=self.healthcontext.persona)
+            eval_rec.evaluate(self.assessment_result.context.evaluation_list, evaluated_records=self.sufficiency_evaluated_records, persona=self.healthcontext.persona)
+            # eval_rec.evaluate(self.assessment_result.context.evaluation_list, variables=self.evaluated_records, persona=self.healthcontext.persona)
             evaluated_recommendations.append(eval_rec)
             log.debug(eval_rec)
 
@@ -174,11 +180,15 @@ class Concord:
         if not self.__assessment_result:
             return 
         # get all records
-        all_variables = self.evaluated_records
-        evaluated_records = self.__assessment_result.context.evaluation_list
-        for er in evaluated_records + all_variables:
+        all_records = self.sufficiency_evaluated_records
+        assess_records = self.assessment_result.context.evaluation_list
+        combined = all_records + assess_records
+
+        # all_variables = self.evaluated_records
+        # evaluated_records = self.__assessment_result.context.evaluation_list
+        for er in combined:
             log.debug(er.record.var.narrative_variables)
-            ls = list(filter(lambda ev: ev.id in er.record.var.narrative_variables if er.record.var.narrative_variables else [], all_variables + evaluated_records))
+            ls = list(filter(lambda ev: ev.id in er.record.var.narrative_variables if er.record.var.narrative_variables else [], combined))
             d = dict(map(lambda er: {er.id: er.record.value.value}, ls))
             log.debug(d)
 

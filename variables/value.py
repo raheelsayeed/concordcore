@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 
-from datetime import date, datetime
+from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 import logging
 
-from primitives import code, unit
+from primitives import code, unit, valuedate
 
 log = logging.getLogger(__name__)
+
 
 
 # ------------- WORKING MODEL ------------ #
@@ -19,9 +21,12 @@ class Value:
         if value == None:
             raise ValueError('requires a value')
 
+        dt = date or datetime.now()
+        dt = valuedate.ValueDate(dt)
+
         self.value = value 
         self.unit = unit
-        self.date = date or datetime.now()
+        self.date = dt
         self.source = source
         self.code = code
         if source and type(source) is not list:
@@ -39,9 +44,11 @@ class Value:
     def representation(self):
         if isinstance(self.value, bool):
             return 'Yes' if self.value == True else 'No'
-        return str(self.value) + (f' {self.unit}' if self.unit else '')
+        return f'{str(self.value)} {self.unit if self.unit else ""}'
+
         
     def __repr__(self) -> str:
+        return f'Val={self.value}'
         return str(self.value)
 
 

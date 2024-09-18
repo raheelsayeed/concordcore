@@ -151,8 +151,8 @@ __Narrative__: {{ r.sanitized_narrative }}
                     <p class="post-author">Based on the following <em>assessments</em>:</p>
                     <ol>
                     {% for b in r.based_on %}
-                    <li>{{b.record.title or b.record.id}}<br/>
-                        <em>santized-narrative: {{b.record.sanitized_narrative}}<br/>
+                    <li>{{b.title or b.id}}<br/>
+                        <em>santized-narrative: {{b.sanitized_narrative}}<br/>
                         </em>
                     </li>
                     {% endfor %}
