@@ -26,8 +26,10 @@ class RecommendationType(YMLStrEnum):
     MEDICATION              = 'medication'
     DISPLAY                 = 'display'
     DISPLAY_PROVIDER        = 'display_provider'
-    DISPLAY_PATIENT          = 'display_patient'
+    DISPLAY_PATIENT         = 'display_patient'
     EVALUATION              = 'evaluation'
+        
+
 
 class ProviderDirective(Enum):
     # Do this, do that, ??
@@ -129,13 +131,19 @@ class RecommendationVar(var.Var):
     def __hash__(self):
         return super().__hash__()
 
+    def citations_text(self):
+        if self.citations:
+            return '\n\n'.join(self.citations)
+        return None
+
     @classmethod
     def instantiate_from_yaml(cls, yml, InstantiationContext=None):
 
+        # because the classes are frozen, we pass the values along within yml
         yml['class_of_recommendation'] = ClassOfRecommendation.from_yaml(yml.get('class_of_recommendation', None))
         yml['level_of_evidence'] = LevelOfEvidence.from_yaml(yml.get('level_of_evidence', None))
         yml['uspstf_grade'] = USPSTFGrading.from_yaml(yml.get('uspstf_grade', None))
-        yml['type'] = RecommendationType.YAML(yml.get('type', None))
+        yml['category'] = RecommendationType.YAML(yml.get('category', None))
 
         return super(RecommendationVar, cls).instantiate_from_yaml(yml)
 
@@ -163,10 +171,13 @@ class EvaluatedRecommendation:
     narrative: str = None
     compliance_narrative = None
 
-        
     @property
     def title(self):
         return self.recommendation.title
+
+    @property 
+    def description(self):
+        return self.recommendation.description
     
     @cached_property
     def based_on_records(self):
@@ -233,8 +244,10 @@ class EvaluatedRecommendation:
             log.info(varible_value_dict)
         self.narrative = self.recommendation.narr.get_text(self.applies, persona=persona, sanitization_dict=varible_value_dict)
         self.compliance_narrative = self.recommendation.narr.get_compliance_text(self.compliant, persona=persona, sanitization_dict=varible_value_dict)
+        log.debug(f'{self.applies}; {type(self.applies)}; narr={self.narrative}')
         
 
+    
 
 
 @dataclass(frozen=True)
@@ -242,6 +255,7 @@ class RecommendationResult:
 
     context: EvaluationContext
     recommendations: list[EvaluatedRecommendation]
+
     
     @property
     def applied(self):

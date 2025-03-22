@@ -44,3 +44,7 @@ class HealthContext:
         return HealthContext(records=records, persona=persona)
 
 
+    def describe(self, missing_notation:str='N/A'):
+        texts = [f"{r.title or r.id}: {r.value.representation if r.value else missing_notation}" for r in self.records]
+        texts = '\n'.join(texts)
+        return texts

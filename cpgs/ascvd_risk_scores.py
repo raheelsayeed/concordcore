@@ -26,7 +26,7 @@ def compute_ten_year_score(
         hdl (int)
     """
     if age < 40 or age > 79:
-        raise ValueError('Age needs to be between 40-75')
+        raise ValueError('Age needs to be between 40-79')
         
     lnAge = math.log(age)
     lnTotalChol = math.log(totalCholesterol)
@@ -103,7 +103,7 @@ def compute_ten_year_score(
 
 def optimal_tenyearriskscore(healthcontext):
     try: 
-        isMale = healthcontext['Gender'].value.as_string == "248153007|http://snomed.info/sct"
+        isMale = healthcontext['Gender'].value.as_string == "http://snomed.info/sct|248153007"
         isAfricanAmerican = healthcontext['Race_Is_Black_AfricanAmerican'].value == True
         onHtnMeds = False
         dm   = False
@@ -144,7 +144,7 @@ def tenyearriskscore(healthcontext):
         hdl (int)
     """
     try: 
-        isMale = healthcontext['Gender'].value.as_string == "248153007|http://snomed.info/sct"
+        isMale = healthcontext['Gender'].value.as_string == "http://snomed.info/sct|248153007"
         isAfricanAmerican = healthcontext['Race_Is_Black_AfricanAmerican'].value == True
         onHtnMeds = healthcontext['med_for_htn'].value
         dm   = healthcontext['diabetesMellitus'].value

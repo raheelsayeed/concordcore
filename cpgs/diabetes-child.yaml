@@ -1,0 +1,145 @@
+CPG:
+  title: "Screening for Prediabetes and Type 2 Diabetes in Children and Adolescents"
+  identifier: DiabetesScreeningChildren
+  publisher: US Preventive Services Task Force
+  uri: https://jamanetwork.com/journals/jama/fullarticle/2795877
+  doi: 10.1001/jama.2022.14543
+  type: [screening, preventative]
+  revision: 1.0
+  revision_date: 2022-09-13
+  rendering_template_path: 'diabetes_child_templates/'
+  description: >
+      This guideline addresses the screening for prediabetes and type 2 diabetes in asymptomatic, nonpregnant children and adolescents under 18 years of age. The USPSTF has determined that there is insufficient evidence to assess the benefits versus harms of routine screening in this population.
+
+variables:
+  # Demographic Data
+  - id: Age
+    code:
+      concord: ['Age']
+  - id: Gender
+    code:
+      concord: ['Gender']
+  - id: Ethnicity
+    code:
+      concord: ['Ethnicity']
+
+  # Laboratory Tests
+  - id: FastingPlasmaGlucose
+    title: Fasting Plasma Glucose
+    user_attestable: False
+    code:
+      loinc: ["1558-6"]
+    validator:
+      plausible: '$value >= 100 and $value <= 125'
+    narrative:
+      patient:
+        HasValue: Your fasting plasma glucose level is $self.values
+        NoValue: Not found in record
+
+  - id: HbA1c
+    title: Hemoglobin A1c
+    user_attestable: False
+    code:
+      loinc: ["4548-4"]
+    validator:
+      plausible: '$value >= 5.7 and $value <= 6.4'
+    narrative:
+      patient:
+        HasValue: Your HbA1c level is $self.values
+        NoValue: Not found in record
+
+  # Additional Assessment Variables
+  - id: BMI
+    title: Body Mass Index
+    user_attestable: False
+    code:
+      concord: ['BMI']
+    validator:
+      plausible: '$value > 0'
+    narrative:
+      patient:
+        HasValue: Your BMI is recorded as $self.values
+        NoValue: BMI not found in record
+    filter:
+      expression: '$BMI >= 85'
+      description: Elevated BMI (≥85th percentile)
+
+  - id: FamilyHistoryDiabetes
+    title: Family History of Diabetes
+    user_attestable: True
+    code:
+      concord: ['Family History of Diabetes']
+    narrative:
+      patient:
+        True: Family history of diabetes is recorded.
+        False: No family history of diabetes recorded.
+
+eligibility:
+  - id: age_criteria
+    title: Age Eligibility for Screening
+    expression: '$Age < 18'
+    description: "Applicable for children and adolescents under 18 years."
+
+  - id: screening_risk_factors
+    title: Elevated Risk Factors
+    expression: |
+      ($Ethnicity in ['American Indian', 'Alaska Native', 'Black', 'Hispanic/Latino', 'Pacific Islander']) or
+      ($FamilyHistoryDiabetes == True) or
+      ($BMI >= 85)
+    description: "Applies to children and adolescents at increased risk due to ethnicity, family history, or obesity."
+
+assessments:
+  - id: elevated_fasting_glucose
+    title: Elevated Fasting Plasma Glucose
+    required: False
+    expression: '$FastingPlasmaGlucose >= 100 and $FastingPlasmaGlucose <= 125'
+    narrative:
+      patient:
+        True: 'Your fasting glucose level is elevated: $value mg/dL.'
+        False: 'Your fasting glucose level is within normal limits.'
+
+  - id: elevated_HbA1c
+    title: Elevated HbA1c
+    required: False
+    expression: '$HbA1c >= 5.7 and $HbA1c <= 6.4'
+    narrative:
+      patient:
+        True: 'Your HbA1c level is elevated, indicating prediabetes risk.'
+        False: 'Your HbA1c level is within normal limits.'
+
+  - id: elevated_BMI
+    title: Elevated BMI
+    required: False
+    expression: '$BMI >= 85'
+    narrative:
+      patient:
+        True: 'Your BMI is in the elevated range (≥85th percentile). This increases your risk for type 2 diabetes.'
+        False: 'Your BMI is within the normal range.'
+
+  - id: positive_family_history
+    title: Family History of Diabetes
+    required: False
+    expression: '$FamilyHistoryDiabetes == True'
+    narrative:
+      patient:
+        True: 'A family history of diabetes is noted, which can increase your risk for type 2 diabetes.'
+        False: 'No family history of diabetes is recorded.'
+
+recommendations:
+  - id: lifestyle_intervention
+    title: Lifestyle Intervention for Elevated Risk
+    type: lifestyle
+    description: "For children at risk of type 2 diabetes, lifestyle interventions focused on diet and exercise are recommended."
+    expression: '$elevated_fasting_glucose == True or $elevated_HbA1c == True or $elevated_BMI == True or $positive_family_history == True'
+    narrative:
+      patient:
+        True: "Based on your lab results and risk factors, it is recommended to consider a diet and exercise program to manage your blood sugar levels."
+      provider:
+        True: "The patient has risk factors for type 2 diabetes and would benefit from lifestyle interventions targeting diet and physical activity."
+
+citations:
+  - id: JAMA_2022
+    title: "Screening for Prediabetes and Type 2 Diabetes in Children and Adolescents"
+    uri: https://jamanetwork.com/journals/jama/fullarticle/2795877
+    publisher: "JAMA"
+    doi: 10.1001/jama.2022.14543

@@ -17,7 +17,7 @@ from primitives.valuedate import ValueDate
 
 log = logging.getLogger(__name__)
 
-class VarType(YMLStrEnum):
+class VarCategory(YMLStrEnum):
     Undetermined = 'undetermined'
     laboratory = 'laboratory-blood-test'
     vital_sign = 'vital-sign'
@@ -61,6 +61,13 @@ class Narrative:
     @property
     def tags(self):
         return self.__narrative_singleline_text.tags
+
+    def __repr__(self):
+        text = '' 
+        for k,v in enumerate(self.data):
+            text += f'{k}: {v}\n'
+        return text
+
 
     def __nested_values(self, d):
         for v in d.values():
@@ -109,7 +116,6 @@ class Narrative:
         else:
             text = narrative_dict.get('NoValue', None)
 
-        log.debug(f'text={text}, n={ narrative_dict},  {for_value}')
 
         
         # self santized values
@@ -127,25 +133,51 @@ class Narrative:
                     val = self.formatted_value(str(val)) if self.FORMAT_VALUE else str(val)
                     text = text.replace('$'+n_var, val)
          
-        log.debug(f'__get_text_Narrative Tags={self.tags} for text={text}')
+        log.debug(f'text={text}, Tags={self.tags} NarrativeDict={narrative_dict},  for_value={for_value}')
         return text
 
     
 @dataclass(frozen=True)
 class Var:
     id: str 
+    """variable identifier"""
+
     title: str = None 
+    """title of the variable"""
+
     description: str = None
-    code: Any = None
-    category: VarType = VarType.Undetermined
-    type: str = None
+    """description of the variable"""
+
+    code: list[Code] = None
+    """ontological code: List[Code]"""
+
+    category: YMLStrEnum = None
+    """category of the variable"""
+
+    type: ValueType = None
+    """type of variable value: boolean, int,  """
+
     user_attestable: bool = True
+    """Can this variable be user attested"""
+
     required: bool = True
+    """Is this variable required for executing this CPG"""
+
     reconcile: bool = False 
+    """Should prompt user for verifying the value"""
+
     question: str = None 
-    narrative: dict = None 
+    """Question related to this"""
+
     value_filter: str = None 
+    """Further filtering of values, see ValueFilter class"""
+
+    narrative: dict = None 
+    """narrative dictionary"""
+
     validator: dict = None
+    """Variable value validation dict"""
+
     narr: Narrative = None
 
     @property
@@ -159,6 +191,10 @@ class Var:
 
         if isinstance(__o, Var) == False:
             return super().__eq__(__o)        
+
+        # use id as an identifier
+        if self.id == __o.id:
+            return True
 
         if self.code and __o.code:
             my_codes = set(map(lambda c: c.as_string, self.code))
@@ -177,7 +213,7 @@ class Var:
 
     @classmethod
     def Sample(cls):
-        v = Var('1', 'title', 'descr', None, VarType.condition, ValueType.boolean)
+        v = Var('1', 'title', 'descr', None, VarCategory.condition, ValueType.boolean)
         return v
 
     @classmethod
@@ -214,7 +250,12 @@ class Var:
 
             cat = yml.get('category', None)
             if cat:
-                yml['category'] = VarType.YAML(yml['category'])
+                if type(cat) == str:
+                    yml['category'] = VarCategory.YAML(yml['category'])
+
+            value_type = yml.get('type', None) 
+            if value_type:
+                yml['type'] = ValueType.YAML(value_type)
 
 
             instance = cls(**yml)

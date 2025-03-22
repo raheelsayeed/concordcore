@@ -82,7 +82,7 @@ def print_evaluatedrecords(variables, title = None, subtitle = None):
     table_ = table.Table(box=box.SIMPLE_HEAD, title_justify='left', highlight=True, title_style="bold blue", show_header=True, show_edge=False, header_style="dim", title=f'Evaluated: {title} -- ')
     table_.add_column('No.', style="dim")
     table_.add_column('id', justify="left", style="white", no_wrap=False)
-    table_.add_column('type', justify="left", style="white", no_wrap=False)
+    table_.add_column('ret_type', justify="left", style="white", no_wrap=False)
     table_.add_column('required', justify="left", style="white", no_wrap=False)
     table_.add_column('attestable', justify="left", style="white", no_wrap=False)
     table_.add_column('val', justify="left", style="white", no_wrap=False)

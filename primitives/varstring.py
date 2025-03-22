@@ -10,7 +10,11 @@ from re import findall
 l = logging.getLogger(__name__)
 
 class VarString(str):
+    """A string that contains variables with a prefix '$'"""
 
+    pattrn = r"\$([A-Za-z][A-Za-z_.0-9]+[A-Za-z0-9])+"
+    """Atleast must contain 3 characters after a $ prefix"""
+    
     __replace_cached: str = field(init=False)
 
     @property
@@ -30,10 +34,10 @@ class VarString(str):
     def tags(self):
         if not self:
             return None 
-        pattrn = r"\$([A-Za-z][A-Za-z_.0-9]+[A-Za-z0-9])+"
-        matches = findall(pattrn, self)
+        matches = findall(VarString.pattrn, self)
         if matches:
-            return sorted(list(set(matches)), key=lambda tag: '.' in tag, reverse=True)
+            list_of_tags = sorted(list(set(matches)), key=lambda tag: '.' in tag, reverse=True)
+            return list_of_tags
         else:
             return None
 

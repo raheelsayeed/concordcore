@@ -10,7 +10,6 @@ import simpleeval, logging
 
 log = logging.getLogger(__name__)
 
-
 class Expression:
 
     def __init__(self, expression_string: str):
@@ -26,7 +25,7 @@ class Expression:
     def result(self):
         return self._result
 
-    def __str__(self) -> str:
+    def __repr__(self) -> str:
         return f'Expression({self.string})'
 
     @property
@@ -46,11 +45,6 @@ class Expression:
             filtered = next(filter(lambda ea_record: ea_record.id == assessment_var_id, evaluated_records), None)
             if filtered:
                 if filtered.record.value:
-                    if not isinstance(filtered.record.value.value, bool):
-                        message = f'POLICY CHANGE WARNING, Assessments are not just Boolean. Assessments in a recommendation must have bool-type value, found:{type(filtered.record.value.value)}'
-                        log.warning(message)
-                        # errors.append(ValueError(f'Assessments in a recommendation must have bool-type value, found:{type(filtered.record.value.value)}')) 
-                        # continue 
                     expression_values[assessment_var_id] = filtered.record.value.value
                     self.__expression_records.append(filtered.record)
                 else:
@@ -59,7 +53,6 @@ class Expression:
             else:
                 errors.append(KeyError(f'Cannot find Assessment={assessment_var_id} in {self.string}'))
         
-        log.info(expression_values)
 
         if errors:
             raise VariableEvaluationError(errors, f'expression={self.string}')
@@ -84,8 +77,6 @@ class Expression:
         dependency_variables_nullValues = [] 
         
         
-
-        
         for exp_var_id in expression_tags:
             comps = exp_var_id.split('.')
             var_id = comps[0]
@@ -97,7 +88,8 @@ class Expression:
                 var_value = None
                 # 1. count of values
                 if func == 'count':
-                    var_value = {'count':len(filtered_record.values)} if filtered_record.values != None else None
+                    var_value = {'count': len(filtered_record.values) if filtered_record.values != None else 0}
+                    # var_value = {'count':len(filtered_record.values)} if filtered_record.values != None else None
                 # 2. date of latest value
                 elif func == 'date':
                     var_value = {'date':filtered_record.value.date} if filtered_record.value != None else None
@@ -121,7 +113,7 @@ class Expression:
             # evaluator.ATTR_INDEX_FALLBACK=True 
             expression_result = evaluator.eval(expstr)
             self._result = Value(expression_result, source=self.__expression_records)
-            log.debug(f'Evaluatingvalues={expression_values}, expression={expstr}, result={expression_result}')
+            log.debug(f'Evaluating values=<{expression_values}>, expression=<{expstr}>, result=<{expression_result}>')
         except TypeError as e:
             ve = ExpressionEvaluationError(expstr, expression_values,  str(e))
             raise ve

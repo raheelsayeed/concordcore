@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 # ------------- VALUE ------------ #
 class Value:
 
-    def __init__(self, value, unit: unit.Unit = None, code: list[code.Code] = None, date: datetime = None, source: list[Any] = None):
+    def __init__(self, value, unit: unit.Unit = None, code: list[code.Code] = None, date: datetime = None, source: list[Any] = None, representation_function=None):
 
         if value == None:
             raise ValueError('requires a value')
@@ -29,6 +29,7 @@ class Value:
         self.date = dt
         self.source = source
         self.code = code
+        self.representation_function = representation_function
         if source and type(source) is not list:
             raise KeyError(f'value.source must be a list-type. found={type(source)}')
 
@@ -42,14 +43,20 @@ class Value:
 
     @property
     def representation(self):
+        if self.representation_function:
+            rep_value = self.representation_function(self)
+            if not isinstance(rep_value, str):
+                raise ValueError(f'cannot apply representation_function on {self}')
+            return rep_value
         if isinstance(self.value, bool):
             return 'Yes' if self.value == True else 'No'
-        return f'{str(self.value)} {self.unit if self.unit else ""}'
+        if isinstance(self.value, code.Code):
+            return self.value.display or self.value.as_string
 
+        return f'{str(self.value)} {self.unit if self.unit else ""}'
         
     def __repr__(self) -> str:
         return f'Val={self.value}'
-        return str(self.value)
 
 
     def __eq__(self, other) -> bool:

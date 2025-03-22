@@ -64,7 +64,8 @@
                     <h2>{{ r.title }}</h2>
 {% markdown %}
 {{ r.recommendation.description or ''}}
-Narraive: {{ r.sanitized_narrative }}
+
+Narraive: {{ r.narrative}}
 {% endmarkdown %}
 </td>
 <td>
@@ -85,10 +86,10 @@ Narraive: {{ r.sanitized_narrative }}
                         <tr>
                             <td class="basedon"><small>{{b.id}}</small></td>
                             <td class="basedon-title">{{b.title }}</td>
-                            <td class="basedon-value">{{b.value}}</td>
+                            <td class="basedon-value">{{b.value.representation}}</td>
                             <td class="basedon-narrative"><small>
 {% markdown %}
-{{b.sanitized_narrative}}
+{{b.narrative}}
 {% endmarkdown %}
                             </small></td>
                         </tr>
@@ -126,8 +127,9 @@ Narraive: {{ r.sanitized_narrative }}
       <td>
           <h2>{{ ea.record.title or ea.id }}</h2>
 {% markdown %}
-{{ ea.record.var.description or '_no description_'}}
-{{ ea.record.sanitized_narrative or '_no narrative_' }}
+Description: {{ ea.record.var.description or '_no description_'}}
+
+Narrative: {{ ea.record.narrative or '_no narrative_' }}
 {% endmarkdown %}
       </td>
       <td>{{ ea.record.value.representation }}</td>
@@ -139,10 +141,10 @@ Narraive: {{ r.sanitized_narrative }}
         <tr>
             <td class="basedon">{{ loop.index }}.</td>
             <td class="basedon-title">{{ source.title or source.id}}</td>
-            <td class="basedon-value">{{ source.value}}</td>
+            <td class="basedon-value">{{ source.value.representation}}</td>
             <td class="basedon-narrative"><small>
 {% markdown %}
-{{source.sanitized_narrative}}
+{{source.narrative}}
 {% endmarkdown %}
                     </small></td>
         </tr>
@@ -176,7 +178,7 @@ Narraive: {{ r.sanitized_narrative }}
           <h3>{{ er.record.title or er.record.id }}</h3>
 {% markdown %}
 {{ er.record.var.description or 'No description' }}
-{{ er.record.sanitized_narrative or 'No narrative'}}
+{{ er.record.narrative or 'No narrative'}}
 {% endmarkdown %}
           <small>Codes: {{ er.record.var.code }} </small>
       </td>

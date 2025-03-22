@@ -10,7 +10,7 @@ from typing import Any, Protocol
 from .expression import Expression
 from .evaluation import EvaluatedRecord, EvaluationContext, EvaluationResult, SufficiencyResultStatus
 from primitives.errors import VariableEvaluationError
-from primitives.types import Persona 
+from primitives.types import Persona, ValueType
 from primitives.vlist import vlist
 from variables import record, var, value
 
@@ -22,12 +22,12 @@ log = logging.getLogger(__name__)
 class AssessmentVar(var.Var):
     
     # default: boolean type value expected
-    # type: str = 'boolean'
+    type: ValueType = ValueType.boolean
     show_if_negative: bool = False 
     expression: str = None
     function: str = None 
     dated: datetime = None
-    references: Any = None
+    reference: Any = None
     user_attestable: bool = False
 
     def __post_init__(self):
@@ -62,6 +62,7 @@ class AssessmentRecord(record.Record):
     def evaluate(self, records, persona: Persona = Persona.patient, functions_module=None):
 
         record_dict = {r.id: r.value if r.value else None for r in records}
+
         try:
             if self.var.function:
                 func = getattr(functions_module, self.var.function)
@@ -79,8 +80,11 @@ class AssessmentRecord(record.Record):
                 if result:
                     # already result is a value.Value type
                     self.__assessed_value = self.__expression.result
+
         except Exception as e:
             raise VariableEvaluationError([e], self.id)
+
+        
         finally:
             # assign narrative
             var_dict = None
@@ -91,10 +95,7 @@ class AssessmentRecord(record.Record):
                     var_dict = {r.id: r.as_dict() for r in records_for_filter}
             
             self.set_narrative(persona=persona, variable_data_dict=var_dict)
-                
             log.debug(f'AssessmentEval={self.id} expression={self.var.expression} function={self.var.function} result={self.value} narrative={self.narrative}')
-            # if self.id == "metabolic_syndrome":
-            #     exit()
         return self.__assessed_value
 
 
@@ -118,7 +119,7 @@ class EvaluatedAssessmentRecord(EvaluatedRecord):
 class AssessmentResult(EvaluationResult):
     
     @property
-    def successful(self) -> bool:
+    def success(self) -> bool:
         # successful only when no records have Insufficient status 
         log.info('AssessmentResult is successful only when no evaluated assessment records are designated=Insufficient')
         for eval_record in self.context.evaluation_list:

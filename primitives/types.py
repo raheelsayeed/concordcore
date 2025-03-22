@@ -12,6 +12,8 @@ class YMLStrEnum(StrEnum):
     
     @classmethod
     def YAML(cls, e_num):
+        if not e_num:
+            return None
         vt = None 
         try:
             vt = cls(e_num)

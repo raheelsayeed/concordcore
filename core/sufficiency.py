@@ -16,10 +16,7 @@ log = logging.getLogger(__name__)
 class SufficiencyResult(EvaluationResult):
   
     def __repr__(self) -> str:
-            return f"""
-            is_executable: {self.is_executable}
-            {super().__repr__()}
-            """
+            return f"is_executable: {self.is_executable}\n{super().__repr__()}"
 
     @cached_property
     def result(self):
@@ -41,7 +38,8 @@ class SufficiencyEvaluatorProtocol(Protocol):
 
     def evaluate(self,
                 user_context: HealthContext,
-                context: EvaluationContext = None) -> SufficiencyResult:
+                context: EvaluationContext = None,
+                strict = True) -> SufficiencyResult:
         ...
 
 
@@ -55,7 +53,8 @@ class SufficiencyEvaluator(SufficiencyEvaluatorProtocol):
 
     def evaluate(self,
                 user_context: HealthContext,
-                context: EvaluationContext = None) -> SufficiencyResult:
+                context: EvaluationContext = None,
+                strict = True) -> SufficiencyResult:
         """Evalutes a given list of variables for sufficiency to execute a CPG and categorizes 
         each variable.
         Note: Always call cpg.is_valid() else where before evaluating for sufficiency!
@@ -63,6 +62,7 @@ class SufficiencyEvaluator(SufficiencyEvaluatorProtocol):
         Args:
             user_context: HealthContext 
             context (EvaluationContext, optional): Records evaluation context. Defaults to None.
+            strict: If True- plausibility and panel evaluation raises evaluation error
 
         Returns:
             SufficiencyResult: Sufficiency
@@ -93,10 +93,11 @@ class SufficiencyEvaluator(SufficiencyEvaluatorProtocol):
         for record in records:
 
             try:
-                if record.validate(records=records, strict=True):
+                if record.validate(records=records, strict=strict):
                     eval_ctx.successful_evaluation(record)
             except Exception as e:
-        
+                # raise e
+                print(e)
                 eval_ctx.failed_evaluation(record, e)   
                 
 

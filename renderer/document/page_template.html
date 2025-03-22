@@ -75,7 +75,7 @@
                             <input class="pure-u-1 var-has_value-{{er.record.has_value}}" id="{{ er.id }}" value="{{ er.record.value.representation }}" type="text" placeholder="No Value" /> 
                         </label>
 {% markdown %}
-Narrative: {{ er.record.sanitized_narrative or '--no-narrative--'}}
+Narrative: {{ er.record.narrative or '--no-narrative--'}}
 {% endmarkdown %}
 <small>
   Values: {{ er.record.values.representation }}<br/>
@@ -112,7 +112,7 @@ Narrative: {{ er.record.sanitized_narrative or '--no-narrative--'}}
                             <div class="post-description">
 {% markdown %}
 Description: {{ ea.record.var.description or ''}}<br/>
-Sanitized-Narrative: {{ ea.record.sanitized_narrative or '' }}
+Sanitized-Narrative: {{ ea.record.narrative or '' }}
 {% endmarkdown %}
 {% if ea.record.value.source %}
   <hr>
@@ -120,7 +120,7 @@ Sanitized-Narrative: {{ ea.record.sanitized_narrative or '' }}
   <ul>
     {% for source in ea.record.value.source %}
     
-    <li><small>{{ source.id }} val={{ source.values }} date={{ source.dated }}<br/>Narrative: {{ source.sanitized_narrative }}<br/>
+    <li><small>{{ source.id }} val={{ source.values }} date={{ source.dated }}<br/>Narrative: {{ source.narrative }}<br/>
           errors=<em class="error">{{ source.error }}</em></small></li>
     {% endfor %}
   </ul>
@@ -152,7 +152,7 @@ __Narrative__: {{ r.sanitized_narrative }}
                     <ol>
                     {% for b in r.based_on %}
                     <li>{{b.title or b.id}}<br/>
-                        <em>santized-narrative: {{b.sanitized_narrative}}<br/>
+                        <em>santized-narrative: {{b.narrative}}<br/>
                         </em>
                     </li>
                     {% endfor %}

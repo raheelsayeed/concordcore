@@ -10,15 +10,9 @@ import misc
 import logging
 from rich.logging import RichHandler
 
-
-
-level = 'INFO'
+level = 'ERROR'
 logging.basicConfig(level=level, format="%(message)s", datefmt="[%X]", handlers=[RichHandler()])
 logger = logging.getLogger("tests")
-
-
-
-
 
 parser = argparse.ArgumentParser("concordcore_")
 parser.add_argument('-f', dest='filepath', type=str, help='Path to Concord.CPG file')
@@ -41,9 +35,6 @@ ht("""
 
 
 """)
-
-
-
 user_context = misc.sample_healthcontext(args.persona)
 print_records(user_context.records)
 
@@ -59,7 +50,7 @@ ht(
 """)
 mycpg = cpg.CPG.from_document_path(fp)
 concord = Concord(mycpg, user_context)
-logger.info(f'Initialized with with cpg: [bold]{mycpg.title}')
+logger.info(f'Initialized with cpg: [bold]{mycpg.title}[/bold]')
 logger.info(f'Publisher={mycpg.publisher}')
 logger.info(f'doi ={mycpg.publisher}')
 logger.info(f'doi ={mycpg.publisher}')
@@ -90,7 +81,8 @@ try:
     logger.info(f'IS_Eligibility: {result.is_eligible}')
     print_evaluatedrecords(result.context.evaluation_list)
     if inspect_output:
-        inspect(result)
+
+        p(result)
 
 except Exception as e:
     raise e
@@ -117,7 +109,7 @@ try:
     result = concord.sufficiency()
     logger.info(f'SufficiencyResult: IS_EXECUTABLE={result.is_executable}')
     if inspect_output:
-        inspect(result)
+        p(result)
         
     print_evaluatedrecords(result.context.evaluation_list, 'Sufficiency Checked Variables')
 except Exception as e:
@@ -144,9 +136,9 @@ except NeedAttestationError as e:
     if session.run(debug_skip=True):
         result = concord.assess()
 
-logger.info(f'Assessment Complete?={result.successful}')
+logger.info(f'Assessment Complete?={result.success}')
 print_evaluatedrecords(result.context.evaluation_list, title="AssessmentVariables")
-if not result.successful:
+if not result.success:
     logger.error(f'Assessment could not be completed, is insufficient. Must stop here.')
     for insuff_record in result.insufficient_variables:
         logger.error(insuff_record)
@@ -154,7 +146,7 @@ if not result.successful:
 
 
 if inspect_output:
-    inspect(result)
+    p(result)
 
 
 
@@ -201,7 +193,7 @@ Based-On: {based_on_text}''',style="on deep_sky_blue4")
         con.print(Columns([panel]))
 
 if inspect_output:
-    inspect(result.recommendations)
+    p(result.recommendations)
 
 
 
@@ -212,7 +204,7 @@ for record in concord.sufficiency_result.context.evaluation_list:
 for record in concord.assessment_result.context.evaluation_list:
     logger.debug(f'ASSESSMENT:narrative test record={record.record.test_narratives()}')
 
-    
+
 if args.template_name:
     
 
@@ -232,4 +224,4 @@ if args.template_name:
 
 from outomes.outcome import Advisory
 
-print(Advisory.All())
+p(Advisory.All())

@@ -29,44 +29,57 @@ class Concord:
     """Instance of CPG()"""
     healthcontext: HealthContext
     """HealthContext"""
+    strict_validation:bool = False
+    """If true, also validates panel and plausible values if given"""
+
+    ignore_eligibility:bool = False
+    """Ignores eligibility and allows assessment and recommendation evaluation"""
+
     until_year: int = None
-    __eligibility_result: EligibilityResult = field(init=False)
-    __assessment_result: AssessmentResult = field(init=False)
-    __recommendations_result: RecommendationResult = field(init=False)
+    __eligibility_result: EligibilityResult = field(default=None)
+    __assessment_result: AssessmentResult = field(default=None)
+    __recommendations_result: RecommendationResult = field(default=None)
     __sufficiency_result: SufficiencyResult = field(init=False)
 
     @cached_property
     def until_date(self) -> date|None:
         return datetime(self.until_year, 12, 31).date if self.until_year else None
+    
     @property
     def records(self):
         """Patient data, from HealthContext"""
         return self.healthcontext.records
+
     @property
     def eligibility_result(self):
-        return self.__eligibility_result
+        return self.__eligibility_result or None
+
     @property
     def assessment_result(self):
-        return self.__assessment_result
+        return self.__assessment_result or None
+
     @property
     def recommendation_result(self):
-        return self.__recommendations_result
+        return self.__recommendations_result or None
+
     @property
     def sufficiency_evaluated_records(self):
         """Sufficiency evaluated records"""
         return self.sufficiency_result.context.evaluation_list
+
     @property
     def sufficiency_result(self):
         return self.__sufficiency_result
+
 
     def eligibility(self, 
                     evaluator: EligibilityEvaluatorProtocol = None,
                     context: EvaluationContext = None) -> EligibilityResult:
 
-        if not self.cpg.eligibility_criterias:
+        if not self.cpg.eligibility_variables:
             raise Exception('Concord: no criterias defined to evaluate for this CPG')
         
-        eligibility_eval = evaluator or EligibilityEvaluator(self.cpg.eligibility_criterias)
+        eligibility_eval = evaluator or EligibilityEvaluator(self.cpg.eligibility_variables)
         # evalute eligibility
         self.__eligibility_result = eligibility_eval.evaluate(self.healthcontext, context=context)
 
@@ -75,20 +88,32 @@ class Concord:
 
     def sufficiency(self, 
                     sufficiency_evaluator: SufficiencyEvaluatorProtocol = None, 
-                    context: EvaluationContext = None) -> SufficiencyResult:
+                    context: EvaluationContext = None,
+                    ) -> SufficiencyResult:
         
         if not self.cpg.variables:
             raise Exception('Concord: no variables defined to evaluate for this CPG')
-
+    
         # initialize an evaluator 
         sufficiency_eval = sufficiency_evaluator or SufficiencyEvaluator('se', cpg_variables=self.cpg.variables)
         # evaluate sufficiency
-        self.__sufficiency_result = sufficiency_eval.evaluate(self.healthcontext, context)
+        self.__sufficiency_result = sufficiency_eval.evaluate(
+                    self.healthcontext, 
+                    context, 
+                    strict=self.strict_validation
+                )
+        
+        log.debug(f"Evaluation done with strict={self.strict_validation} policy")
+        log.info(f'Validation policy={self.strict_validation}')
 
         return self.__sufficiency_result
 
+
+
     def assess(self,
-                assessment_evaluator: AssessmentEvaluatorProtocol = None
+                assessment_evaluator: AssessmentEvaluatorProtocol = None,
+                ignore_sufficiency = False,
+                ignore_required_variable_attestations = False
                 ) -> AssessmentResult:
 
         """Get all evaluated_records
@@ -99,11 +124,13 @@ class Concord:
         4. evalate Assessment variables after collection of PGHD.
         """
         errs = []
-        if self.__eligibility_result == None:
-            errs.append(Exception('Eligibility evaluation must be completed before risk assessment'))
 
-        if self.__eligibility_result.is_eligible == False: 
-            errs.append(Exception('Eligibility criteria not met, cannot execute CPG'))
+        if self.ignore_eligibility == False:
+            if self.__eligibility_result == None:
+                errs.append(Exception('Eligibility evaluation must be completed before risk assessment'))
+
+            if self.__eligibility_result.is_eligible == False: 
+                errs.append(Exception('Eligibility criteria not met, cannot execute CPG'))
         
         if self.__sufficiency_result.result == None:
             errs.append(Exception(f'Sufficiency not evaluated for CPG={self.cpg,identifier}'))
@@ -114,8 +141,12 @@ class Concord:
 
         log.debug(f'Sufficiency check complete; IS_Executable={self.__sufficiency_result.is_executable}')
         if errs:
-            raise ExceptionGroup('Cannot Execute CPG', errs)
-
+            self.__assessment_result = None
+            exe = ExceptionGroup('Cannot Execute CPG', errs)
+            if not ignore_sufficiency:
+                raise exe
+            else:
+                log.error(exe)
 
 
         # --> check if they need Input
@@ -124,10 +155,13 @@ class Concord:
         if need_attestation:
             for n in need_attestation:
                 log.error(f'Need Input for record={n.record.id}')
-            raise NeedAttestationError(need_attestation)
+            e = NeedAttestationError(need_attestation)
+            if ignore_required_variable_attestations:
+                log.warning(e) 
+            else:
+                raise e
         else:
             log.debug('UserAttestation/PGHD Not Needed, proceeding..to evaluation')
-
 
         
 
@@ -135,31 +169,45 @@ class Concord:
         ctx = EvaluationContext()
 
         self.__assessment_result = evaluator.assess(
-            assessment_variables= self.cpg.assessments_variables,
+            assessment_variables= self.cpg.assessment_variables,
             evaluated_records= self.sufficiency_evaluated_records,
             persona= self.healthcontext.persona,
             functions_module= self.cpg.functions_module,
             context= ctx
         )
 
-        return self.__assessment_result
 
-    
+
+        return self.__assessment_result
 
 
     def recommendations(self, context: EvaluationContext = None) -> RecommendationResult:
 
+        ### 
+        # Recommendations not valid for population not eligible
 
-        context = context or    EvaluationContext() 
+        context = context or EvaluationContext() 
         evaluated_recommendations = []
+        if self.assessment_result is None: 
+            raise Exception('Assessment must be completed before calling recommendations()')
+
+
         for recommendation in self.cpg.recommendation_variables:
-
+            
             eval_rec = EvaluatedRecommendation(recommendation=recommendation)
-            eval_rec.evaluate(self.assessment_result.context.evaluation_list, evaluated_records=self.sufficiency_evaluated_records, persona=self.healthcontext.persona)
-            # eval_rec.evaluate(self.assessment_result.context.evaluation_list, variables=self.evaluated_records, persona=self.healthcontext.persona)
-            evaluated_recommendations.append(eval_rec)
-            log.debug(eval_rec)
-
+            try:
+                eval_rec.evaluate(
+                        self.assessment_result.context.evaluation_list, 
+                        evaluated_records=self.sufficiency_evaluated_records, 
+                        persona=self.healthcontext.persona
+                    )
+            except Exception as e:
+                eval_rec.error = e
+                log.error(e)
+            finally:
+                log.debug(eval_rec)
+                evaluated_recommendations.append(eval_rec)
+        
         self.__recommendations_result = RecommendationResult(
                 context=context, 
                 recommendations=sorted(evaluated_recommendations, key=lambda er: er.applies if er.applies else False, reverse=True)
@@ -173,6 +221,17 @@ class Concord:
             return None
         return self.recommendation_result.applied
 
+    
+
+    @staticmethod
+    def evaluated_record(identifier:str, records: list[EvaluatedRecord]):
+        for er in records:
+            if er.id == identifier:
+                return er
+        return None
+
+    def evaluated_recommendation(self, identifier: str):
+        return Self.evaluated_record(identifier=identifier, records=self.recommendation_result.recommendations)
 
     
     def build_and_sanitize_narratives(self):

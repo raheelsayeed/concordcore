@@ -24,10 +24,11 @@ class CPG():
     code: list[Code] = None 
     publisher: str = None
     variables: list[var.Var] = None
-    eligibility_criterias: list[EligibilityVar] = None
-    assessments_variables: list[AssessmentVar] = None 
+    eligibility_variables: list[EligibilityVar] = None
+    assessment_variables: list[AssessmentVar] = None 
     recommendation_variables: list[RecommendationVar] = None
     rendering_template_path: str = None
+    functions_module_name: str = None
     functions_module: Any = None
 
     # for rendering reasons
@@ -39,6 +40,16 @@ class CPG():
                 }
 
 
+    def __str__(self):
+        return  '''
+                CPG: {self.identifier}
+                Name: {self.title}
+                Vars: {len(self.variables)}
+                Assessments: {len(self.assessments)}
+                Recommendations: {len(self.recommendations)}
+                '''
+
+
 
     @classmethod
     def from_document_path(cls, cpg_filepath: str):
@@ -46,16 +57,6 @@ class CPG():
         from os import path
         import sys
         import yaml
-        yaml_filename = path.basename(cpg_filepath)
-        directory = path.dirname(cpg_filepath)
-        function_module =yaml_filename[:-5].replace('/', '.')
-        functions_module_path = directory + '/' + function_module + '.py'
-
-        log.info(cpg_filepath)
-        log.info(yaml_filename)
-        log.info(directory)
-        log.info(function_module)
-        log.debug(functions_module_path)
 
         yml = None
         with open(cpg_filepath, 'r') as cpgs_doc:
@@ -68,9 +69,19 @@ class CPG():
                 log.error(e)
                 raise e
         
+        yaml_filename = path.basename(cpg_filepath)
+        directory = path.dirname(cpg_filepath)
+        function_module = yml['CPG'].get('functions_module_name', None) or yaml_filename[:-5].replace('/', '.')
+        functions_module_path = directory + '/' + function_module + '.py'
+
+        log.info(cpg_filepath)
+        log.info(yaml_filename)
+        log.info(directory)
+        log.info(function_module)
+        log.debug(functions_module_path)
         raise_error = path.exists(functions_module_path)
         import importlib
-        log.warning('SAFETY-ISSUE: make sure functions module has not malicious-ness. INTERNAL-PROVISION-ONLY')
+        log.warning('CONCORD: make sure functions module has not malicious-ness. INTERNAL-PROVISION-ONLY')
         try:
             # fn_module = importlib.import_module(functions_module_path) if functions_module_path else None
             from importlib.util import spec_from_file_location as sf
@@ -100,9 +111,10 @@ class CPG():
         return cls(
             identifier=cpg_dict['identifier'],
             title=cpg_dict['title'],
+            publisher=cpg_dict.get('publisher', None),
             variables=[var.Var.instantiate_from_yaml(d) for d in variables_dict],
-            eligibility_criterias=[EligibilityVar.instantiate_from_yaml(d) for d in eligibility_dict],
-            assessments_variables=[AssessmentVar.instantiate_from_yaml(d) for d in assessments_dict],
+            eligibility_variables=[EligibilityVar.instantiate_from_yaml(d) for d in eligibility_dict],
+            assessment_variables=[AssessmentVar.instantiate_from_yaml(d) for d in assessments_dict],
             recommendation_variables=[RecommendationVar.instantiate_from_yaml(d) for d in recommendations_dict],
             functions_module=module
         )
@@ -131,11 +143,61 @@ class CPG():
         else:
             return None
 
+    @staticmethod
+    def get_var(identifier:str, variables: list[var.Var]):
+        for er in variables:
+            if er.id == identifier:
+                return er
+        return None
+
+    def get_recommendation(self, identifier: str):
+        return CPG.get_var(identifier=identifier, variables=self.recommendation_variables)
+
+
+    def contexts(self, eligibility_identifiers=None, assessment_identifiers=None, recommendation_identifiers=None):
+        ctx = self.assessment_context(identifiers=assessment_identifiers)
+        ctx.extend(self.recommendation_context(identifiers=recommendation_identifiers))
+        return ctx
+        
+
+    def eligibility_context(self, identifiers=None) -> list[str] | None: 
+        if self.eligibility_variables:
+            if identifiers:
+                contexts = [ev.title for ev in self.eligibility_variables if ev.title is not None and ev.id in identifiers]
+            else:
+                contexts = [ev.title for ev in self.eligibility_variables if ev.title is not None]
+            return contexts 
+
+        return None
+
+
+    def assessment_context(self, identifiers=None) -> list[str] | None:
+        if self.assessment_variables:
+            if identifiers:
+                contexts = [av.reference for av in self.assessment_variables if av.reference is not None and av.id in identifiers]
+            else:
+                contexts = [av.reference for av in self.assessment_variables if av.reference is not None]
+            return contexts
+        return None
+
+    def recommendation_context(self, identifiers=None) -> list[str] | None: 
+        if self.recommendation_variables:
+            if identifiers:
+                contexts = [rv.citations for rv in self.recommendation_variables if rv.citations_text is not None and rv.id in identifiers]
+            else:
+                contexts = [rv.citations for rv in self.recommendation_variables if rv.citations_text is not None]
+
+
+            
+
+            return [ctx for ctexes in contexts for ctx in ctexes]
+        return None
+
 
     def validate(self) -> bool:
 
          # check if they exist in variable list.
-        all_vars = self.variables + self.eligibility_criterias + self.assessments_variables
+        all_vars = self.variables + self.eligibility_variables + self.assessment_variables
         all_vars_Identifiers = list(map(lambda v: v.id, all_vars))
         errors = []
         # --- duplicates
@@ -167,8 +229,8 @@ class CPG():
 
             # Vars with expressions or functions must have var.identifiers already defined 
         distinct_vars = set()
-        from primitives.errors import ExpressionVariableNotFound
-        for vr in (self.eligibility_criterias + self.assessments_variables + self.recommendation_variables):
+        from primitives.errors import ExpressionVariableNotFound    
+        for vr in (self.eligibility_variables + self.assessment_variables + self.recommendation_variables):
 
             # Two variables cavnnot have same `id`
 
@@ -192,12 +254,12 @@ class CPG():
                     Exception('CPG.variables cannot have duplicate variable `id`s: ', dups)
                  )
 
-        if not self.assessments_variables:
+        if not self.assessment_variables:
             errors.append(
                     Exception('CPG.assessment_variables not found;  all CPGs must have risk `assessment` variables defined')
             )
 
-        for assessment in self.assessments_variables:
+        for assessment in self.assessment_variables:
             if assessment.expression and assessment.function:
                 errors.append(
                     ValueError(f'CPG.assessment {assessment.id} cannot have both `expression` and `function`')
@@ -218,7 +280,7 @@ class CPG():
         #         based_on = flatten(recommendation.based_on.values())
         #         based_on_identifiers.extend(based_on)
 
-        a_var_ids = [a.id for a in self.assessments_variables] 
+        a_var_ids = [a.id for a in self.assessment_variables] 
         for assessment_id in set(based_on_identifiers):
             if assessment_id not in a_var_ids:
                 errors.append(

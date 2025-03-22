@@ -45,7 +45,7 @@ class Record:
 
     
     def __repr__(self) -> str:
-        return f'Record={self.var.id}\tvals={self.values or ''}'
+        return f'Record<{self.var.id}; values={self.values or ''}>'
 
 
     @cached_property
@@ -131,11 +131,11 @@ class Record:
     
     def set_narrative(self, persona: Persona = Persona.patient, variable_data_dict: dict = None):
 
-
         narr = self.var.narr or self.default_narratives
 
         if not narr:
-            raise Exception('this is a problem, self.var.narr == nil ? then check if default narr available')
+            #  raise Exception('this is a problem, self.var.narr == nil ? then check if default narr available')
+            # logging.warning(e)
             return None 
 
         if variable_data_dict:
@@ -143,10 +143,17 @@ class Record:
         else:
             variable_data_dict = {"self": self.as_dict()}
 
-        self.__narrative = narr.get_text(self.value.value if self.value else None, persona, variable_data_dict, default=self.default_narratives.data)
-        logger.debug(f'Santized-Narrative={self.id} variable_dict={variable_data_dict}, narrative_text={self.narrative}, tags={self.var.narr}, default={self.default_narratives.data}')
-        # exit()
+        self.__narrative = narr.get_text(
+                self.value.value if self.value else None, 
+                persona, 
+                variable_data_dict, 
+                default=self.default_narratives.data
+            )
 
+        
+        
+        # print(f'Santized-Narrative={self.id} variable_dict={variable_data_dict}, narrative_text={self.narrative}, tags={self.var.narr}, default={self.default_narratives.data}')
+        # exit()
         # only for debug reasons
         self.__persona = persona
         return self.__narrative
@@ -160,8 +167,6 @@ class Record:
                 "NoValue": "Not found in your record",
                 True: "Following results in your record: $self.values",
                 False: "Not found in your record"
-
-
             },
             Persona.provider.value: {
                 "HasValue": "Values: $self.values",
@@ -169,7 +174,6 @@ class Record:
                 "NoValue": "Not in record",
                 False: "Not in record"
             }
-
         }
         return Narrative(data)
 
@@ -180,7 +184,7 @@ class Record:
         var_dict = self.var.as_dict()
         var_dict = {}
         var_dict.update({
-                'value': self.value if self.value else None,
+                'value': self.value.value if self.value else None,
                 'values': self.values.representation if self.values else None,
                 'date': self.value.date if self.value else None,
                 'count': len(self.values) if self.values else None,
@@ -195,12 +199,16 @@ class Record:
             logger.warning(f'Record={self.id} has no value to validate')
             return True
         
+        if type(val) != Value:
+            ve = VarError(f'Record={self.id}.value.type = {type(val)}')
+            raise ve
+
         if self.var.value_type:
             vtype = self.var.value_type.type
             if vtype == bool and type(val.value) == str and (val.value not in ['False', 'True']):
-                raise VarError(f'Invalid value_type={type(val.value)}; need={vtype}', self.id)
+                raise VarError(f'Record=<{self.id}> invalid value_type={type(val.value)}; need={vtype}', self.id)
             if vtype(val.value) == None:
-                raise VarError(f'Invalid value_type={type(val.value)}; need={vtype}', self.id)
+                raise VarError(f'Record=<{self.id}> invalid value_type={type(val.value)}; need={vtype}', self.id)
 
 
         if self.__plausible_validator:
@@ -213,14 +221,24 @@ class Record:
                     else: 
                         logger.warning(e)
             except Exception as e:
-                raise e
+                if strict: 
+                    raise e
+                else:
+                    logger.warning(e)
 
         if self.__panel_validator and records:
             try:
                 expression_vars = self.__panel_validator.variables
                 filtered = list(filter(lambda r: r.id in expression_vars, records))
-                f_dict = {r.id: r.value.value for r in filtered}
+                f_dict = {r.id: r.value.value if r.value else None for r in filtered}
                 f_dict.update({'value': self.value.value})
+                if None in f_dict.values():
+                    e = VarError(self.var.id, f'Cannot evaluate expression, missing values={f_dict}')
+                    if strict:
+                        raise e
+                    else:
+                        logger.warning(e)
+
                 res = self.__panel_validator.evaluate(f_dict)
                 if not res:
                     e = VarPanelValidationError(self.var, val.value)
@@ -229,7 +247,11 @@ class Record:
                     else: 
                         logger.warning(e)
             except Exception as e:
-                raise e
+                if strict: 
+                    raise e
+                else:
+                    logger.warning(e)
+
         
         return True
 
