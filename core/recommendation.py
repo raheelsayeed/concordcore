@@ -31,9 +31,29 @@ class RecommendationType(YMLStrEnum):
         
 
 
+class RecommendationActionType(StrEnum):
+    """Type of clinical action a recommendation suggests."""
+    prescribe = 'prescribe'
+    order_test = 'order-test'
+    schedule_screening = 'schedule-screening'
+    counseling = 'counseling'
+    referral = 'referral'
+    lifestyle_modification = 'lifestyle-modification'
+    monitoring = 'monitoring'
+
+
+class RecommendationAction(StrEnum):
+    """Provider response to a recommendation."""
+    pending = 'pending'
+    accepted = 'accepted'
+    rejected = 'rejected'
+    deferred = 'deferred'
+    not_applicable = 'not-applicable'
+
+
 class ProviderDirective(Enum):
     # Do this, do that, ??
-    pass 
+    pass
 
 class UserDirective(Enum):
     discussion_with_provider = auto()
@@ -160,16 +180,17 @@ class RecommendationVar(var.Var):
 
 @dataclass
 class EvaluatedRecommendation:
-    
+
     recommendation: RecommendationVar
-    based_on: list[EvaluatedAssessmentRecord] = None 
+    based_on: list[EvaluatedAssessmentRecord] = None
     compliance: Expression = None
-    expression: Expression = None 
-    applies: bool = None 
+    expression: Expression = None
+    applies: bool = None
     compliant: bool  = None
     error: Exception = None
     narrative: str = None
     compliance_narrative = None
+    non_compliance_evidence: list[EvaluatedRecord] = None
 
     @property
     def title(self):
@@ -242,6 +263,11 @@ class EvaluatedRecommendation:
                 if self.compliance:
                     self.compliant = self.compliance.evaluate([v.record for v in evaluated_records])
                     self.based_on.extend(self.compliance.expression_records)
+                    if self.compliant is False or (hasattr(self.compliant, 'value') and self.compliant.value is False):
+                        self.non_compliance_evidence = [
+                            er for er in (evaluated_records or [])
+                            if er.record.id in {r.id for r in self.compliance.expression_records}
+                        ]
             except Exception as e:
                 raise e
 
