@@ -163,3 +163,70 @@ class TestSufficiencyClassification:
         assert record.has_value is False
         assert var.required is True
         assert var.user_attestable is False
+
+
+class TestDependencyGraph:
+    """Tests for DependencyGraph variable dependency analysis."""
+
+    def test_empty_variables(self):
+        """DependencyGraph from variables with no validators."""
+        from core.sufficiency import DependencyGraph
+        vars = [Var(id='A'), Var(id='B')]
+        graph = DependencyGraph.from_variables(vars)
+        assert graph.dependencies == {}
+        assert graph.dependents == {}
+
+    def test_panel_validator_dependencies(self):
+        """DependencyGraph detects panel validator dependencies."""
+        from core.sufficiency import DependencyGraph
+        vars = [
+            Var(id='LDL', validator={'panel': '$HDL + $LDL < 300'}),
+            Var(id='HDL'),
+        ]
+        graph = DependencyGraph.from_variables(vars)
+        assert 'LDL' in graph.dependencies
+        assert 'HDL' in graph.dependencies['LDL']
+        assert 'LDL' in graph.dependents.get('HDL', set())
+
+    def test_missing_dependencies(self):
+        """get_missing_dependencies reports unavailable deps."""
+        from core.sufficiency import DependencyGraph
+        vars = [
+            Var(id='Ratio', validator={'panel': '$LDL / $HDL < 5'}),
+            Var(id='LDL'),
+            Var(id='HDL'),
+        ]
+        graph = DependencyGraph.from_variables(vars)
+        missing = graph.get_missing_dependencies('Ratio', available_ids={'LDL'})
+        assert 'HDL' in missing
+
+    def test_no_missing_when_all_available(self):
+        """get_missing_dependencies returns empty when all deps present."""
+        from core.sufficiency import DependencyGraph
+        vars = [
+            Var(id='Ratio', validator={'panel': '$LDL / $HDL < 5'}),
+            Var(id='LDL'),
+            Var(id='HDL'),
+        ]
+        graph = DependencyGraph.from_variables(vars)
+        missing = graph.get_missing_dependencies('Ratio', available_ids={'LDL', 'HDL'})
+        assert missing == set()
+
+    def test_value_reference_excluded(self):
+        """$value references in panel expressions are not counted as dependencies."""
+        from core.sufficiency import DependencyGraph
+        vars = [
+            Var(id='LDL', validator={'plausible': '$value > 0 and $value < 500'}),
+        ]
+        graph = DependencyGraph.from_variables(vars)
+        # plausible validators are not scanned (only panel), so no deps
+        assert graph.dependencies == {}
+
+    def test_sufficiency_result_has_dependency_graph(self, sample_healthcontext):
+        """SufficiencyResult includes the dependency graph."""
+        vars = [
+            Var(id='LDL', title='LDL', required=True, user_attestable=False),
+        ]
+        evaluator = SufficiencyEvaluator('test', cpg_variables=vars)
+        result = evaluator.evaluate(sample_healthcontext)
+        assert result.dependency_graph is not None

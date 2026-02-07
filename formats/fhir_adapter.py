@@ -186,19 +186,25 @@ class FHIRAdapter:
         return codes
 
     def _normalize_system(self, system: str) -> str:
-        """Normalize FHIR system URI to ConcordCore system name."""
+        """Normalize FHIR system URI to ConcordCore system URI.
+
+        Maps FHIR system URIs to the canonical URIs used by ConcordCore's
+        Code factory methods (e.g., CodeSystemType.loinc.value).
+        """
+        from ontology.definitions import CodeSystemType
+
         system_lower = system.lower()
 
         if 'loinc' in system_lower:
-            return 'loinc'
+            return CodeSystemType.loinc.value
         elif 'snomed' in system_lower:
-            return 'snomed'
+            return CodeSystemType.snomed.value
         elif 'rxnorm' in system_lower:
-            return 'rxnorm'
+            return CodeSystemType.rxnorm.value
         elif 'cpt' in system_lower:
-            return 'cpt'
+            return CodeSystemType.cpt.value
         elif 'icd' in system_lower:
-            return 'icd'
+            return system  # Keep ICD system URI as-is
         else:
             return system
 
@@ -344,6 +350,70 @@ class FHIRAdapter:
         result = Value(value=value, date=date, source=[proc])
         result.code = codes[0] if codes else None
         return result
+
+    def parse_bundle_to_records(self, bundle: dict,
+                               variables: list[Var]) -> list[Record]:
+        """Parse a FHIR Bundle into Records matched against CPG variables.
+
+        Iterates through bundle entries, extracts values, and matches them
+        to CPG variables by comparing codes. Returns one Record per matched
+        variable.
+
+        Args:
+            bundle: FHIR Bundle dict with 'entry' array
+            variables: List of CPG variable definitions to match against
+
+        Returns:
+            List of Records with values from the FHIR Bundle
+        """
+        # Build a code→Var index for O(1) matching
+        code_to_var: dict[str, Var] = {}
+        for var in variables:
+            if var.code:
+                for c in var.code:
+                    code_to_var[c.as_string] = var
+
+        # Collect values per var_id
+        var_values: dict[str, list[Value]] = {}
+
+        entries = bundle.get('entry', [])
+        for entry in entries:
+            resource = entry.get('resource', {})
+            if not resource or not self.can_parse(resource):
+                continue
+
+            resource_codes = self.extract_codes(resource)
+            if not resource_codes:
+                continue
+
+            # Match resource codes to CPG variables
+            matched_var = None
+            for rc in resource_codes:
+                matched_var = code_to_var.get(rc.as_string)
+                if matched_var:
+                    break
+
+            if not matched_var:
+                continue
+
+            try:
+                value = self.parse_resource(resource)
+                if value is None:
+                    continue
+
+                values = [value] if isinstance(value, Value) else value
+                var_values.setdefault(matched_var.id, []).extend(values)
+            except Exception as e:
+                log.warning(f"Failed to parse FHIR resource for {matched_var.id}: {e}")
+
+        # Build Records
+        records = []
+        for var in variables:
+            vals = var_values.get(var.id)
+            if vals:
+                records.append(Record(var=var, initial_values=vals))
+
+        return records
 
     def _extract_date(self, resource: dict, fields: list) -> Any:
         """Extract date from resource using multiple possible field paths."""

@@ -14,6 +14,7 @@ from variables import var, value, record
 
 if TYPE_CHECKING:
     from core.cpg import CPG
+    from core.concord_user import ConcordUser
     from ai.notes_extractor import ExtractionConfig
 
 
@@ -162,22 +163,25 @@ class HealthContext:
         fhir_bundle: dict = None,
         clinical_notes: str = None,
         attestations: dict = None,
+        concord_user: 'ConcordUser | None' = None,
         persona: Persona = None,
         extraction_config: 'ExtractionConfig' = None
     ) -> 'HealthContext':
         """Create HealthContext from multiple data sources with priority.
 
         Combines data from FHIR resources, clinical notes (via LLM extraction),
-        and user attestations. Data sources are prioritized:
+        and user attestations or ConcordUser session data. Data sources are prioritized:
         1. FHIR data (highest priority - structured EHR data)
         2. Clinical notes (LLM-extracted, only for missing variables)
-        3. Attestations (user-provided, only for missing variables)
+        3. ConcordUser PGHD data OR attestations (user-provided, only for missing variables)
 
         Args:
             cpg: The CPG containing variable definitions.
             fhir_bundle: Optional FHIR Bundle with patient resources.
             clinical_notes: Optional clinical notes text for LLM extraction.
             attestations: Optional dict mapping variable IDs to values.
+            concord_user: Optional ConcordUser with accumulated PGHD data.
+                          When provided, takes precedence over attestations dict.
             persona: Persona for narrative generation. Defaults to patient.
             extraction_config: Optional ExtractionConfig for LLM settings.
 
@@ -200,7 +204,6 @@ class HealthContext:
 
         # Priority 1: FHIR data
         if fhir_bundle:
-            from formats import registry
             fhir_records = cls._parse_fhir_bundle(fhir_bundle, cpg)
             for rec in fhir_records:
                 records.append(rec)
@@ -216,10 +219,10 @@ class HealthContext:
             all_vars = []
             if cpg.variables:
                 all_vars.extend(cpg.variables)
-            if cpg.eligibility:
-                all_vars.extend(list(cpg.eligibility))
-            if cpg.assessments:
-                all_vars.extend(list(cpg.assessments))
+            if cpg.eligibility_variables:
+                all_vars.extend(list(cpg.eligibility_variables))
+            if cpg.assessment_variables:
+                all_vars.extend(list(cpg.assessment_variables))
 
             # Only extract for variables not already in FHIR
             missing_vars = [v for v in all_vars
@@ -232,8 +235,13 @@ class HealthContext:
                     records.append(rec)
                     existing_ids.add(rec.id)
 
-        # Priority 3: User attestations
-        if attestations:
+        # Priority 3: ConcordUser PGHD data (preferred over raw attestations)
+        if concord_user is not None:
+            for pghd_record in concord_user.records:
+                if pghd_record.id not in existing_ids and pghd_record.has_value:
+                    records.append(pghd_record)
+                    existing_ids.add(pghd_record.id)
+        elif attestations:
             attestation_records = cls._attestations_to_records(attestations, cpg, existing_ids)
             records.extend(attestation_records)
 
@@ -241,7 +249,10 @@ class HealthContext:
 
     @staticmethod
     def _parse_fhir_bundle(fhir_bundle: dict, cpg: 'CPG') -> list[record.Record]:
-        """Parse a FHIR Bundle into Records.
+        """Parse a FHIR Bundle into Records matched against CPG variables.
+
+        Uses FHIRAdapter.parse_bundle_to_records() for code-based matching
+        between FHIR resources and CPG variable definitions.
 
         Args:
             fhir_bundle: FHIR Bundle dict with patient resources.
@@ -250,34 +261,29 @@ class HealthContext:
         Returns:
             List of Record objects parsed from FHIR resources.
         """
-        # This is a placeholder - actual implementation depends on
-        # the fhir_parsers module structure
-        records = []
-
         try:
-            from formats import registry
+            from formats.fhir_adapter import FHIRAdapter
 
-            entries = fhir_bundle.get('entry', [])
-            for entry in entries:
-                resource = entry.get('resource', {})
-                if not resource:
-                    continue
+            adapter = FHIRAdapter()
 
-                # Try to parse each resource
-                try:
-                    values = registry.parse(resource, format='fhir')
-                    if values:
-                        # Match to CPG variables by code
-                        # This is simplified - real implementation would
-                        # do proper code matching
-                        pass
-                except Exception:
-                    pass
+            # Collect all variables from CPG for matching
+            all_vars = []
+            if cpg.variables:
+                all_vars.extend(cpg.variables)
+            if cpg.eligibility_variables:
+                all_vars.extend(list(cpg.eligibility_variables))
+
+            if not all_vars:
+                return []
+
+            return adapter.parse_bundle_to_records(fhir_bundle, all_vars)
 
         except ImportError:
-            pass
-
-        return records
+            return []
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"FHIR bundle parsing failed: {e}")
+            return []
 
     @staticmethod
     def _attestations_to_records(
@@ -303,11 +309,11 @@ class HealthContext:
         if cpg.variables:
             for v in cpg.variables:
                 var_lookup[v.id] = v
-        if cpg.eligibility:
-            for v in cpg.eligibility:
+        if cpg.eligibility_variables:
+            for v in cpg.eligibility_variables:
                 var_lookup[v.id] = v
-        if cpg.assessments:
-            for v in cpg.assessments:
+        if cpg.assessment_variables:
+            for v in cpg.assessment_variables:
                 var_lookup[v.id] = v
 
         for var_id, val in attestations.items():

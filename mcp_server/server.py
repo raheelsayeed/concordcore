@@ -585,35 +585,25 @@ async def handle_create_health_context(args: dict) -> list[TextContent]:
     persona_str = args.get("persona", "patient")
     health_data = args["health_data"]
 
-    records = []
+    persona = Persona.patient if persona_str == "patient" else Persona.provider
+
+    session = state.get_session(session_id)
+    user = session.get_or_create_user(persona)
+    user.clear()  # Reset for fresh context creation
+
     for item in health_data:
         var_id = item["variable_id"]
         raw_value = item["value"]
+        user.add_input(var_id, raw_value)
 
-        var = Var(id=var_id, title=var_id)
-
-        date = None
-        if "date" in item and item["date"]:
-            try:
-                date = datetime.fromisoformat(item["date"])
-            except:
-                pass
-
-        value = Value(value=raw_value, date=date)
-        record = Record(var=var, initial_values=[value])
-        records.append(record)
-
-    persona = Persona.patient if persona_str == "patient" else Persona.provider
-    context = HealthContext(records=records, persona=persona)
-
-    session = state.get_session(session_id)
+    context = user.build_health_context()
     session.health_context = context
 
     result = {
         "session_id": session_id,
         "status": "created",
-        "records_count": len(records),
-        "variables": [r.id for r in records]
+        "records_count": len(context.records),
+        "variables": [r.id for r in context.records]
     }
     return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
@@ -1052,16 +1042,18 @@ async def handle_submit_attestation(args: dict) -> list[TextContent]:
             "error": f"No health context for session: {session_id}"
         }))]
 
+    user = session.get_or_create_user()
+
     for att in attestations:
         var_id = att["variable_id"]
         raw_value = att["value"]
+        user.attest(var_id, raw_value)
 
+        # Keep attestations dict for backward compatibility
         session.attestations[var_id] = raw_value
 
-        var = Var(id=var_id, title=var_id)
-        value = Value(value=raw_value)
-        record = Record(var=var, initial_values=[value])
-        session.health_context.records.append(record)
+    # Rebuild HealthContext with the new attestations (frozen-safe)
+    session.health_context = user.update_health_context(session.health_context)
 
     result = {
         "session_id": session_id,

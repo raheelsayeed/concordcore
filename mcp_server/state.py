@@ -16,7 +16,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from core.cpg import CPG
 from core.concord import Concord
+from core.concord_user import ConcordUser
 from core.healthcontext import HealthContext
+from primitives.types import Persona
 
 log = logging.getLogger(__name__)
 
@@ -35,7 +37,8 @@ class EvaluationSession:
         guidelines_acknowledged_at: When guidelines were acknowledged
         health_context: Patient health data
         cpg_evaluations: Map of CPG ID to Concord instances
-        attestations: Map of variable ID to attested values
+        attestations: Map of variable ID to attested values (deprecated, use user)
+        user: ConcordUser session for PGHD data management
         fhir_resources: Original FHIR resources if provided
         confidence_scores: Cached confidence scores by CPG ID
         prioritized_recommendations: Cached prioritized recommendations
@@ -50,7 +53,10 @@ class EvaluationSession:
     # Core state
     health_context: HealthContext | None = None
     cpg_evaluations: dict[str, Concord] = field(default_factory=dict)
-    attestations: dict[str, Any] = field(default_factory=dict)
+    attestations: dict[str, Any] = field(default_factory=dict)  # Deprecated: use user
+
+    # ConcordUser for PGHD management
+    user: ConcordUser | None = None
 
     # FHIR data (if provided)
     fhir_resources: list[dict] = field(default_factory=list)
@@ -64,6 +70,23 @@ class EvaluationSession:
         self.guidelines_acknowledged = True
         self.guidelines_acknowledged_at = datetime.now()
         log.info(f"Session {self.session_id}: Guidelines acknowledged")
+
+    def get_or_create_user(self, persona: Persona = Persona.patient) -> ConcordUser:
+        """Get or create the ConcordUser for this session.
+
+        Args:
+            persona: Persona for the user (used only on creation)
+
+        Returns:
+            The session's ConcordUser instance
+        """
+        if self.user is None:
+            self.user = ConcordUser(
+                user_id=self.session_id,
+                persona=persona,
+            )
+            log.info(f"Session {self.session_id}: Created ConcordUser")
+        return self.user
 
     @property
     def active_concord(self) -> Concord | None:

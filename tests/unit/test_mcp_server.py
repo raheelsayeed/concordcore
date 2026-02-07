@@ -30,6 +30,7 @@ from mcp_server.instructions_handler import (
 )
 
 from core.healthcontext import HealthContext
+from core.concord_user import ConcordUser
 from core.recommendation import ClassOfRecommendation, LevelOfEvidence, USPSTFGrading
 from variables.var import Var
 from variables.value import Value
@@ -754,6 +755,190 @@ class TestInstructionHandlers:
 
         data = json.loads(result[0].text)
         assert "LDL 180" in data["prompt"]["system"]
+
+
+# =============================================================================
+# MCP ATTESTATION WITH CONCORDUSER TESTS
+# =============================================================================
+
+class TestMCPAttestationWithConcordUser:
+    """Tests verifying the attestation flow uses ConcordUser and produces
+    new (not mutated) frozen HealthContext objects."""
+
+    def test_get_or_create_user_creates_concord_user(self):
+        """Test that get_or_create_user creates a ConcordUser instance."""
+        session = EvaluationSession(session_id="attest-test-1")
+        assert session.user is None
+
+        user = session.get_or_create_user(Persona.patient)
+
+        assert user is not None
+        assert isinstance(user, ConcordUser)
+        assert user.user_id == "attest-test-1"
+        assert user.persona == Persona.patient
+
+    def test_get_or_create_user_returns_same_instance(self):
+        """Test that get_or_create_user returns the same ConcordUser on subsequent calls."""
+        session = EvaluationSession(session_id="attest-test-2")
+
+        user1 = session.get_or_create_user(Persona.patient)
+        user2 = session.get_or_create_user(Persona.provider)
+
+        # Same instance - persona only used on creation
+        assert user1 is user2
+        assert user1.persona == Persona.patient
+
+    def test_submit_attestation_replaces_health_context(self, sample_health_context):
+        """Test that submitting attestations produces a new HealthContext object,
+        not a mutation of the original frozen HealthContext."""
+        session = EvaluationSession(session_id="attest-replace-test")
+        session.health_context = sample_health_context
+        original_context = session.health_context
+
+        # Simulate the attestation flow from handle_submit_attestation
+        user = session.get_or_create_user()
+        user.attest("Smoker", 0)
+        session.attestations["Smoker"] = 0
+        session.health_context = user.update_health_context(session.health_context)
+
+        # The health context must be a different object (replaced, not mutated)
+        assert session.health_context is not original_context
+        # The new context should have the attested data
+        new_ids = {r.id for r in session.health_context.records}
+        assert "Smoker" in new_ids
+        # Original records should still be present
+        original_ids = {r.id for r in original_context.records}
+        assert original_ids.issubset(new_ids)
+
+    def test_submit_attestation_preserves_original_records(self, sample_health_context):
+        """Test that the original HealthContext records are untouched after attestation."""
+        session = EvaluationSession(session_id="attest-preserve-test")
+        session.health_context = sample_health_context
+        original_record_count = len(sample_health_context.records)
+
+        user = session.get_or_create_user()
+        user.attest("DM", 1)
+        session.health_context = user.update_health_context(session.health_context)
+
+        # Original context is unchanged (frozen)
+        assert len(sample_health_context.records) == original_record_count
+        # New context has one more record
+        assert len(session.health_context.records) == original_record_count + 1
+
+    def test_submit_attestation_user_has_attested_data(self):
+        """Test that after attestation, the ConcordUser has the attested data."""
+        session = EvaluationSession(session_id="attest-data-test")
+
+        # Build initial context via ConcordUser (like handle_create_health_context does)
+        user = session.get_or_create_user(Persona.patient)
+        user.add_input("Age", 55)
+        user.add_input("LDL", 145)
+        session.health_context = user.build_health_context()
+
+        # Now attest new data (like handle_submit_attestation does)
+        user.attest("DM", True)
+        session.health_context = user.update_health_context(session.health_context)
+
+        # User should have all data
+        assert user.has_data_for("Age")
+        assert user.has_data_for("LDL")
+        assert user.has_data_for("DM")
+
+        # The attestation log should include the DM attestation
+        attestation_entries = [
+            e for e in user.attestation_log if e.get("is_attestation")
+        ]
+        assert len(attestation_entries) >= 1
+        attested_var_ids = [e["var_id"] for e in attestation_entries]
+        assert "DM" in attested_var_ids
+
+    def test_submit_attestation_handler_flow(self, sample_health_context):
+        """Test the full handle_submit_attestation flow end-to-end using the
+        same logic as the server handler."""
+        session = EvaluationSession(session_id="attest-handler-test")
+        session.health_context = sample_health_context
+        original_context_id = id(session.health_context)
+
+        # Replicate handle_submit_attestation logic
+        attestations = [
+            {"variable_id": "DM", "value": 1},
+            {"variable_id": "Smoker", "value": 0},
+        ]
+
+        user = session.get_or_create_user()
+
+        for att in attestations:
+            var_id = att["variable_id"]
+            raw_value = att["value"]
+            user.attest(var_id, raw_value)
+            session.attestations[var_id] = raw_value
+
+        # Rebuild HealthContext (frozen-safe)
+        session.health_context = user.update_health_context(session.health_context)
+
+        # Verify context was replaced
+        assert id(session.health_context) != original_context_id
+        # Verify new context has the attested variables
+        ctx_var_ids = {r.id for r in session.health_context.records}
+        assert "DM" in ctx_var_ids
+        assert "Smoker" in ctx_var_ids
+        # Verify original variables are preserved
+        assert "Age" in ctx_var_ids
+        assert "LDL" in ctx_var_ids
+
+    def test_submit_attestation_does_not_duplicate_existing_vars(self, sample_health_context):
+        """Test that attesting a variable already in the health context does not
+        create a duplicate record (update_health_context skips existing IDs)."""
+        session = EvaluationSession(session_id="attest-nodup-test")
+        session.health_context = sample_health_context
+        original_record_count = len(sample_health_context.records)
+
+        user = session.get_or_create_user()
+        # Attest a variable that already exists in the health context
+        user.attest("Age", 60)
+        session.health_context = user.update_health_context(session.health_context)
+
+        # update_health_context only adds records for variables NOT already present
+        # So the count should remain the same (Age already exists)
+        assert len(session.health_context.records) == original_record_count
+
+    def test_multiple_attestation_rounds(self, sample_health_context):
+        """Test multiple rounds of attestation accumulate correctly."""
+        session = EvaluationSession(session_id="attest-multi-test")
+        session.health_context = sample_health_context
+
+        user = session.get_or_create_user()
+
+        # Round 1: attest DM
+        user.attest("DM", 1)
+        session.health_context = user.update_health_context(session.health_context)
+        ctx_after_round1 = session.health_context
+        ids_after_round1 = {r.id for r in ctx_after_round1.records}
+        assert "DM" in ids_after_round1
+
+        # Round 2: attest Smoker
+        user.attest("Smoker", 0)
+        session.health_context = user.update_health_context(session.health_context)
+
+        # Context was replaced again
+        assert session.health_context is not ctx_after_round1
+        ids_after_round2 = {r.id for r in session.health_context.records}
+        assert "DM" in ids_after_round2
+        assert "Smoker" in ids_after_round2
+        assert "Age" in ids_after_round2
+        assert "LDL" in ids_after_round2
+
+    def test_health_context_persona_preserved_after_attestation(self, sample_health_context):
+        """Test that the persona is preserved when health context is replaced."""
+        session = EvaluationSession(session_id="attest-persona-test")
+        session.health_context = sample_health_context
+        original_persona = sample_health_context.persona
+
+        user = session.get_or_create_user()
+        user.attest("DM", True)
+        session.health_context = user.update_health_context(session.health_context)
+
+        assert session.health_context.persona == original_persona
 
 
 # =============================================================================
