@@ -4,9 +4,10 @@ from dataclasses import dataclass
 from enum import Enum, auto
 from functools import cached_property
 from typing import Any, Protocol
-from .assessment import AssessmentVar, AssessmentRecord
+from .assessment import EvaluableVar, AssessmentRecord
 from .healthcontext import HealthContext
 from .evaluation import EvaluationResult, EvaluationContext
+from .record_index import RecordIndex
 from primitives.types import YMLStrEnum, ValueType
 
 
@@ -24,9 +25,8 @@ class EligibilityResult(EvaluationResult):
 
     @cached_property
     def is_eligible(self) -> bool:
-        if False in [ev.record.is_eligible  for ev in self.context.evaluation_list]:
-            return False 
-        return True
+        # Use any() instead of creating a list - short-circuits on first False
+        return not any(ev.record.is_eligible is False for ev in self.context.evaluation_list)
             
 
 class EligbilityCriteriaType(YMLStrEnum):
@@ -36,11 +36,21 @@ class EligbilityCriteriaType(YMLStrEnum):
 
 
 @dataclass(frozen=True)
-class EligibilityVar(AssessmentVar):
-    type: ValueType = ValueType.boolean
-    criteria_type: EligbilityCriteriaType = None
+class EligibilityVar(EvaluableVar):
+    """Eligibility variable for determining if a CPG applies to a patient.
 
-    @classmethod 
+    Extends EvaluableVar with eligibility-specific criteria type for
+    distinguishing between inclusion and exclusion criteria.
+
+    Attributes:
+        criteria_type: Whether this is an inclusion or exclusion criterion
+        llm_prompt: Prompt text for extracting this variable from clinical notes
+    """
+
+    criteria_type: EligbilityCriteriaType = None
+    llm_prompt: str = None
+
+    @classmethod
     def instantiate_from_yaml(cls, yml):
         if 'criteria_type' in yml:
             yml['criteria_type'] = EligbilityCriteriaType(yml['criteria_type'])
@@ -76,32 +86,39 @@ class EligibilityEvaluator(EligibilityEvaluatorProtocol):
     def __init__(self, criterias: list[EligibilityVar]):
         self.criterias = criterias
 
-    def evaluate(self, 
-                healthcontext: HealthContext, 
+    def evaluate(self,
+                healthcontext: HealthContext,
                 context: EvaluationContext = None) -> EligibilityResult:
 
         if not self.criterias:
             raise ValueError('No criterias to evaluate')
 
-        errs = [] 
         eval_ctx = context or EvaluationContext()
-        evaluated_crtiera_records = []
+
+        # Build record index once for O(1) lookups during expression evaluation
+        record_index = RecordIndex(healthcontext.records)
+
+        # Pre-build record dict for function evaluations (built once, reused)
+        record_dict = {r.id: r.value if r.value else None for r in healthcontext.records}
 
         for criteria in self.criterias:
-
             try:
                 criteria_record = EligibilityRecord(criteria)
-                criteria_record.evaluate(records=healthcontext.records, persona=healthcontext.persona)
+                criteria_record.evaluate(
+                    records=healthcontext.records,
+                    persona=healthcontext.persona,
+                    record_index=record_index,
+                    record_dict=record_dict
+                )
                 eval_ctx.successful_evaluation(criteria_record)
             except Exception as e:
                 eval_ctx.failed_evaluation(criteria_record, e)
 
-        # Raise eligibility erros immediately
+        # Raise eligibility errors immediately
         if eval_ctx.errors:
             raise ExceptionGroup('EligibilityEvaluationError', eval_ctx.errors)
 
-        result = EligibilityResult(eval_ctx)
-        return result
+        return EligibilityResult(eval_ctx)
 
 
 

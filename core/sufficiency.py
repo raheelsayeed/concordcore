@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+"""Sufficiency evaluation for ConcordCore.
+
+This module provides the SufficiencyEvaluator which checks if patient data
+is sufficient to execute a CPG.
+"""
 
 from functools import cached_property
 import logging
@@ -6,6 +11,7 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from .healthcontext import HealthContext
+from .record_index import RecordIndex
 from variables.record import Record
 from variables.var import Var
 from .evaluation import EvaluationContext, EvaluationResult, SufficiencyResultStatus
@@ -50,6 +56,35 @@ class SufficiencyEvaluator(SufficiencyEvaluatorProtocol):
         self.id = identifier
         self.cpg_variables = cpg_variables
 
+    def _build_code_index(self, user_records: list[Record]) -> dict[str, Record]:
+        """Build index mapping code strings to records for O(1) lookup."""
+        index = {}
+        for record in user_records:
+            if record.var.code:
+                for c in record.var.code:
+                    index[c.as_string] = record
+        return index
+
+    def _find_record_by_code(self, var: Var, code_index: dict[str, Record]) -> Record | None:
+        """Find a user record matching CPG variable by code using pre-built index.
+
+        Args:
+            var: The CPG variable to match
+            code_index: Pre-built dict mapping code strings to records
+
+        Returns:
+            Matching Record or None
+        """
+        if not var.code:
+            return None
+
+        for c in var.code:
+            if c.as_string in code_index:
+                record = code_index[c.as_string]
+                log.debug(f"Matched {var.id} to {record.id} by code {c.as_string}")
+                return record
+
+        return None
 
     def evaluate(self,
                 user_context: HealthContext,
@@ -70,22 +105,27 @@ class SufficiencyEvaluator(SufficiencyEvaluatorProtocol):
         
         eval_ctx = context or EvaluationContext()
 
+        # Build indexes once for O(1) lookups
+        user_record_index = RecordIndex(user_context.records)
+        code_index = self._build_code_index(user_context.records)
+
         records: list[Record] = []
         # --- Sufficiency only checks of `cpg.Variables`
         # --- Assessments, Eligibility, Recommendations rely on Sufficiency of cpg.Variables to execute
         for var in self.cpg_variables:
-            
-            record = None
-            
-            user_record = next(filter(lambda user_record: user_record.var == var, user_context.records), None)
+            # O(1) lookup by var.id first
+            user_record = user_record_index.get_by_var_id(var.id)
+
+            # If not found by ID, try code-based matching using pre-built index
+            if not user_record:
+                user_record = self._find_record_by_code(var, code_index)
 
             # Assign Values to Concord Record
             if user_record and user_record.has_value:
-                record = Record(var, user_record.values)
+                record = Record(var, initial_values=user_record.values)
             else:
-                record = Record(var, None)
-            
-            # record.set_narrative(persona=user_context.persona)
+                record = Record(var, initial_values=None)
+
             records.append(record)
 
 
@@ -96,8 +136,7 @@ class SufficiencyEvaluator(SufficiencyEvaluatorProtocol):
                 if record.validate(records=records, strict=strict):
                     eval_ctx.successful_evaluation(record)
             except Exception as e:
-                # raise e
-                print(e)
+                log.debug(f"Validation failed for {record.id}: {e}")
                 eval_ctx.failed_evaluation(record, e)   
                 
 

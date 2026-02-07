@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from functools import cached_property
 import logging
 
 from typing import Any, Protocol
@@ -8,24 +9,38 @@ from typing_extensions import Self
 from .assessment import AssessmentVar
 from .eligibility import EligibilityVar
 from .recommendation import RecommendationVar
+from .security import SecurityError, sanitize_module_name, validate_module_path, validate_cpg_filepath
 from primitives.code import Code
 from variables import var
 from .expression import Expression
 
 log = logging.getLogger(__name__)
 
+# Expression cache for reuse across CPG validation
+_expression_cache: dict[str, Expression] = {}
+
+
+def get_cached_expression(expression_string: str) -> Expression:
+    """Get or create cached Expression object."""
+    if expression_string not in _expression_cache:
+        _expression_cache[expression_string] = Expression(expression_string)
+    return _expression_cache[expression_string]
+
 @dataclass
 class CPG():
 
     identifier: str
     title: str
-    doi: str = None 
-    parent: Self = None 
-    code: list[Code] = None 
+    doi: str = None
+    parent: Self = None
+    code: list[Code] = None
     publisher: str = None
+    version: str = None  # Semantic version (e.g., "1.0.0")
+    last_updated: str = None  # ISO date string (e.g., "2024-01-15")
+    source_url: str = None  # Original guideline URL
     variables: list[var.Var] = None
     eligibility_variables: list[EligibilityVar] = None
-    assessment_variables: list[AssessmentVar] = None 
+    assessment_variables: list[AssessmentVar] = None
     recommendation_variables: list[RecommendationVar] = None
     rendering_template_path: str = None
     functions_module_name: str = None
@@ -35,9 +50,58 @@ class CPG():
     def as_dict(self):
         return {
                 'cpg_title': self.title,
-                'cpg_doi': self.doi, 
+                'cpg_doi': self.doi,
                 'cpg_publisher': self.publisher,
+                'cpg_version': self.version,
+                'cpg_last_updated': self.last_updated,
+                'cpg_source_url': self.source_url,
                 }
+
+    # --- Cached indexes for O(1) lookups ---
+    @cached_property
+    def _var_by_id(self) -> dict[str, var.Var]:
+        """Index variables by id for O(1) lookup."""
+        return {v.id: v for v in (self.variables or [])}
+
+    @cached_property
+    def _var_by_code(self) -> dict[str, var.Var]:
+        """Index variables by code string for O(1) lookup."""
+        index = {}
+        for v in (self.variables or []):
+            if v.code:
+                for c in v.code:
+                    index[c.as_string] = v
+        return index
+
+    @cached_property
+    def _all_var_ids(self) -> set[str]:
+        """Set of all variable IDs for O(1) membership check."""
+        all_vars = (self.variables or []) + (self.eligibility_variables or []) + (self.assessment_variables or [])
+        return {v.id for v in all_vars}
+
+    @cached_property
+    def non_optional_variables(self) -> list[var.Var] | None:
+        """Required variables (cached)."""
+        if not self.variables:
+            return None
+        result = [v for v in self.variables if v.required]
+        return result if result else None
+
+    @cached_property
+    def optional_variables(self) -> list[var.Var] | None:
+        """Optional variables (cached)."""
+        if not self.variables:
+            return None
+        result = [v for v in self.variables if not v.required]
+        return result if result else None
+
+    @cached_property
+    def attestable_variables(self) -> list[var.Var] | None:
+        """User-attestable variables (cached)."""
+        if not self.variables:
+            return None
+        result = [v for v in self.variables if v.user_attestable]
+        return result if result else None
 
 
     def __str__(self):
@@ -53,10 +117,27 @@ class CPG():
 
     @classmethod
     def from_document_path(cls, cpg_filepath: str):
-        
+        """Load a CPG from a YAML file path.
+
+        Args:
+            cpg_filepath: Path to the CPG YAML definition file
+
+        Returns:
+            CPG instance
+
+        Raises:
+            SecurityError: If the filepath or module path fails security validation
+            yaml.YAMLError: If the YAML file cannot be parsed
+            FileNotFoundError: If the CPG file does not exist
+        """
         from os import path
         import sys
         import yaml
+
+        # Validate CPG filepath for security
+        is_valid, error_msg = validate_cpg_filepath(cpg_filepath)
+        if not is_valid:
+            raise SecurityError(f"Invalid CPG filepath: {error_msg}")
 
         yml = None
         with open(cpg_filepath, 'r') as cpgs_doc:
@@ -68,11 +149,22 @@ class CPG():
             except Exception as e:
                 log.error(e)
                 raise e
-        
+
         yaml_filename = path.basename(cpg_filepath)
-        directory = path.dirname(cpg_filepath)
+        directory = path.dirname(cpg_filepath) or '.'
         function_module = yml['CPG'].get('functions_module_name', None) or yaml_filename[:-5].replace('/', '.')
-        functions_module_path = directory + '/' + function_module + '.py'
+
+        # Sanitize and validate module name
+        function_module = sanitize_module_name(function_module)
+        if function_module is None:
+            raise SecurityError(f"Invalid function module name in CPG")
+
+        # Validate module path for security
+        is_valid, error_msg = validate_module_path(directory, function_module)
+        if not is_valid:
+            raise SecurityError(f"Cannot load module: {error_msg}")
+
+        functions_module_path = path.join(directory, function_module + '.py')
 
         log.info(cpg_filepath)
         log.info(yaml_filename)
@@ -81,9 +173,7 @@ class CPG():
         log.debug(functions_module_path)
         raise_error = path.exists(functions_module_path)
         import importlib
-        log.warning('CONCORD: make sure functions module has not malicious-ness. INTERNAL-PROVISION-ONLY')
         try:
-            # fn_module = importlib.import_module(functions_module_path) if functions_module_path else None
             from importlib.util import spec_from_file_location as sf
             spec = sf(function_module, functions_module_path)
             fn_module = importlib.util.module_from_spec(spec)
@@ -112,6 +202,10 @@ class CPG():
             identifier=cpg_dict['identifier'],
             title=cpg_dict['title'],
             publisher=cpg_dict.get('publisher', None),
+            version=cpg_dict.get('version', '1.0.0'),
+            last_updated=cpg_dict.get('last_updated', None),
+            source_url=cpg_dict.get('uri', None) or cpg_dict.get('source_url', None),
+            doi=cpg_dict.get('doi', None),
             variables=[var.Var.instantiate_from_yaml(d) for d in variables_dict],
             eligibility_variables=[EligibilityVar.instantiate_from_yaml(d) for d in eligibility_dict],
             assessment_variables=[AssessmentVar.instantiate_from_yaml(d) for d in assessments_dict],
@@ -119,32 +213,17 @@ class CPG():
             functions_module=module
         )
 
-    def non_optional_variables(self):
-        if self.variables:
-            non_optionals = list(filter(lambda v: v.required == True, self.variables), None)
-            if non_optionals:
-                return non_optionals 
-        else:
-            return None
+    def get_var_by_id(self, identifier: str) -> var.Var | None:
+        """O(1) variable lookup by id."""
+        return self._var_by_id.get(identifier)
 
-    def optional_variables(self):
-        if self.variables:
-            optionals = list(filter(lambda v: v.required == False, self.variables), None)
-            if optionals:
-                return optionals 
-        else:
-            return None
-
-    def attestable_variables(self):
-        if self.variables:
-            attestables = list(filter(lambda v: v.user_attestable == True, self.variables), None)
-            if attestables:
-                return attestables 
-        else:
-            return None
+    def get_var_by_code(self, code_string: str) -> var.Var | None:
+        """O(1) variable lookup by code string."""
+        return self._var_by_code.get(code_string)
 
     @staticmethod
-    def get_var(identifier:str, variables: list[var.Var]):
+    def get_var(identifier: str, variables: list[var.Var]):
+        """Legacy O(n) lookup - prefer get_var_by_id for CPG variables."""
         for er in variables:
             if er.id == identifier:
                 return er
@@ -195,59 +274,38 @@ class CPG():
 
 
     def validate(self) -> bool:
+        """Validate CPG definition."""
+        from primitives.errors import ExpressionVariableNotFound
 
-         # check if they exist in variable list.
-        all_vars = self.variables + self.eligibility_variables + self.assessment_variables
-        all_vars_Identifiers = list(map(lambda v: v.id, all_vars))
         errors = []
-        # --- duplicates
-        # All variables must have a unique `id` 
-        # 
-        dups = set() 
-        distinct_vars = set()
-        similar_code = set()
+        dups = set()
+        distinct_ids = set()
 
-        all_codes = [vr.code_string  for vr in all_vars if vr.code is not None]
+        # Use cached set for O(1) membership checks
+        all_var_ids = self._all_var_ids
 
-        for vr in self.variables:
-
-            # Two variables cavnnot have same `id`
-            if vr not in distinct_vars:
-                distinct_vars.add(vr)
+        # Check for duplicate IDs in variables
+        for vr in (self.variables or []):
+            if vr.id in distinct_ids:
+                dups.add(vr.id)
             else:
-                dups.add(vr) 
+                distinct_ids.add(vr.id)
 
-
-            # # all codes for a variable must be unqiue. Two variables cannot share a codeable concept
-            # if var.code:
-            #     for cd in var.code:
-            #         # find if the code occurs in more than two places in all_codes 
-            #         filt = list(filter(lambda code_str: code_str != None and cd.as_string in code_str, all_codes))
-            #         if len(filt) > 1:
-            #             err = ValueError(f'CPG.var: {var.id} contains code:{cd.as_string} found in other variables. Definitions require codes to be unique')
-            #             errors.append(err)
-
-            # Vars with expressions or functions must have var.identifiers already defined 
-        distinct_vars = set()
-        from primitives.errors import ExpressionVariableNotFound    
-        for vr in (self.eligibility_variables + self.assessment_variables + self.recommendation_variables):
-
-            # Two variables cavnnot have same `id`
-
-            if vr not in distinct_vars:
-                distinct_vars.add(vr)
+        # Check eligibility, assessment, recommendation variables
+        for vr in ((self.eligibility_variables or []) + (self.assessment_variables or []) + (self.recommendation_variables or [])):
+            if vr.id in distinct_ids:
+                dups.add(vr.id)
             else:
-                dups.add(vr) 
+                distinct_ids.add(vr.id)
 
+            # Validate expression references using cached expressions
             if vr.expression:
-                exp = Expression(vr.expression)
-                identifiers = exp.variable_identifiers 
+                exp = get_cached_expression(vr.expression)
+                identifiers = exp.variable_identifiers
                 if identifiers:
                     for idn in identifiers:
-
-                        if idn not in all_vars_Identifiers:
-                            err = ExpressionVariableNotFound( idn, vr.expression)
-                            errors.append(err)
+                        if idn not in all_var_ids:
+                            errors.append(ExpressionVariableNotFound(idn, vr.expression))
 
         if dups:
             errors.append(

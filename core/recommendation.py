@@ -129,7 +129,7 @@ class RecommendationVar(var.Var):
     compliance_expression: str = None
    
     def __hash__(self):
-        return super().__hash__()
+        return hash(self.id)
 
     def citations_text(self):
         if self.citations:
@@ -208,11 +208,19 @@ class EvaluatedRecommendation:
         if self.recommendation.compliance_expression:
             self.compliance = Expression(self.recommendation.compliance_expression)
 
-    def evaluate(self, evaluated_assessments: vlist.vlist[EvaluatedAssessmentRecord], evaluated_records: list[EvaluatedRecord] = None, persona: Persona = Persona.patient):
-        """Evaluates recommendations
+    def evaluate(self, evaluated_assessments: vlist.vlist[EvaluatedAssessmentRecord],
+                 evaluated_records: list[EvaluatedRecord] = None,
+                 persona: Persona = Persona.patient,
+                 assessment_index: dict = None,
+                 record_index: dict = None):
+        """Evaluates recommendations.
 
-        evaluated_assessments: List of EvaluatedAssessmentRecords 
-        evaluated_records: List of evaluated Patient Records `EvaluatedRecord`  
+        Args:
+            evaluated_assessments: List of EvaluatedAssessmentRecords
+            evaluated_records: List of evaluated Patient Records (EvaluatedRecord)
+            persona: Persona for narrative generation
+            assessment_index: Optional pre-built dict mapping id to EvaluatedAssessmentRecord
+            record_index: Optional pre-built dict mapping id to EvaluatedRecord
         """
         rectype = self.recommendation.type
         show_if_patient = rectype == RecommendationType.DISPLAY_PATIENT
@@ -220,16 +228,16 @@ class EvaluatedRecommendation:
         show_for_both = rectype == RecommendationType.DISPLAY
 
         if show_for_both:
-            self.applies = True 
-        elif show_if_provider: 
+            self.applies = True
+        elif show_if_provider:
             self.applies = persona == Persona.provider
-        elif show_if_patient: 
-            self.applies = persona == Persona.patient 
+        elif show_if_patient:
+            self.applies = persona == Persona.patient
         elif not self.expression:
-            raise Exception(f'Cannot evaluate, no expression found for recommendation={self.recommendation.id}') 
+            raise Exception(f'Cannot evaluate, no expression found for recommendation={self.recommendation.id}')
         else:
             try:
-                self.applies =  self.expression.evaluate_recommendation(evaluated_assessments)
+                self.applies = self.expression.evaluate_recommendation(evaluated_assessments)
                 self.based_on = self.expression.expression_records
                 if self.compliance:
                     self.compliant = self.compliance.evaluate([v.record for v in evaluated_records])
@@ -237,13 +245,29 @@ class EvaluatedRecommendation:
             except Exception as e:
                 raise e
 
-        varible_value_dict = None 
-        if self.recommendation.narr.variables:
-            records = list(filter(lambda ea: ea.id in self.recommendation.narr.variables, evaluated_assessments + (evaluated_records or [])))
-            varible_value_dict = {r.id: r.record.as_dict() for r in records}
-            log.info(varible_value_dict)
-        self.narrative = self.recommendation.narr.get_text(self.applies, persona=persona, sanitization_dict=varible_value_dict)
-        self.compliance_narrative = self.recommendation.narr.get_compliance_text(self.compliant, persona=persona, sanitization_dict=varible_value_dict)
+        variable_value_dict = None
+        if self.recommendation.narr and self.recommendation.narr.variables:
+            # Use pre-built indexes for O(1) lookup if available
+            narr_vars = self.recommendation.narr.variables
+            if assessment_index and record_index:
+                records = []
+                for var_id in narr_vars:
+                    if var_id in assessment_index:
+                        records.append(assessment_index[var_id])
+                    elif var_id in record_index:
+                        records.append(record_index[var_id])
+            else:
+                # Fallback to O(n) filter if no indexes provided
+                narr_var_set = set(narr_vars)
+                records = [ea for ea in evaluated_assessments if ea.id in narr_var_set]
+                if evaluated_records:
+                    records.extend([er for er in evaluated_records if er.id in narr_var_set])
+
+            variable_value_dict = {r.id: r.record.as_dict() for r in records}
+            log.debug(f'Narrative vars for {self.recommendation.id}: {variable_value_dict.keys()}')
+
+        self.narrative = self.recommendation.narr.get_text(self.applies, persona=persona, sanitization_dict=variable_value_dict) if self.recommendation.narr else None
+        self.compliance_narrative = self.recommendation.narr.get_compliance_text(self.compliant, persona=persona, sanitization_dict=variable_value_dict) if self.recommendation.narr else None
         log.debug(f'{self.applies}; {type(self.applies)}; narr={self.narrative}')
         
 
@@ -259,7 +283,7 @@ class RecommendationResult:
     
     @property
     def applied(self):
-        return list(filter(lambda er: er.applies == True, self.recommendations))
+        return [er for er in self.recommendations if er.applies is True]
 
 
 
