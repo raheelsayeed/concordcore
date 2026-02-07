@@ -276,3 +276,119 @@ class TestFHIRCodeMatching:
         statin_code = Code.rxnorm('83367')
         assert statin_code.system == 'http://www.nlm.nih.gov/research/umls/rxnorm'
         assert statin_code.code == '83367'
+
+
+# ============================================================================
+# FHIRAdapter.parse_bundle_to_records Tests
+# ============================================================================
+
+class TestFHIRAdapterBundleParsing:
+    """Tests for FHIRAdapter.parse_bundle_to_records."""
+
+    @pytest.fixture
+    def adapter(self):
+        from formats.fhir_adapter import FHIRAdapter
+        return FHIRAdapter()
+
+    @pytest.fixture
+    def fhir_bundle(self):
+        return {
+            "resourceType": "Bundle",
+            "type": "collection",
+            "entry": [
+                {
+                    "resource": {
+                        "resourceType": "Observation",
+                        "code": {
+                            "coding": [{
+                                "system": "http://loinc.org",
+                                "code": "13457-7",
+                                "display": "LDL"
+                            }]
+                        },
+                        "valueQuantity": {"value": 165, "unit": "mg/dL"},
+                        "effectiveDateTime": "2024-01-15"
+                    }
+                },
+                {
+                    "resource": {
+                        "resourceType": "Condition",
+                        "code": {
+                            "coding": [{
+                                "system": "http://snomed.info/sct",
+                                "code": "44054006",
+                                "display": "Type 2 DM"
+                            }]
+                        },
+                        "clinicalStatus": {
+                            "coding": [{"code": "active"}]
+                        }
+                    }
+                }
+            ]
+        }
+
+    def test_parse_bundle_matches_variables(self, adapter, fhir_bundle):
+        from primitives.code import Code
+        from variables.var import Var
+
+        variables = [
+            Var(id='LDL', code=[Code.loinc('13457-7')]),
+            Var(id='DM', code=[Code.snomed('44054006')]),
+        ]
+        records = adapter.parse_bundle_to_records(fhir_bundle, variables)
+        assert len(records) == 2
+        ids = {r.id for r in records}
+        assert 'LDL' in ids
+        assert 'DM' in ids
+
+    def test_parse_bundle_empty(self, adapter):
+        from variables.var import Var
+        bundle = {"resourceType": "Bundle", "entry": []}
+        records = adapter.parse_bundle_to_records(bundle, [Var(id='X')])
+        assert records == []
+
+
+# ============================================================================
+# HealthContext.from_mixed_sources with ConcordUser Tests
+# ============================================================================
+
+class TestHealthContextMixedSourcesWithConcordUser:
+    """Tests for ConcordUser integration in from_mixed_sources."""
+
+    def test_concord_user_fills_missing_data(self, minimal_cpg):
+        from core.healthcontext import HealthContext
+        from core.concord_user import ConcordUser
+
+        user = ConcordUser(user_id='p1')
+        user.add_input('Age', 55)
+
+        ctx = HealthContext.from_mixed_sources(cpg=minimal_cpg, concord_user=user)
+        ids = {r.id for r in ctx.records}
+        assert 'Age' in ids
+
+    def test_attestations_still_work(self, minimal_cpg):
+        from core.healthcontext import HealthContext
+
+        ctx = HealthContext.from_mixed_sources(
+            cpg=minimal_cpg,
+            attestations={'Age': 55}
+        )
+        ids = {r.id for r in ctx.records}
+        assert 'Age' in ids
+
+    def test_concord_user_takes_precedence_over_attestations(self, minimal_cpg):
+        """When both concord_user and attestations are provided, concord_user wins."""
+        from core.healthcontext import HealthContext
+        from core.concord_user import ConcordUser
+
+        user = ConcordUser(user_id='p1')
+        user.add_input('Age', 99)
+
+        ctx = HealthContext.from_mixed_sources(
+            cpg=minimal_cpg,
+            concord_user=user,
+            attestations={'Age': 55},  # Should be ignored
+        )
+        age = next(r for r in ctx.records if r.id == 'Age')
+        assert age.value.value == 99  # From ConcordUser, not attestations
