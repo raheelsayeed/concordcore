@@ -33,10 +33,10 @@ def render_patient_selector() -> str | None:
                 weight = "700" if is_selected else "400"
                 st.markdown(
                     f"""
-                    <div style="background: {bg_color}; border: 1.5px solid {border_color}; border-radius: 6px; padding: 0.875rem; margin-bottom: 0.375rem;">
-                        <div style="font-weight: {weight}; color: {c['text_primary']}; margin-bottom: 0.125rem; font-size: 0.9375rem;">{patient['name']}</div>
-                        <div style="color: {c['text_muted']}; font-size: 0.8125rem;">Age {patient['age']} · {patient['gender']}</div>
-                        <div style="color: {c['text_secondary']}; font-size: 0.8125rem; margin-top: 0.125rem;">{patient['description']}</div>
+                    <div style="background: {bg_color}; border: 1.5px solid {border_color}; border-radius: 6px; padding: 1rem; margin-bottom: 0.5rem;">
+                        <div style="font-weight: {weight}; color: {c['text_primary']}; margin-bottom: 0.25rem; font-size: 1rem;">{patient['name']}</div>
+                        <div style="color: {c['text_muted']}; font-size: 0.875rem;">Age {patient['age']} · {patient['gender']}</div>
+                        <div style="color: {c['text_secondary']}; font-size: 0.875rem; margin-top: 0.25rem; line-height: 1.5;">{patient['description']}</div>
                     </div>
                     """,
                     unsafe_allow_html=True
@@ -153,20 +153,20 @@ def render_patient_info(patient_id: str):
 
     st.markdown(
         f"""
-        <div style="background: {c['surface']}; border: 1.5px solid {c['border']}; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+        <div style="background: {c['surface']}; border: 1.5px solid {c['border']}; border-radius: 6px; padding: 1.25rem; margin-bottom: 1.25rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
                 <div>
-                    <div style="font-size: 1rem; font-weight: 700; color: {c['text_primary']};">{name}</div>
-                    <div style="color: {c['text_muted']}; font-size: 0.8125rem;">{age} years · {gender}</div>
+                    <div style="font-size: 1.0625rem; font-weight: 700; color: {c['text_primary']};">{name}</div>
+                    <div style="color: {c['text_muted']}; font-size: 0.9375rem;">{age} years · {gender}</div>
                 </div>
-                <div style="display: flex; gap: 1.25rem;">
+                <div style="display: flex; gap: 1.5rem;">
                     <div style="text-align: center;">
-                        <div style="color: {c['text_muted']}; font-size: 0.625rem; text-transform: uppercase; letter-spacing: 0.1em;">LDL</div>
-                        <div style="color: {c['text_primary']}; font-weight: 700; font-size: 0.9375rem;">{ldl}</div>
+                        <div style="color: {c['text_muted']}; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;">LDL</div>
+                        <div style="color: {c['text_primary']}; font-weight: 900; font-size: 1rem;">{ldl}</div>
                     </div>
                     <div style="text-align: center;">
-                        <div style="color: {c['text_muted']}; font-size: 0.625rem; text-transform: uppercase; letter-spacing: 0.1em;">Conditions</div>
-                        <div style="color: {c['text_primary']}; font-weight: 700; font-size: 0.9375rem;">{', '.join(conditions) if conditions else 'None'}</div>
+                        <div style="color: {c['text_muted']}; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;">Conditions</div>
+                        <div style="color: {c['text_primary']}; font-weight: 900; font-size: 1rem;">{', '.join(conditions) if conditions else 'None'}</div>
                     </div>
                 </div>
             </div>

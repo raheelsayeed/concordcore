@@ -53,9 +53,9 @@ def render_cpg_selector(loader: CPGLoaderService) -> list[str]:
 
                 with col1:
                     weight = "700" if is_selected else "400"
-                    color = c['text_primary'] if is_selected else c['text_muted']
+                    color = c['text_primary'] if is_selected else c['text_secondary']
                     st.markdown(
-                        f'<p style="color: {color}; font-weight: {weight}; font-size: 0.9375rem; margin: 0.375rem 0;">{cpg["name"]}</p>',
+                        f'<p style="color: {color}; font-weight: {weight}; font-size: 1rem; margin: 0.5rem 0; line-height: 1.4;">{cpg["name"]}</p>',
                         unsafe_allow_html=True
                     )
 
@@ -75,12 +75,12 @@ def render_cpg_selector(loader: CPGLoaderService) -> list[str]:
             background: {c['accent_soft']};
             border: 1.5px solid {c['border']};
             border-radius: 6px;
-            padding: 0.75rem;
+            padding: 1rem;
             text-align: center;
-            margin-top: 1rem;
+            margin-top: 1.25rem;
         ">
-            <span style="color: {c['text_primary']}; font-weight: 900; font-size: 1rem;">{len(selected)}</span>
-            <span style="color: {c['text_muted']}; font-size: 0.9375rem; margin-left: 0.375rem;">guidelines selected</span>
+            <span style="color: {c['text_primary']}; font-weight: 900; font-size: 1.125rem;">{len(selected)}</span>
+            <span style="color: {c['text_muted']}; font-size: 1rem; margin-left: 0.5rem;">guidelines selected</span>
         </div>
         """,
         unsafe_allow_html=True

@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
-"""View modules for the Multi-CPG app."""
+"""View modules for the Concord app."""
 
-from .provider_view import render_provider_view
-from .patient_view import render_patient_view
+from .main_view import render_main_view
 
 __all__ = [
-    "render_provider_view",
-    "render_patient_view",
+    "render_main_view",
 ]

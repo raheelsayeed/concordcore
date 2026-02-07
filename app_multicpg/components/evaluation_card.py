@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Evaluation result display - single column monotone."""
+"""Evaluation result display - crisp monotone design."""
 
 import streamlit as st
+from app_multicpg.styles import COLORS
 
 
 def render_evaluation_summary(summary, view_mode: str = "provider"):
@@ -11,6 +12,8 @@ def render_evaluation_summary(summary, view_mode: str = "provider"):
 
 def render_evaluation_card(cpg_id: str, eval_result, view_mode: str = "provider"):
     """Render a single CPG evaluation result."""
+    c = COLORS
+
     # Status
     if eval_result.is_eligible:
         status = "Eligible"
@@ -20,12 +23,20 @@ def render_evaluation_card(cpg_id: str, eval_result, view_mode: str = "provider"
         status = "Unknown"
 
     # Header
-    col1, col2 = st.columns([4, 1])
-    with col1:
-        st.markdown(f"### {eval_result.cpg_title}")
-        st.caption(eval_result.cpg_publisher)
-    with col2:
-        st.markdown(f"**{status}**")
+    st.markdown(
+        f"""
+        <div style="margin-bottom: 1.25rem;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                    <h3 style="font-size: 1.25rem; font-weight: 700; color: {c['text_primary']}; margin: 0 0 0.375rem 0;">{eval_result.cpg_title}</h3>
+                    <span style="font-size: 0.875rem; color: {c['text_muted']};">{eval_result.cpg_publisher}</span>
+                </div>
+                <span style="background: {c['text_primary']}; color: {c['background']}; padding: 0.375rem 0.75rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.02em;">{status}</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
     # Stats row using columns
     st.markdown("---")
@@ -93,6 +104,7 @@ def _render_assessments_tab(eval_result):
 
 def _render_recommendation(rec, show_status: bool = False):
     """Render a single recommendation."""
+    c = COLORS
     rec_var = getattr(rec, 'recommendation', rec)
     title = getattr(rec_var, 'title', None) or getattr(rec_var, 'id', 'Recommendation')
     narrative = getattr(rec, 'narrative', '') or ''
@@ -111,45 +123,44 @@ def _render_recommendation(rec, show_status: bool = False):
         grade = uspstf.value if hasattr(uspstf, 'value') else str(uspstf)
         grade_text = f"Grade {grade}"
 
-    # Status text
-    status_text = ""
+    # Status
     if show_status:
         if applies is True:
-            status_text = "● APPLIES"
+            status_text = "Applies"
+            status_style = f"background: {c['text_primary']}; color: {c['surface']};"
         elif has_error:
-            status_text = "⚠ ERROR"
+            status_text = "Error"
+            status_style = f"background: {c['text_muted']}; color: {c['surface']};"
         else:
-            status_text = "○ Does not apply"
+            status_text = "No"
+            status_style = f"background: {c['border']}; color: {c['text_secondary']};"
 
-    with st.container():
-        # Status and grade row
-        col1, col2 = st.columns([3, 1])
-        with col1:
-            if status_text:
-                if applies:
-                    st.markdown(f"**{status_text}**")
-                else:
-                    st.caption(status_text)
-        with col2:
-            if grade_text:
-                st.markdown(f"**{grade_text}**")
+    st.markdown(
+        f"""
+        <div style="padding: 1rem 0; border-bottom: 1.5px solid {c['border']};">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem;">
+                <div style="flex: 1;">
+                    <div style="font-weight: 700; font-size: 1rem; color: {c['text_primary']};">{title}</div>
+                    {"<div style='font-size: 0.9375rem; color: " + c['text_secondary'] + "; line-height: 1.6; margin-top: 0.375rem;'>" + narrative[:180] + ('...' if len(narrative) > 180 else '') + "</div>" if narrative else ""}
+                </div>
+                <div style="display: flex; gap: 0.5rem; flex-shrink: 0;">
+                    {"<span style='" + status_style + " padding: 0.375rem 0.625rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700;'>" + status_text + "</span>" if show_status else ""}
+                    {"<span style='background: " + c['text_primary'] + "; color: " + c['background'] + "; padding: 0.375rem 0.625rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700;'>" + grade_text + "</span>" if grade_text else ""}
+                </div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-        # Title
-        st.markdown(f"**{title}**")
-
-        # Narrative
-        if narrative:
-            st.write(narrative)
-
-        # Expression (if showing status)
-        if show_status and expression:
-            st.code(expression, language=None)
-
-        st.markdown("---")
+    # Expression (if showing status - use streamlit code block)
+    if show_status and expression:
+        st.code(expression, language=None)
 
 
 def _render_assessment(assessed_record):
     """Render a single assessment."""
+    c = COLORS
     var_id = getattr(assessed_record, 'id', 'Unknown')
 
     # Title
@@ -177,7 +188,7 @@ def _render_assessment(assessed_record):
         else:
             indicator = "◐"
     elif error:
-        indicator = "⚠"
+        indicator = "!"
     else:
         indicator = "○"
 
@@ -186,12 +197,15 @@ def _render_assessment(assessed_record):
     if value_str.startswith("Val="):
         value_str = value_str[4:]
     # Truncate long values
-    if len(value_str) > 50:
-        value_str = value_str[:47] + "..."
+    if len(value_str) > 40:
+        value_str = value_str[:37] + "..."
 
-    # Use columns for layout
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        st.markdown(f"{indicator} {title}")
-    with col2:
-        st.markdown(f"**{value_str}**")
+    st.markdown(
+        f"""
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.625rem 0; border-bottom: 1.5px solid {c['accent_soft']};">
+            <span style="font-size: 0.9375rem; color: {c['text_secondary']};">{indicator} {title}</span>
+            <span style="font-size: 0.9375rem; font-weight: 700; color: {c['text_primary']};">{value_str}</span>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
