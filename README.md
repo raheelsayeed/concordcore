@@ -7,7 +7,7 @@ Python framework to compute and yeild recommendations based on published evidenc
 
 1. __IN__
     - `CPG-YAML`: A clinical practise guideline (CPG) definition file, encoded in `YAML` and accompanying `<file-name>.py` module if necessary.
-    - `HealthContext`: a longtidinal health record consisting of `concordcore.variables.record(s)`
+    - `HealthContext`: a longtidinal health record consisting of `concord.variables.record(s)`
 2. __OUT__ 
     - Eligibility: Does the CPG apply to the given `healthcontext`?
     - Sufficiency: Is the data in `healthcontext` sufficient or partly sufficient to successfully execute the given CPG
@@ -18,8 +18,8 @@ Python framework to compute and yeild recommendations based on published evidenc
 # Installation
 
 ```bash
-$ git clone https://github.com/concordhealth/concordcore.git
-$ cd concordcore
+$ git clone https://github.com/concordhealth/concord.git
+$ cd concord
 $ python3 -m venv .venv
 $ source .venv/bin/activate
 $ pip install -r requirements.txt
@@ -57,7 +57,7 @@ variables:
 Creating variables in py:
 
 ```python
-from concordcore.variables import value, var, record
+from concord.variables import value, var, record
 
 ldl_val     = value.Value(121)
 ldl_var     = var.Var(id="LDL", title="Low Density Lipoprotein", code=[Code.loinc('loinc_code')])
@@ -89,8 +89,8 @@ print_variables(cpg.variables)
 ## 2. User data 
 
 ```python
-from concordcore.healthcontext import HealthContext
-from concordcore.primitives.types import Persona
+from concord.healthcontext import HealthContext
+from concord.primitives.types import Persona
 
 # interaction-context is that a `Patient` is launching the app 
 persona = Persona.patient 
@@ -102,17 +102,17 @@ user_context = HealthContext(records=<# list of records #>, persona=persona)
 
 ## 3. Initialize a cpg-manager class 
 
-`concordcore.concord.Concord` is the core management class that takes in user data `healthcontext` and `CPG` and parses through eligibility check, sufficiency check, assessment evaluation and recommendations.
+`concord.concord.Concord` is the core management class that takes in user data `healthcontext` and `CPG` and parses through eligibility check, sufficiency check, assessment evaluation and recommendations.
 
 ```python
-from concordcore.concord import Concord
+from concord.concord import Concord
 
 manager = Concord(statin_cholesterol_cpg, healthcontext=user_context)
 ```
 
 ## 4. Eligibility variables
 
-Checks for the eligibility and applicability of `CPG` for a given `HealthContext` as specificed in the cpg definition file. See `concordcore.eligibility`
+Checks for the eligibility and applicability of `CPG` for a given `HealthContext` as specificed in the cpg definition file. See `concord.eligibility`
 
 Policy
 
@@ -137,13 +137,13 @@ try:
 except Exception as e:
     raise e
 ```
-Check `concordcore.eligbility.EligibilityResult` class for a list of eligibilited specific records that were evaluated
+Check `concord.eligbility.EligibilityResult` class for a list of eligibilited specific records that were evaluated
 
 
 
 ## 3. Sufficiency variables
 
-Checks for the sufficiency of health data (`HealthContext`) to __execute__ a CPG as specified in the definition file. See `concordcore.sufficiency`. Based on defined charateristics (`var.required` and `var.user_attestable`), each variable is evaluated to one of the following:
+Checks for the sufficiency of health data (`HealthContext`) to __execute__ a CPG as specified in the definition file. See `concord.sufficiency`. Based on defined charateristics (`var.required` and `var.user_attestable`), each variable is evaluated to one of the following:
 
 ```python
 class SufficiencyResultStatus(Enum):
@@ -165,7 +165,7 @@ except Exception as e:
 
 ## 3. Assessment variables
 
-Checks for the eligibility and applicability of `CPG` for a given `HealthContext` as specificed in the cpg definition file. See `concordcore.assessment`. 
+Checks for the eligibility and applicability of `CPG` for a given `HealthContext` as specificed in the cpg definition file. See `concord.assessment`. 
 
 Policy: 
 
@@ -190,7 +190,7 @@ assessments:
 
 ## 4. Recommendations
 
-To define a conditioned recommendation, use `RecommendationVar`. See `concordcore.recommendations` for more, including `EvaluatedRecommendation` that is the result of `concord.recommendations()`. 
+To define a conditioned recommendation, use `RecommendationVar`. See `concord.recommendations` for more, including `EvaluatedRecommendation` that is the result of `concord.recommendations()`. 
 
 Policy to define `RecommendationVar` 
 
@@ -235,12 +235,12 @@ recommendations:
 
 | concord_modules_ | description |
 | --- | --- |
-| concordcore.primitives | list of primitives types `code`,`unit` |
-| concordcore.variables | list of variables– `value`,`var`,`record` |
-| concordcore.eligibility | eligibility evaluation `eligibilityVar` |
-| concordcore.sufficiency| Checks all `var(s) and record(s)` for sufficiency |
-| concordcore.assessment| `AssessmentVar`, `AssessmentRecord`, `AssessmentResult` |
-| concordcore.recommendation | Recommendation protocol module 
+| concord.primitives | list of primitives types `code`,`unit` |
+| concord.variables | list of variables– `value`,`var`,`record` |
+| concord.eligibility | eligibility evaluation `eligibilityVar` |
+| concord.sufficiency| Checks all `var(s) and record(s)` for sufficiency |
+| concord.assessment| `AssessmentVar`, `AssessmentRecord`, `AssessmentResult` |
+| concord.recommendation | Recommendation protocol module 
 | inputsession| Patient-Reported Health Data caputuring protocol |
 | ontology| convinience `presets`, `codes` for ontological codes |
 | renderer|`jinja` based templating module for creating mutli-modal data (apps,voice, in-context LLM data) |
@@ -256,7 +256,7 @@ recommendations:
 # Under review - consideration
 
 - __Package__
-  - [x] !!! Reorganize package, move outcomes into concordcore
+  - [x] !!! Reorganize package, move outcomes into concord
 
 - __HealthContext__:
   - [x] !!! Define method to include "persona" within the input healthcontext. This persona would be an enum of patient/practitioner
@@ -303,7 +303,7 @@ recommendations:
   - [ ] `evidence_rejectioning_module`: LLM based suggestions for providers to quickly select/click/tap/reply reasons for the above
 
 - __FHIR__:
-  - [ ] direct-fhir-json to `concordcore.value` conversion. Skip `fhirclient` or `fhir.resource`
+  - [ ] direct-fhir-json to `concord.value` conversion. Skip `fhirclient` or `fhir.resource`
  
 - __ActionRecommendation__:
   - [ ] Enums for VariableActionRecommendation: Eg. variable.stale --> ActionRecommendation('get new lab test done), AR1('go here..'), AR2('notify your doctor for a new test')

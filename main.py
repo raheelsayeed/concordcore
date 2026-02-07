@@ -3,8 +3,9 @@
 import argparse
 from typing import final
 from core import cpg, healthcontext
-from core.concord import Concord, NeedAttestationError
-from clog import *
+from core.concord import Concord
+from core.errors import NeedAttestationError
+from clog import ht, p, con, print_records, print_variables, print_evaluatedrecords
 import misc
 
 import logging
@@ -14,7 +15,7 @@ level = 'ERROR'
 logging.basicConfig(level=level, format="%(message)s", datefmt="[%X]", handlers=[RichHandler()])
 logger = logging.getLogger("tests")
 
-parser = argparse.ArgumentParser("concordcore_")
+parser = argparse.ArgumentParser("concord")
 parser.add_argument('-f', dest='filepath', type=str, help='Path to Concord.CPG file')
 parser.add_argument('-t', dest='template_name', type=str, help='Name of the template')
 parser.add_argument('-p', dest='persona', type=str, help='patient or provider persona')
@@ -28,7 +29,7 @@ logger.info(f'File={fp}')
 
 ht("""
 [black on green]# --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---[/black on green]
-[black on green]# --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --concordcore v0.1 [/black on green]
+[black on green]# --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---concord v0.1 [/black on green]
 # [b]User Data (sample)[/b]
 #       Health context holds all the user data
 #       can be a person/patient/?physician
@@ -197,12 +198,12 @@ if inspect_output:
 
 
 
-## Narrative tests 
+## Narrative tests
 for record in concord.sufficiency_result.context.evaluation_list:
-    logger.debug(f'VARIABLE:narrative test record={record.record.test_narratives()}')
-## Narrative tests 
+    logger.debug(f'VARIABLE:narrative test record={record.record.narrative}')
+## Narrative tests
 for record in concord.assessment_result.context.evaluation_list:
-    logger.debug(f'ASSESSMENT:narrative test record={record.record.test_narratives()}')
+    logger.debug(f'ASSESSMENT:narrative test record={record.record.narrative}')
 
 
 if args.template_name:

@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 from primitives.errors import VarError
 from primitives.types import Persona, ValueType, YMLStrEnum
 from primitives.code import Code
-from primitives.varstring import VarString
+from primitives.varstring import VarString, VAR_PREFIX
 from primitives.valuedate import ValueDate
 
 log = logging.getLogger(__name__)
@@ -108,8 +108,8 @@ class Narrative:
             log.debug('no narrative found')
             return None 
 
-        if for_value != None:
-            if type(for_value) == bool:
+        if for_value is not None:
+            if isinstance(for_value, bool):
                 text = narrative_dict.get(for_value, None)
             else:
                 text = narrative_dict.get(str(for_value), None) or narrative_dict.get('HasValue', None) or narrative_dict.get(True, None)
@@ -131,7 +131,7 @@ class Narrative:
                         val = humanize.naturaldate(val.date)
 
                     val = self.formatted_value(str(val)) if self.FORMAT_VALUE else str(val)
-                    text = text.replace('$'+n_var, val)
+                    text = text.replace(VAR_PREFIX + n_var, val)
          
         log.debug(f'text={text}, Tags={self.tags} NarrativeDict={narrative_dict},  for_value={for_value}')
         return text
@@ -180,16 +180,19 @@ class Var:
 
     narr: Narrative = None
 
+    llm_prompt: str = None
+    """Prompt text for extracting this variable's value from clinical notes using an LLM"""
+
     @property
     def code_string(self):
         return ','.join([c.as_string for c in self.code]) if self.code else None
 
     def __hash__(self):
-        return hash(self.__repr__)
+        return hash(self.id)
 
     def __eq__(self, __o: object) -> bool:
 
-        if isinstance(__o, Var) == False:
+        if not isinstance(__o, Var):
             return super().__eq__(__o)        
 
         # use id as an identifier
@@ -250,7 +253,7 @@ class Var:
 
             cat = yml.get('category', None)
             if cat:
-                if type(cat) == str:
+                if isinstance(cat, str):
                     yml['category'] = VarCategory.YAML(yml['category'])
 
             value_type = yml.get('type', None) 
@@ -259,7 +262,7 @@ class Var:
 
 
             instance = cls(**yml)
-            if instance.narrative != None:
+            if instance.narrative is not None:
                 assert isinstance(instance.narr, Narrative)
             return instance
 

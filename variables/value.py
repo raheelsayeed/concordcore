@@ -15,22 +15,20 @@ log = logging.getLogger(__name__)
 
 # ------------- VALUE ------------ #
 class Value:
+    """Value with __slots__ for memory efficiency."""
+    __slots__ = ('value', 'unit', 'date', 'source', 'code', 'representation_function')
 
     def __init__(self, value, unit: unit.Unit = None, code: list[code.Code] = None, date: datetime = None, source: list[Any] = None, representation_function=None):
-
-        if value == None:
+        if value is None:
             raise ValueError('requires a value')
 
-        dt = date or datetime.now()
-        dt = valuedate.ValueDate(dt)
-
-        self.value = value 
+        self.value = value
         self.unit = unit
-        self.date = dt
+        self.date = valuedate.ValueDate(date or datetime.now())
         self.source = source
         self.code = code
         self.representation_function = representation_function
-        if source and type(source) is not list:
+        if source and not isinstance(source, list):
             raise KeyError(f'value.source must be a list-type. found={type(source)}')
 
 

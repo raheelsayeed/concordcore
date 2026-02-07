@@ -6,9 +6,8 @@ import logging
 from core import concord
 from core.healthcontext import HealthContext
 from variables.record import Record
-from variables.var import Var, VarType
+from variables.var import Var, VarCategory
 from variables.value import Value
-from ontology.presets import *
 from clog import *
 
 
@@ -27,8 +26,8 @@ logger = logging.getLogger("tests")
 
 if __name__ == '__main__':
 
-    from core.cpg import BaseCPG
-    cpg = BaseCPG.from_document_path('cpgs/cholesterol.yaml')
+    from core.cpg import CPG
+    cpg = CPG.from_document_path('cpgs/cholesterol.yaml')
     import misc
     manager = concord.Concord(cpg, misc.sample_healthcontext())
 
@@ -48,7 +47,7 @@ if __name__ == '__main__':
     from variables import value, record, var
     val1 = value.Value(1, unit=None, code=fcode)
     logger.info(val1)
-    var1= var.Var('LDL', 'LDL', None, code=[fcode], category=VarType.vital_sign, type=None)
+    var1= var.Var('LDL', 'LDL', None, code=[fcode], category=VarCategory.vital_sign, type=None)
     var2= var.Var.Sample()
     assert isinstance(var1, type(var2))
     assert isinstance(var1, var.Var)
@@ -77,11 +76,11 @@ if __name__ == '__main__':
     ar1.evaluate([rec1])
     logger.debug(f'{ar1.value}, {rec1.value}')
 
-    logger.debug('narrative={ar1.sanitized_narrative}')
+    logger.debug(f'narrative={ar1.narrative}')
 
 
 
-    ldl_var = var.Var('LDL', 'LDL', None, code=[fcode], category=VarType.vital_sign, type=None,
+    ldl_var = var.Var('LDL', 'LDL', None, code=[fcode], category=VarCategory.vital_sign, type=None,
                       narrative= {
                             'patient': {
                                     'HasValue': 'we have val $value',
@@ -102,7 +101,7 @@ if __name__ == '__main__':
     highldl_rec = AssessmentRecord(high_ldl, None)
     highldl_rec.evaluate([ldl_rec])
 
-    logger.debug(f'highldl_rec={highldl_rec.value}, narr={highldl_rec.sanitized_narrative}, ldlnarr={ldl_rec.sanitized_narrative}')
+    logger.debug(f'highldl_rec={highldl_rec.value}, narr={highldl_rec.narrative}, ldlnarr={ldl_rec.narrative}')
 
     import misc
     hc = misc.sample_healthcontext()
@@ -110,8 +109,8 @@ if __name__ == '__main__':
     from core.eligibility import EligibilityVar, EligibilityRecord, EligibilityEvaluator
     e_var = EligibilityVar('Gender', expression='$Gender == 1')
     eligibility_record = EligibilityRecord(e_var)
-    # eligibility_record.evaluate([ldl_rec])
-    logger.debug(f'Eligibiltiy={eligibility_record.id} is_eligiblity={eligibility_record.is_eligible}')
+    # Note: eligibility_record needs to be evaluated against records containing Gender before accessing is_eligible
+    logger.debug(f'Eligibility={eligibility_record.id} (not yet evaluated)')
     logger.info('EligbilityEvaluation:')
     e_eval = EligibilityEvaluator([e_var])
     e_result = e_eval.evaluate(hc)
@@ -128,13 +127,43 @@ if __name__ == '__main__':
     for fhirval in fhirvals:
         logger.debug(f'fhirvalue={fhirval}')
     from datetime import date
+    from primitives.types import Persona
     until_2023 = date.today().replace(year=2015)
-    patientdata = HealthContext.from_values(fhirvals, manager.cpg.variables, until_2023)
+    # Create placeholder records for demographics
+    age_record = Record(var=Var('Age', 'Age'), initial_values=[Value(55)])
+    gender_record = Record(var=Var('Gender', 'Gender'), initial_values=[Value(1)])
+    race_record = Record(var=Var('Race', 'Race'), initial_values=[Value('white')])
+    patientdata = HealthContext.from_values(fhirvals, manager.cpg.variables, age_record, gender_record, race_record, Persona.patient, until_2023)
     # print_records(patientdata.records)
 
     # latest = healthcontext.HealthContext.from_values(fhir, manager.cpg.variables)
     # print_records(latest.records)
 
+    # --- Test: Verify sample data is accurately matched to CPG variables ---
+    ht("[black on green]# --- SAMPLE DATA MATCHING TEST --- [/black on green]")
+
+    from core.cpg import CPG
+    from core.concord import Concord
+
+    test_cpg = CPG.from_document_path('cpgs/cholesterol.yaml')
+    test_hc = misc.sample_healthcontext()
+    test_concord = Concord(cpg=test_cpg, healthcontext=test_hc, ignore_eligibility=True)
+
+    # Run sufficiency to see variable matching
+    sufficiency_result = test_concord.sufficiency()
+
+    # Check that key variables have values (matched by code)
+    critical_vars = ['triglycerides', 'bloodpressure', 'LDL', 'HDL', 'Chol', 'diabetesMellitus']
+    for ev in sufficiency_result.context.evaluation_list:
+        if ev.record.id in critical_vars:
+            has_value = ev.record.has_value
+            status = "✓ HAS VALUE" if has_value else "✗ MISSING"
+            logger.info(f"  {ev.record.id}: {status} (values={ev.record.values})")
+            if ev.record.id in ['triglycerides', 'bloodpressure', 'LDL', 'HDL', 'Chol', 'diabetesMellitus']:
+                assert has_value, f"Critical variable {ev.record.id} should have value from sample data"
+
+    logger.info("Sample data matching test PASSED")
+    # --- End Sample Data Matching Test ---
 
     logger.info("tests=PASSED")
 

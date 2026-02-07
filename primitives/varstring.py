@@ -9,6 +9,11 @@ from re import findall
 
 l = logging.getLogger(__name__)
 
+# Variable syntax constants
+VAR_PREFIX = '$'
+VAR_ACCESSOR_SEPARATOR = '.'
+
+
 class VarString(str):
     """A string that contains variables with a prefix '$'"""
 
@@ -44,8 +49,8 @@ class VarString(str):
     def replaced_with_data_from(self, data_dict):
         txt = self
         for var_id in self.variable_identifiers:
-            txt = self.replace('$'+var_id, data_dict.get(var_id, '<>'))
-        
+            txt = self.replace(VAR_PREFIX + var_id, data_dict.get(var_id, '<>'))
+
         self.__replace_cached = txt
         return self.__replace_cached
 
@@ -88,7 +93,7 @@ class EvaluatorString:
     def evaluate(self, values: dict = None):
         try:
             self.__value_dict = values
-            expstr = self.string.replace('$', '')
+            expstr = self.string.replace(VAR_PREFIX, '')
             self.__result = simple_eval(expstr, names=values)
             return self.result
         except Exception as e:

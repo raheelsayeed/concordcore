@@ -1,51 +1,42 @@
-import logging
+#!/usr/bin/env python3
+"""Deprecated: Error classes have moved to core.errors.
 
-log = logging.getLogger(__name__)
+This module re-exports error classes from core.errors for backwards compatibility.
+Import directly from core.errors instead:
 
-class ExpressionError(Exception):
-    def __init__(self, expression, message):
-        message =  message + f' expression={expression}'
-        super(ExpressionError, self).__init__(message)
-        
-class ExpressionEvaluationError(ExpressionError):
-    def __init__(self, expression, values,  message=None):
-        msg = f'ExpressionEvaluationError for values={values} message={message}'
-        super(ExpressionEvaluationError, self).__init__(expression, msg)
+    from core.errors import ExpressionError, VarError, VariableEvaluationError
+"""
 
-class ExpressionVariableNotFound(ExpressionError):
-    def __init__(self, expression_var, expression):
-        msg = f'var_id={expression_var} not found or undefined'
-        super(ExpressionVariableNotFound, self).__init__(expression, msg)
+import warnings
 
+# Re-export all error classes from core.errors for backwards compatibility
+from core.errors import (
+    ConcordError,
+    ExpressionError,
+    ExpressionEvaluationError,
+    ExpressionVariableNotFound,
+    VarError,
+    VariableEvaluationError,
+    SecurityError,
+    NeedAttestationError,
+    FHIRParseError,
+)
 
+__all__ = [
+    'ConcordError',
+    'ExpressionError',
+    'ExpressionEvaluationError',
+    'ExpressionVariableNotFound',
+    'VarError',
+    'VariableEvaluationError',
+    'SecurityError',
+    'NeedAttestationError',
+    'FHIRParseError',
+]
 
-class VarError(Exception):
-
-    def __init__(self, message, variable_id):
-
-        message =  message + f' variable_id={variable_id}'
-        super(VarError, self).__init__(message)
-        self.variable_id = variable_id
-        log.error(f'{self.__class__}: {message}')
-
-
-
-        
-class VariableEvaluationError(Exception):
-
-    def __init__(self, errors, variable_id):
-
-        msgs = "\n  ".join([str(e).replace("\n", "\n  ") for e in errors])
-        message = "{}:\n  {}".format(variable_id or "{root}", msgs)
-
-       
-        super(VariableEvaluationError, self).__init__(message)
-
-        self.errors = errors
-
-        self.variable_id = variable_id
-
-        log.error(f'VariableEvaluationError variable_id={self.variable_id} error={message}')
-
-
-
+# Issue deprecation warning when this module is imported directly
+warnings.warn(
+    "primitives.errors is deprecated. Import from core.errors instead.",
+    DeprecationWarning,
+    stacklevel=2
+)

@@ -3,8 +3,8 @@ certifi==2024.2.2
 charset-normalizer==3.3.2
 dnspython==2.6.1
 email_validator==2.1.1
-fhir.resources==7.1.0
-fhirclient==4.1.0
+fhir.resources>=8.0.0
+fhirclient>=4.1.0
 idna==3.6
 isodate==0.6.1
 jinja-markdown==1.210911
@@ -25,3 +25,4 @@ six==1.16.0
 typing_extensions==4.10.0
 urllib3==2.2.1
 humanize==4.10.0
+mcp>=1.0.0

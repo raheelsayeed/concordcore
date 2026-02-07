@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
+"""Record class for ConcordCore.
+
+A Record combines a variable definition (Var) with actual patient values.
+"""
 
 from dataclasses import dataclass, field, InitVar
 from functools import cache, cached_property
 from datetime import datetime
+from typing import Any
 
 import logging, humanize
+from simpleeval import simple_eval
 
-
-from types import NoneType
 from typing_extensions import Self
 from primitives.errors import VarError
-
 
 from primitives.varstring import EvaluatorString, ValidationExpression
 from variables.var import Narrative, Var, VarError, VarImplausibleError, VarPanelValidationError
@@ -20,143 +23,198 @@ from primitives.types import Persona
 
 logger = logging.getLogger(__name__)
 
+# Validator dict keys
+VALIDATOR_PANEL = 'panel'
+VALIDATOR_PLAUSIBLE = 'plausible'
+
+# Comparison operators for value filtering
+COMPARISON_OPERATORS = '<>=!'
+
+
 @dataclass
 class Record:
+    """A record combining a variable definition with patient values.
+
+    Attributes:
+        var: The variable definition
+        initial_values: Optional list of values to initialize record with
+    """
 
     var: Var
-    __values: vlist[Value] = None 
-    __attested_value: Value = field(init=False, default=None)
-    __narrative: str = field(init=False, default=None)
-    __plausible_validator: ValidationExpression = field(init=False)
-    __panel_validator: EvaluatorString = field(init=False)
-    __persona: Persona = field(init=False)
+    initial_values: InitVar[list[Value] | None] = None
+    # Internal storage for values
+    _stored_values: vlist[Value] = field(init=False, default=None)
+    _attested_value: Value = field(init=False, default=None)
+    _narrative: str = field(init=False, default=None)
+    _plausible_validator: ValidationExpression = field(init=False, default=None)
+    _panel_validator: EvaluatorString = field(init=False, default=None)
+    _persona: Persona = field(init=False, default=None)
 
-    def __post_init__(self):
-        self.__values = vlist(self.__values) if self.__values else None
+    def __post_init__(self, initial_values: list[Value] | None):
+        # Accept values parameter directly (cleaner API)
+        self._stored_values = vlist(initial_values) if initial_values else None
+
+        # Initialize validators
         if self.var.validator:
             logger.debug(self.var.validator)
-            self.__panel_validator = EvaluatorString(self.var.validator['panel']) if 'panel' in self.var.validator else None 
-            self.__plausible_validator = ValidationExpression(self.var.validator['plausible']) if 'plausible' in self.var.validator else None 
+            self._panel_validator = (
+                EvaluatorString(self.var.validator[VALIDATOR_PANEL])
+                if VALIDATOR_PANEL in self.var.validator else None
+            )
+            self._plausible_validator = (
+                ValidationExpression(self.var.validator[VALIDATOR_PLAUSIBLE])
+                if VALIDATOR_PLAUSIBLE in self.var.validator else None
+            )
         else:
-            self.__panel_validator = None
-            self.__plausible_validator = None
-        # debug purpose:
-        self.__persona = None
+            self._panel_validator = None
+            self._plausible_validator = None
 
-    
+        self._persona = None
+
     def __repr__(self) -> str:
-        return f'Record<{self.var.id}; values={self.values or ''}>'
-
+        return f'Record<{self.var.id}; values={self.get_values() or ""}>'
 
     @cached_property
-    def __must_filter_values(self):
+    def _must_filter_values(self) -> bool:
+        """Check if values need filtering based on value_filter."""
         if self.var.value_filter:
             logging.debug(f'{self.id} Record.values are filtered')
             return True
         return False
 
     @property
-    def id(self):
+    def id(self) -> str:
+        """Variable identifier."""
         return self.var.id
 
     @property
-    def title(self):
+    def title(self) -> str | None:
+        """Variable title."""
         return self.var.title
 
     @property
     def code(self):
+        """Variable code(s)."""
         return self.var.code
 
     @property
-    def value(self):
-        return self.values[0] if self.values else None
+    def value(self) -> Value | None:
+        """Most recent/primary value."""
+        vals = self.get_values()
+        return vals[0] if vals else None
 
-    @property
-    def values(self):
-        if self.__attested_value:
-            return vlist([self.__attested_value])
-        elif self.__must_filter_values:
+    def get_values(self) -> vlist[Value] | None:
+        """Get all values, applying filters and attestations.
+
+        Returns:
+            vlist of Value objects, or None if no values
+        """
+        if self._attested_value:
+            return vlist([self._attested_value])
+        elif self._must_filter_values:
             return self.filtered_values
         else:
-            return self.__values
+            return self._stored_values
+
+    # Backward compatible property
+    @property
+    def values(self) -> vlist[Value] | None:
+        """Get all values (alias for get_values)."""
+        return self.get_values()
 
     @property
-    def attested_value(self):
-        return self.__attested_value
-    
+    def attested_value(self) -> Value | None:
+        """User-attested value."""
+        return self._attested_value
+
     @attested_value.setter
-    def attested_value(self, value):
+    def attested_value(self, value: Value):
+        """Set user-attested value."""
         if self.var.user_attestable:
             if self.validate(value=value):
-                self.__attested_value = value
-                assert self.__attested_value 
+                self._attested_value = value
+                assert self._attested_value
         else:
             raise ValueError(f'Variable is not attestable var={self.id}')
-        self.set_narrative(persona=self.__persona)
+        self.set_narrative(persona=self._persona)
 
-    @property 
-    def narrative(self):
-        return self.__narrative
     @property
-    def has_value(self):
+    def narrative(self) -> str | None:
+        """Generated narrative text."""
+        return self._narrative
+
+    @property
+    def has_value(self) -> bool:
+        """Check if record has at least one value."""
         return self.value is not None
 
-    def __filter_values(self, values: vlist[Value]):
+    def _filter_values(self, values: vlist[Value]) -> vlist[Value] | None:
+        """Apply value filters to the values list."""
         if not values:
             logging.debug('No values to apply valuefilter')
             return None
-        lst = list(filter(self.__function_filter, values))
+        lst = list(filter(self._function_filter, values))
         if self.var.value_filter.upper:
-            return lst[:self.upper]
+            return vlist(lst[:self.var.value_filter.upper])
         if self.var.value_filter.lower:
-            return lst[-int(self.lower):]
+            return vlist(lst[-int(self.var.value_filter.lower):])
         return vlist(lst)
 
-    def __function_filter(self, value: Value):
+    def _function_filter(self, value: Value) -> bool:
+        """Filter function for individual values."""
         bools = []
         if self.var.value_filter.after_date:
             bools.append(value.date >= self.var.value_filter.after_date)
         if self.var.value_filter.before_date:
             bools.append(value.date <= self.var.value_filter.before_date)
         if self.var.value_filter.value_expression:
-            exp = str(value.value) + ' ' + self.var.value_filter.value_expression
-            bools.append(eval(exp))
-        return False if False in bools else True
+            exp = self.var.value_filter.value_expression.strip()
+            # Backward compatibility: if expression starts with operator, prepend 'value'
+            if exp and exp[0] in COMPARISON_OPERATORS:
+                exp = 'value ' + exp
+            result = simple_eval(exp, names={'value': value.value})
+            bools.append(result)
+        return False not in bools
 
     @cached_property
-    def filtered_values(self):
-        if self.__must_filter_values == False:
+    def filtered_values(self) -> vlist[Value] | None:
+        """Values after applying filters."""
+        if not self._must_filter_values:
             return None
-        return self.__filter_values(self.__values)
+        return self._filter_values(self._stored_values)
     
-    def set_narrative(self, persona: Persona = Persona.patient, variable_data_dict: dict = None):
+    def set_narrative(self, persona: Persona = None, variable_data_dict: dict = None):
+        """Generate and set narrative text for this record.
+
+        Args:
+            persona: The persona (patient/provider) for narrative style. Defaults to patient.
+            variable_data_dict: Optional dict of variable data for substitution
+
+        Returns:
+            The generated narrative text, or None if no narrative defined
+        """
+        # Use default persona if None passed
+        persona = persona or Persona.patient
 
         narr = self.var.narr or self.default_narratives
 
         if not narr:
-            #  raise Exception('this is a problem, self.var.narr == nil ? then check if default narr available')
-            # logging.warning(e)
-            return None 
+            return None
 
         if variable_data_dict:
             variable_data_dict.update({"self": self.as_dict()})
         else:
             variable_data_dict = {"self": self.as_dict()}
 
-        self.__narrative = narr.get_text(
-                self.value.value if self.value else None, 
-                persona, 
-                variable_data_dict, 
-                default=self.default_narratives.data
-            )
+        self._narrative = narr.get_text(
+            self.value.value if self.value else None,
+            persona,
+            variable_data_dict,
+            default=self.default_narratives.data
+        )
 
-        
-        
-        # print(f'Santized-Narrative={self.id} variable_dict={variable_data_dict}, narrative_text={self.narrative}, tags={self.var.narr}, default={self.default_narratives.data}')
-        # exit()
-        # only for debug reasons
-        self.__persona = persona
-        return self.__narrative
+        self._persona = persona
+        return self._narrative
 
     @cached_property
     def default_narratives(self):
@@ -182,7 +240,6 @@ class Record:
 
     def as_dict(self):
         var_dict = self.var.as_dict()
-        var_dict = {}
         var_dict.update({
                 'value': self.value.value if self.value else None,
                 'values': self.values.representation if self.values else None,
@@ -199,37 +256,39 @@ class Record:
             logger.warning(f'Record={self.id} has no value to validate')
             return True
         
-        if type(val) != Value:
+        if not isinstance(val, Value):
             ve = VarError(f'Record={self.id}.value.type = {type(val)}')
             raise ve
 
         if self.var.value_type:
             vtype = self.var.value_type.type
-            if vtype == bool and type(val.value) == str and (val.value not in ['False', 'True']):
+            if vtype == bool and isinstance(val.value, str) and (val.value not in ['False', 'True']):
                 raise VarError(f'Record=<{self.id}> invalid value_type={type(val.value)}; need={vtype}', self.id)
-            if vtype(val.value) == None:
+            if vtype(val.value) is None:
                 raise VarError(f'Record=<{self.id}> invalid value_type={type(val.value)}; need={vtype}', self.id)
 
 
-        if self.__plausible_validator:
+        if self._plausible_validator:
             try:
-                res = self.__plausible_validator.evaluate(value=val.value)
+                res = self._plausible_validator.evaluate(value=val.value)
                 if not res:
                     e = VarImplausibleError(self.var, val.value)
                     if strict:
                         raise e
-                    else: 
+                    else:
                         logger.warning(e)
             except Exception as e:
-                if strict: 
+                if strict:
                     raise e
                 else:
                     logger.warning(e)
 
-        if self.__panel_validator and records:
+        if self._panel_validator and records:
             try:
-                expression_vars = self.__panel_validator.variables
-                filtered = list(filter(lambda r: r.id in expression_vars, records))
+                expression_vars = self._panel_validator.variables
+                # Use set for O(1) lookup instead of list membership
+                expr_var_set = set(expression_vars)
+                filtered = [r for r in records if r.id in expr_var_set]
                 f_dict = {r.id: r.value.value if r.value else None for r in filtered}
                 f_dict.update({'value': self.value.value})
                 if None in f_dict.values():
@@ -239,46 +298,17 @@ class Record:
                     else:
                         logger.warning(e)
 
-                res = self.__panel_validator.evaluate(f_dict)
+                res = self._panel_validator.evaluate(f_dict)
                 if not res:
                     e = VarPanelValidationError(self.var, val.value)
                     if strict:
-                        raise e 
-                    else: 
+                        raise e
+                    else:
                         logger.warning(e)
             except Exception as e:
-                if strict: 
+                if strict:
                     raise e
                 else:
                     logger.warning(e)
 
-        
         return True
-
-
-        
-
-    def test_narratives(self):
-        
-        return
-        if not self.var.narr:
-            return 'NO-NARRATIVE'
-
-        d = self.var.narr.data
-        patient = d.get('patient', None)
-        provider = d.get('provider', None)
-
-        if self.__persona == Persona.patient:
-            assert self.narrative if patient else None,  f'record={self.id} value={self.value}, narr={patient} _must_have_narrative'
-
-        if self.__persona == Persona.practitioner:
-            assert self.narrative if provider else None,  f'record={self.id} value={self.value}, narr={provider} _must_have_narrative'
-
-        return 'PASSED'
-            
-
-
-
-        assert (self.narrative == None) == (narrative_dict == None), f'record={self} narr={narrative_dict} _must_have_narrative'
-        return 'PASSED'
-
