@@ -1,0 +1,110 @@
+CPG:
+  title: "Minimal Test CPG"
+  identifier: minimal_test_cpg
+  publisher: 'Test Publisher'
+
+variables:
+  - id: Age
+    title: Patient Age
+    code:
+      concord: ['Age']
+    required: true
+
+  - id: LDL
+    title: LDL Cholesterol
+    code:
+      loinc: ['13457-7']
+    required: true
+    user_attestable: false
+    narrative:
+      patient:
+        HasValue: Your LDL is $self.value mg/dL
+        NoValue: LDL not found in your records
+      provider:
+        HasValue: 'LDL: $self.value mg/dL'
+        NoValue: LDL not available
+
+  - id: HDL
+    title: HDL Cholesterol
+    code:
+      loinc: ['2085-9']
+    required: false
+    user_attestable: false
+
+eligibility:
+  - id: age_eligibility
+    title: Age between 40 and 75
+    expression: $Age >= 40 and $Age <= 75
+
+assessments:
+  - id: high_ldl
+    title: High LDL Assessment
+    expression: $LDL > 130
+    narrative:
+      patient:
+        True: Your LDL cholesterol is elevated above 130 mg/dL
+        False: Your LDL cholesterol is within normal range
+        None: Unable to determine LDL status
+      provider:
+        True: LDL > 130 mg/dL (elevated)
+        False: LDL <= 130 mg/dL (normal)
+        None: LDL status undetermined
+
+  - id: very_high_ldl
+    title: Very High LDL Assessment
+    expression: $LDL > 190
+    narrative:
+      patient:
+        True: Your LDL cholesterol is very high (above 190 mg/dL)
+        False: Your LDL cholesterol is below 190 mg/dL
+      provider:
+        True: LDL > 190 mg/dL (very high - consider familial hypercholesterolemia)
+        False: LDL <= 190 mg/dL
+
+recommendations:
+  - id: lifestyle_recommendation
+    title: Lifestyle Modifications
+    type: display
+    narrative:
+      patient:
+        True: |
+          Consider lifestyle modifications including:
+          - Heart-healthy diet
+          - Regular physical activity
+          - Weight management
+      provider:
+        True: Recommend lifestyle modifications per guidelines
+
+  - id: statin_recommendation
+    title: Consider Statin Therapy
+    expression: $high_ldl == True
+    class_of_recommendation: IIa
+    level_of_evidence: A
+    narrative:
+      patient:
+        True: |
+          Based on your cholesterol levels, your healthcare provider may recommend
+          statin medication to help lower your LDL cholesterol.
+        False: Statin therapy may not be indicated at this time.
+      provider:
+        True: Consider moderate-to-high intensity statin therapy per ACC/AHA guidelines
+        False: Statin therapy not indicated based on current LDL levels
+    citations:
+      - "2019 ACC/AHA Guideline on Primary Prevention of Cardiovascular Disease"
+
+  - id: specialist_referral
+    title: Consider Specialist Referral
+    expression: $very_high_ldl == True
+    class_of_recommendation: I
+    level_of_evidence: B-R
+    narrative:
+      patient:
+        True: |
+          Your LDL cholesterol is very high. Your doctor may recommend seeing
+          a specialist to evaluate for genetic causes of high cholesterol.
+        False: Specialist referral not currently indicated.
+      provider:
+        True: Consider lipid specialist referral for evaluation of familial hypercholesterolemia
+        False: Specialist referral not indicated
+    citations:
+      - "2019 ACC/AHA Guideline on Primary Prevention of Cardiovascular Disease"
