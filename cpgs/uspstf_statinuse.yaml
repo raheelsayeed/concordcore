@@ -138,6 +138,36 @@ variables:
         Note: Former smoker or quit smoking should return false for current smoking.
         Return: true if current smoker, false if non-smoker or former smoker, null if not mentioned.
 
+    - id: hx_myocardial_infarction
+      title: History of myocardial infarction
+      user_attestable: True
+      code:
+        snomed: ["22298006", "399211009"]
+      llm_prompt: |
+        Does the patient have a history of myocardial infarction (heart attack)?
+        Look for: MI, myocardial infarction, heart attack, STEMI, NSTEMI, acute coronary syndrome.
+        Return: true if history present, false if explicitly denied, null if not mentioned.
+
+    - id: hx_stroke
+      title: History of stroke
+      user_attestable: True
+      code:
+        snomed: ["230690007", "422504002"]
+      llm_prompt: |
+        Does the patient have a history of stroke or cerebrovascular accident?
+        Look for: stroke, CVA, cerebrovascular accident, ischemic stroke, hemorrhagic stroke, TIA.
+        Return: true if history present, false if explicitly denied, null if not mentioned.
+
+    - id: hx_peripheral_arterial_disease
+      title: History of peripheral arterial disease
+      user_attestable: True
+      code:
+        snomed: ["840580004", "400047006"]
+      llm_prompt: |
+        Does the patient have a history of peripheral arterial disease or peripheral vascular disease?
+        Look for: PAD, PVD, peripheral arterial disease, peripheral vascular disease, claudication, limb ischemia.
+        Return: true if history present, false if explicitly denied, null if not mentioned.
+
 
 
 #--------------------------------------------------------
@@ -198,8 +228,18 @@ eligibility:
     expression: $Age > 39.9 and $Age < 76
 
   - id: chol_over_190
-    title: 'Does not apply to individuals with LDL-c over 190 mg/dL.'
-    expression: $LDL > 190 
+    title: 'Does not apply to individuals with LDL-c of 190 mg/dL or greater.'
+    expression: $LDL >= 190
+    criteria_type: exclusion
+
+  - id: already_on_statin
+    title: 'Does not apply to individuals already being treated with a statin.'
+    expression: $med_statins == True
+    criteria_type: exclusion
+
+  - id: has_cvd_history
+    title: 'Does not apply to individuals with existing cardiovascular disease (primary prevention only).'
+    expression: $hx_myocardial_infarction == True or $hx_stroke == True or $hx_peripheral_arterial_disease == True
     criteria_type: exclusion
 
 
