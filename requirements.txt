@@ -1,28 +1,37 @@
-annotated-types>=0.7.0
-certifi>=2024.7.4
-charset-normalizer>=3.4.0
-dnspython>=2.6.1
-email_validator>=2.1.1
+# Core dependencies
+pydantic>=2.10.0
+PyYAML>=6.0.2
+Jinja2>=3.1.4
+simpleeval>=1.0.0
+humanize>=4.10.0
+rich>=13.7.1
+
+# FHIR support
 fhir.resources>=8.0.0
 fhirclient>=4.1.0
-idna>=3.7
-isodate>=0.6.1
-jinja-markdown>=1.210911
-Jinja2>=3.1.4
+
+# Markdown rendering
 Markdown>=3.6
-markdown-it-py>=3.0.0
-MarkupSafe>=2.1.5
-mdurl>=0.1.2
-pydantic>=2.7.0
-pydantic_core>=2.18.0
-Pygments>=2.18.0
+jinja-markdown>=1.210911
 pymdown-extensions>=10.8
-PyYAML>=6.0.2
-requests>=2.32.0
-rich>=13.7.1
-simpleeval>=0.9.13
-six>=1.16.0
-typing_extensions>=4.12.0
-urllib3>=2.2.2
-humanize>=4.10.0
+
+# MCP server
 mcp>=1.0.0
+
+# HTTP client (secure versions)
+requests>=2.32.0
+urllib3>=2.2.2
+certifi>=2024.7.4
+
+# Type hints
+typing_extensions>=4.12.0
+annotated-types>=0.7.0
+
+# Validation
+email_validator>=2.1.1
+
+# Date handling
+python-dateutil>=2.9.0
+
+# Web app (optional)
+streamlit>=1.30.0
