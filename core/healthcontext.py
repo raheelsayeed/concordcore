@@ -270,8 +270,8 @@ class HealthContext:
             all_vars = []
             if cpg.variables:
                 all_vars.extend(cpg.variables)
-            if cpg.eligibility:
-                all_vars.extend(list(cpg.eligibility))
+            if cpg.eligibility_variables:
+                all_vars.extend(list(cpg.eligibility_variables))
 
             if not all_vars:
                 return []
