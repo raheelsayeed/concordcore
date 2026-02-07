@@ -102,12 +102,47 @@ def compute_ten_year_score(
 
 
 def optimal_tenyearriskscore(healthcontext):
-    try: 
-        isMale = healthcontext['Gender'].value.as_string == "http://snomed.info/sct|248153007"
-        isAfricanAmerican = healthcontext['Race_Is_Black_AfricanAmerican'].value == True
+    """Calculate optimal ASCVD 10-year risk score (with ideal values).
+
+    Uses patient's demographics but assumes optimal health metrics.
+
+    Args:
+        healthcontext: Dict of {variable_id: Value} where Value has a .value property
+
+    Returns:
+        float: Optimal 10-year ASCVD risk percentage
+    """
+    try:
+        # Extract gender
+        gender_val = healthcontext['Gender'].value
+        if hasattr(gender_val, 'as_string'):
+            gender_str = gender_val.as_string
+        else:
+            gender_str = str(gender_val)
+        isMale = gender_str == "http://snomed.info/sct|248153007"
+
+        # Race - check assessment result or ethnicity
+        race_val = healthcontext.get('Race_Is_Black_AfricanAmerican')
+        if race_val is not None:
+            isAfricanAmerican = race_val.value == True if hasattr(race_val, 'value') else race_val == True
+        else:
+            ethnicity_val = healthcontext.get('Ethnicity')
+            if ethnicity_val:
+                eth_str = ethnicity_val.value if hasattr(ethnicity_val, 'value') else str(ethnicity_val)
+                isAfricanAmerican = eth_str in [
+                    "urn:oid:2.16.840.1.113883.6.238|2058-6",
+                    "urn:oid:2.16.840.1.113883.6.238|2060-2"
+                ]
+            else:
+                isAfricanAmerican = False
+
+        # Get age
+        age_val = healthcontext['Age']
+        age = int(age_val.value if hasattr(age_val, 'value') else age_val)
+
+        # Optimal values
         onHtnMeds = False
-        dm   = False
-        age = healthcontext['Age'].value
+        dm = False
         sbp = 110
         chol = 170
         hdl = 50
@@ -122,7 +157,7 @@ def optimal_tenyearriskscore(healthcontext):
             age,
             sbp,
             chol,
-            hdl 
+            hdl
         )
 
     except Exception as e:
@@ -130,29 +165,60 @@ def optimal_tenyearriskscore(healthcontext):
 
 
 def tenyearriskscore(healthcontext):
+    """Calculate ASCVD 10-year risk score.
 
-    """
     Args:
-        isMale (bool)
-        isAfricanAmerican (bool)
-        smoker (bool)
-        hypertensive (bool)
-        diabetic (bool)
-        age (int)
-        systolicBloodPressure (int)
-        totalCholesterol (int)
-        hdl (int)
+        healthcontext: Dict of {variable_id: Value} where Value has a .value property
+
+    Returns:
+        float: 10-year ASCVD risk percentage
     """
-    try: 
-        isMale = healthcontext['Gender'].value.as_string == "http://snomed.info/sct|248153007"
-        isAfricanAmerican = healthcontext['Race_Is_Black_AfricanAmerican'].value == True
-        onHtnMeds = healthcontext['med_for_htn'].value
-        dm   = healthcontext['diabetesMellitus'].value
-        age = healthcontext['Age'].value
-        sbp = healthcontext['bloodpressure'].value[0]
-        chol = healthcontext['Chol'].value
-        hdl = healthcontext['HDL'].value
-        isSmoker = healthcontext['is_smoker'].value
+    try:
+        # Extract values - healthcontext[key] is a Value object, .value gets the raw value
+        gender_val = healthcontext['Gender'].value
+        # Handle both string and Code object formats
+        if hasattr(gender_val, 'as_string'):
+            gender_str = gender_val.as_string
+        else:
+            gender_str = str(gender_val)
+        isMale = gender_str == "http://snomed.info/sct|248153007"
+
+        # Race_Is_Black_AfricanAmerican is an assessment result (Value with bool)
+        race_val = healthcontext.get('Race_Is_Black_AfricanAmerican')
+        if race_val is not None:
+            isAfricanAmerican = race_val.value == True if hasattr(race_val, 'value') else race_val == True
+        else:
+            # Fallback: check Ethnicity directly for African American codes
+            ethnicity_val = healthcontext.get('Ethnicity')
+            if ethnicity_val:
+                eth_str = ethnicity_val.value if hasattr(ethnicity_val, 'value') else str(ethnicity_val)
+                isAfricanAmerican = eth_str in [
+                    "urn:oid:2.16.840.1.113883.6.238|2058-6",
+                    "urn:oid:2.16.840.1.113883.6.238|2060-2"
+                ]
+            else:
+                isAfricanAmerican = False
+
+        # Extract other values
+        def get_val(key):
+            v = healthcontext.get(key)
+            if v is None:
+                return None
+            return v.value if hasattr(v, 'value') else v
+
+        onHtnMeds = bool(get_val('med_for_htn'))
+        dm = bool(get_val('diabetesMellitus'))
+        age = int(get_val('Age'))
+        isSmoker = bool(get_val('is_smoker'))
+        chol = float(get_val('Chol'))
+        hdl = float(get_val('HDL'))
+
+        # Blood pressure can be tuple (systolic, diastolic) or just systolic
+        bp_val = get_val('bloodpressure')
+        if isinstance(bp_val, (list, tuple)):
+            sbp = int(bp_val[0])
+        else:
+            sbp = int(bp_val)
 
         return compute_ten_year_score(
             isMale,
@@ -163,7 +229,7 @@ def tenyearriskscore(healthcontext):
             age,
             sbp,
             chol,
-            hdl 
+            hdl
         )
 
     except Exception as e:

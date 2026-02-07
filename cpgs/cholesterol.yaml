@@ -98,23 +98,33 @@ variables:
     # VITAL SIGNS
     - id: bloodpressure
       title: Blood Pressure
-      user_attestable: False 
-      code: 
+      user_attestable: False
+      code:
         loinc: ["55284-4"]
+      llm_prompt: |
+        What is the patient's blood pressure?
+        Look for: blood pressure, BP, systolic/diastolic, mmHg.
+        Return: systolic and diastolic values (e.g., 130/80), or null if not mentioned.
 
 
 #--------------------------------------------------------
     # DIAGNOSIS/CONDITIONS
     - id: diabetesMellitus
       user_attestable: True
-      code: 
+      code:
         snomed: ["44054006"]
-      narrative: 
+      llm_prompt: |
+        Does the patient have diabetes mellitus (Type 1 or Type 2)?
+        Look for: diabetes, DM, Type 1 diabetes, Type 2 diabetes, T1DM, T2DM, diabetic,
+        HbA1c elevated, on insulin for diabetes, on metformin.
+        Exclude: pre-diabetes alone, gestational diabetes (unless developed into DM).
+        Return: true if diabetes diagnosed, false if explicitly denied, null if not mentioned.
+      narrative:
         patient:
           True: Condition Type 2 Diabetes Mellitus recorded $self.date. Self-Attested|EHR
         provider:
-          True: | 
-            __Type 2 Diabetes Mellitus__ 
+          True: |
+            __Type 2 Diabetes Mellitus__
             Source: Self-Attested | Hospital Name
             Date: $self.date
 
@@ -122,11 +132,19 @@ variables:
       title: Hypertension
       code:
         snomed: ["38341003"]
+      llm_prompt: |
+        Does the patient have hypertension (high blood pressure)?
+        Look for: hypertension, HTN, high blood pressure, elevated BP, on antihypertensive medications.
+        Return: true if hypertension diagnosed, false if explicitly denied, null if not mentioned.
 
     - id: is_smoker
       title: Tobacco smoking status
       code:
         loinc: ["72166-2"]
+      llm_prompt: |
+        What is the patient's smoking status?
+        Look for: current smoker, former smoker, never smoker, tobacco use, cigarettes, pack-years.
+        Return: true if current or former smoker, false if never smoked, null if not mentioned.
 
 
 
@@ -135,14 +153,24 @@ variables:
     - id: med_for_htn
       title: Medication for Hypertension
       reconcile: True
-      code: 
-        rxnorm: ["104375", "104376", "104377", "104378", "206771", "213482", "206764", "206765", "206766", "207965", "823971", "823982", "823986", "1806890", "197884", "197885", "197886", "197887", "205326", "311353", "311354", "314076", "314077", "1806884"] 
-    
+      code:
+        rxnorm: ["104375", "104376", "104377", "104378", "206771", "213482", "206764", "206765", "206766", "207965", "823971", "823982", "823986", "1806890", "197884", "197885", "197886", "197887", "205326", "311353", "311354", "314076", "314077", "1806884"]
+      llm_prompt: |
+        Is the patient taking any medication for high blood pressure (hypertension)?
+        Look for: antihypertensive, blood pressure medication, lisinopril, amlodipine, losartan,
+        hydrochlorothiazide, metoprolol, atenolol, carvedilol, valsartan, olmesartan, ACE inhibitor, ARB, beta-blocker, calcium channel blocker, diuretic for BP.
+        Return: true if on antihypertensive medication, false if not, null if not mentioned.
+
     - id: med_statins
       title: Statin Medications
       reconcile: True
-      code: 
+      code:
         rxnorm: ["262095", "617314", "617318", "617320", "750199", "750203", "750207", "750211", "750215", "750227", "750231", "750235", "750239", "259255", "404011", "404013", "597967", "597971", "597974", "597977", "597980", "597984", "597987", "597990", "597993", "617310", "617311", "617312", "2167563", "2167567", "2167571", "2167575", "859421", "859426", "859749", "859753", "2536060", "2536062", "2536064", "2536066", "2167557", "2167565", "2167569", "2167573", "2535745", "2535747", "2535749", "2535750", "859419", "859424", "859747", "859751", "206257", "206258", "884383", "997006", "997007", "197903", "197904", "197905", "359731", "433849", "582041", "582042", "582043", "729605", "359732", "904668", "904664", "904460", "904469", "904477", "904483", "904458", "904467", "904475", "904481", "861646", "861650", "861654", "2001260", "2001264", "2001268", "861643", "861648", "861652", "2001254", "2001262", "2001266", "1944262", "1944266", "104490", "104491", "152923", "208220", "213319", "1245420", "1245430", "1245441", "1245449", "1944264", "198211", "200345", "312961", "314231", "476345", "476349", "476350", "476351", "757702", "757703", "757704", "757705", "761907", "761909", "762970", "312962", "1790679", "103918", "103919", "687048", "310404", "310405", "360507","316672","1422096","859751","197903","904467","1422086","597980","259255","83367","36567"]
+      llm_prompt: |
+        Is the patient taking a statin medication for cholesterol?
+        Look for: statin, atorvastatin (Lipitor), rosuvastatin (Crestor), simvastatin (Zocor),
+        pravastatin (Pravachol), lovastatin (Mevacor), pitavastatin (Livalo), fluvastatin (Lescol).
+        Return: true if on statin medication, false if not, null if not mentioned.
 
     - id: med_nonstatins_chol
       title: Medications to lower blood cholesterol (non-Statins)
@@ -181,21 +209,54 @@ variables:
   #All are optional and user attestable
     - id: Psoriasis
       code:
-        snomed: ["9014002"] 
+        snomed: ["9014002"]
       required: False
+      llm_prompt: |
+        Does the patient have psoriasis?
+        Look for: psoriasis, psoriatic, plaque psoriasis, guttate psoriasis.
+        Return: true if psoriasis present, false if denied, null if not mentioned.
 
     - id: ckd
       title: Chronic kidney disease
       required: False
       code:
         snomed: ["709044004"]
+      llm_prompt: |
+        Does the patient have chronic kidney disease (CKD)?
+        Look for: CKD, chronic kidney disease, renal insufficiency, kidney disease, elevated creatinine,
+        reduced GFR, eGFR <60, on dialysis.
+        Return: true if CKD present, false if denied, null if not mentioned.
 
     - id: RA
       title: Rheumatoid arthritis
       required: False
       code:
         snomed: ["69896004"]
+      llm_prompt: |
+        Does the patient have rheumatoid arthritis?
+        Look for: rheumatoid arthritis, RA, on methotrexate for arthritis, DMARDs for arthritis.
+        Exclude: osteoarthritis (OA), degenerative joint disease.
+        Return: true if RA present, false if denied, null if not mentioned.
 
+    - id: Lupus
+      title: Systemic lupus erythematosus
+      required: False
+      code:
+        snomed: ["55464009"]
+      llm_prompt: |
+        Does the patient have systemic lupus erythematosus (SLE)?
+        Look for: lupus, SLE, systemic lupus, on hydroxychloroquine for lupus.
+        Return: true if lupus present, false if denied, null if not mentioned.
+
+    - id: HIV
+      title: HIV/AIDS
+      required: False
+      code:
+        snomed: ["86406008"]
+      llm_prompt: |
+        Does the patient have HIV infection or AIDS?
+        Look for: HIV positive, HIV+, AIDS, on antiretroviral therapy (ART), HAART.
+        Return: true if HIV positive, false if HIV negative, null if not mentioned.
 
   #FEMALE RISK FACTOR
     - id: Preeclampsia
@@ -203,23 +264,42 @@ variables:
       code:
         snomed: ["105651000119100", "398254007", "48194001"]
       required: False
+      llm_prompt: |
+        Does the patient have a history of preeclampsia?
+        Look for: preeclampsia, pre-eclampsia, toxemia of pregnancy, pregnancy-induced hypertension
+        with proteinuria, HELLP syndrome.
+        Return: true if history of preeclampsia, false if denied, null if not mentioned.
 
     - id: PrematureMenopause
       title: Premature menopause
       required: False
-      code: 
+      code:
         snomed: ["373717006"]
+      llm_prompt: |
+        Does the patient have premature menopause (before age 40)?
+        Look for: premature menopause, early menopause, primary ovarian insufficiency,
+        premature ovarian failure, menopause before age 40.
+        Return: true if premature menopause present, false if denied, null if not mentioned.
 
   #FAMILYHISTORY
     - id: FamilyHxPrematureASCVD
       title: Family history of premature ASCVD
       required: False
+      llm_prompt: |
+        Does the patient have a family history of premature atherosclerotic cardiovascular disease?
+        Look for: family history of heart attack, stroke, or coronary artery disease in first-degree
+        relatives (parents, siblings) before age 55 in men or 65 in women.
+        Return: true if family history present, false if explicitly denied, null if not mentioned.
 
   #SouthAsian
     - id: sa_ancestry
       title: South asian ancestry
       required: False
       type: boolean
+      llm_prompt: |
+        Is the patient of South Asian ancestry?
+        Look for: South Asian, Indian, Pakistani, Bangladeshi, Sri Lankan, Nepali heritage.
+        Return: true if South Asian ancestry, false if different ancestry stated, null if not mentioned.
 
 
   #Other riskfactors
@@ -229,8 +309,48 @@ variables:
       title: HsCRP test
       user_attestable: False
       required: False
-      code: 
+      code:
         loinc: ["30522-7"]
+      llm_prompt: |
+        What is the patient's high-sensitivity C-reactive protein (hs-CRP) level?
+        Look for: hs-CRP, hsCRP, high-sensitivity CRP, C-reactive protein.
+        Return: numeric value in mg/L, or null if not mentioned.
+
+    - id: Lpa
+      title: Lipoprotein(a)
+      user_attestable: False
+      required: False
+      code:
+        loinc: ["10835-7", "43583-4"]
+      llm_prompt: |
+        What is the patient's Lipoprotein(a) [Lp(a)] level?
+        Look for: Lp(a), lipoprotein a, lipoprotein little a.
+        Note: Elevated is ≥50 mg/dL or ≥125 nmol/L.
+        Return: numeric value, or null if not mentioned.
+
+    - id: ABI
+      title: Ankle-brachial index
+      user_attestable: False
+      required: False
+      code:
+        loinc: ["39016-1"]
+      llm_prompt: |
+        What is the patient's ankle-brachial index (ABI)?
+        Look for: ABI, ankle-brachial index, peripheral arterial disease screening.
+        Note: ABI <0.9 indicates peripheral arterial disease and is a risk enhancer.
+        Return: numeric value, or null if not mentioned.
+
+    - id: waist_circumference
+      title: Waist circumference
+      user_attestable: True
+      required: False
+      code:
+        loinc: ["56086-2"]
+      llm_prompt: |
+        What is the patient's waist circumference?
+        Look for: waist circumference, abdominal circumference, waist measurement.
+        Note: Elevated is ≥40 inches (102 cm) in men, ≥35 inches (88 cm) in women.
+        Return: numeric value in inches or cm, or null if not mentioned.
 
       #2. Peristantly Erevated LDL
     - id: elevated_LDL_list
@@ -302,12 +422,32 @@ assessments:
     - id: elevated_apoB
       title: Elevated apolipoprotein B
       required: False
-      expression: $ApoB > 130
-      reference: 'Elevated apoB (≥130 mg/dL): A relative indication for its measurement would be triglyceride ≥200 mg/dL. A level ≥130 mg/dL corresponds to an LDL-C >160 mg/dL and constitutes a risk-enhancing factor'
+      expression: $ApoB >= 130
+      reference: 'Elevated apoB (≥130 mg/dL): A relative indication for its measurement would be triglyceride ≥200 mg/dL. A level ≥130 mg/dL corresponds to an LDL-C >160 mg/dL and constitutes a risk-enhancing factor per 2019 ACC/AHA Table 3.'
       narrative:
         patient:
-          True: ApoB is quite high bro!
+          True: Your apolipoprotein B level is elevated (≥130 mg/dL), which is a risk-enhancing factor.
           NoValue: ApoB values could not found in your data
+
+    - id: elevated_Lpa
+      title: Elevated Lipoprotein(a)
+      required: False
+      expression: $Lpa >= 50
+      reference: 'Elevated Lp(a) ≥50 mg/dL or ≥125 nmol/L constitutes a risk-enhancing factor, especially in those with family history of premature ASCVD per 2019 ACC/AHA Table 3.'
+      narrative:
+        patient:
+          True: Your Lipoprotein(a) level is elevated (≥50 mg/dL), which is a risk-enhancing factor.
+          NoValue: Lipoprotein(a) was not measured.
+
+    - id: low_ABI
+      title: Low ankle-brachial index
+      required: False
+      expression: $ABI < 0.9
+      reference: 'ABI <0.9 indicates peripheral arterial disease and constitutes a risk-enhancing factor per 2019 ACC/AHA Table 3.'
+      narrative:
+        patient:
+          True: Your ankle-brachial index is low (<0.9), indicating peripheral arterial disease, which is a risk-enhancing factor.
+          NoValue: Ankle-brachial index was not measured.
 
     - id: persistant_Elevated_LDL
       title: Persistantly elevated LDL
@@ -321,11 +461,12 @@ assessments:
           False: 'You do not have high LDL in atleast 3 occasions $values'
           NoValue: 'Not enough data. Need atleast 3 tests to determine risk $LDL.count' 
 
-    #1._RR_ChronicConditions
+    #1._RR_ChronicConditions (per Table 3: psoriasis, RA, lupus, HIV/AIDS)
     - id: chronicConditions
       title: Chronic inflammatory conditions
-      expression: ($RA + $Psoriasis + $ckd) > 1
+      expression: $RA is True or $Psoriasis is True or $Lupus is True or $HIV is True or $ckd is True
       required: False
+      reference: 'Chronic inflammatory conditions (psoriasis, RA, lupus, or HIV/AIDS) and CKD are risk-enhancing factors per 2019 ACC/AHA Table 3.'
     #2._RR_Female risk enhancing factors
     - id: Femaleriskfactors
       title: Female-specific risk-enhancing factors
@@ -333,32 +474,57 @@ assessments:
       required: False
 
 
-    #3._Metabolic risk factors
-    #
+    #3._Metabolic risk factors (Table 3: increased waist, elevated TG >150, elevated BP, elevated glucose, low HDL)
     - id: metabolic_syndrome
-      title: Metabolic risk factors
+      title: Metabolic syndrome
       user_attestable: False
       required: False
       expression: |
-        (1 if $lowHDL else 0)  + (1 if $elevated_glucose else 0) + (1 if $elevated_tg else 0) > 3
-      code: 
+        (1 if $lowHDL is True else 0) + (1 if $elevated_glucose is True else 0) + (1 if $triglycerides > 150 else 0) + (1 if $htn is True else 0) >= 3
+      code:
         concord: ['riskfactors.metabolicsyndrome']
+      reference: 'Metabolic syndrome (increased waist circumference, elevated triglycerides >150 mg/dL, elevated BP, elevated glucose, low HDL-C); a tally of 3 makes the diagnosis per 2019 ACC/AHA Table 3.'
       narrative:
         patient:
-          True: Atleast 3 are needed to to be positive. 
-          False: '$self.count riskfactors(s) found. Atleast 3 are needed for this to be classified as a risk-factor, __however__, there may be additional factors but not in your data'
-    #FINAL_RR
+          True: You have metabolic syndrome, which is a risk-enhancing factor for cardiovascular disease.
+          False: You do not meet criteria for metabolic syndrome based on available data.
+    #FINAL_RR - Complete list per 2019 ACC/AHA Table 3
     - id: ascvd_risk_enhancing_factors
       title: ASCVD risk-enhancing factors
-      expression: (1 if $FamilyHxPrematureASCVD else 0) + (1 if $sa_ancestry else 0) + (1 if $Femaleriskfactors else 0)
-      required: True
+      expression: |
+        (1 if $FamilyHxPrematureASCVD is True else 0) +
+        (1 if $persistant_Elevated_LDL is True else 0) +
+        (1 if $metabolic_syndrome is True else 0) +
+        (1 if $chronicConditions is True else 0) +
+        (1 if $Femaleriskfactors is True else 0) +
+        (1 if $sa_ancestry is True else 0) +
+        (1 if $persistant_tg is True else 0) +
+        (1 if $Elevated_hsCRP is True else 0) +
+        (1 if $elevated_Lpa is True else 0) +
+        (1 if $elevated_apoB is True else 0) +
+        (1 if $low_ABI is True else 0)
+      required: False
+      reference: 'Risk-enhancing factors per 2019 ACC/AHA Table 3: Family history of premature ASCVD, LDL-C 160-189, metabolic syndrome, CKD, chronic inflammatory conditions, pregnancy complications, South Asian ancestry, elevated TG, hs-CRP ≥2, Lp(a) ≥50, apoB ≥130, ABI <0.9'
       narrative:
         patient:
-          False: Atleast __3__ factors are needed to be positive.
-          True: There are atleast __3__ risk enhancing factors found in your data. ACC/AHA guidance suggests that these factors, _if found_, can enhance the risk of developing heart attack, stroke or other cardiovascular event.
+          False: No risk-enhancing factors were identified in your data.
+          True: |
+            __$self.value__ risk-enhancing factor(s) found in your data.
+            ACC/AHA guidance suggests that these factors can favor initiation or intensification of statin therapy for borderline or intermediate risk patients.
         provider:
-          False: Need three factors for this to count as a single risk factor.
-          True: Atleast __$self.value__ risk-enhancing factors found in your data. ACC/AHA guidance suggests that these factors, _if found_, can enhance the risk of developing heart attack, stroke or other cardiovascular event.
+          False: No risk-enhancing factors identified.
+          True: |
+            __$self.value__ risk-enhancing factor(s) identified per 2019 ACC/AHA Table 3.
+            In borderline (5-7.5%) or intermediate (7.5-20%) risk patients, risk-enhancing factors favor initiation or intensification of statin therapy.
+
+    - id: has_any_risk_enhancer
+      title: Has any risk-enhancing factor
+      expression: $ascvd_risk_enhancing_factors >= 1
+      required: False
+      narrative:
+        patient:
+          True: You have at least one risk-enhancing factor that may favor statin therapy.
+          False: No risk-enhancing factors identified.
             
 
     # ------------------------------------------------------------------------------------
@@ -413,20 +579,20 @@ assessments:
 
     # ------------------------------------------------------------------------------------
       
-    - id: ldl_over_189
+    - id: ldl_over_190
       title: LDL is 190 mg/dL or greater
-      expression: $LDL >= 189
-      narrative: 
+      expression: $LDL >= 190
+      narrative:
         patient:
           True: |
-            Your LDL-Cholesterol is __$LDL mg/dL recorded $LDL.date__. 
+            Your LDL-Cholesterol is __$LDL mg/dL recorded $LDL.date__.
             A value of __190 mg/dL or more__ is a high risk state that increases the risk of developing heart attack or stroke or other cardiovascular event.
           None: Could not be determined.
           False: Most recent LDL in your record is $LDL mg/dL record $LDL.date
         provider:
           True: Most recent $LDL recorded $LDL.date
           False: Most recent is below 190 ($LDL $LDL.date)
-      reference: 'LDL-cholesterol 190 mg/dL or more is a high risk factor for developing atherosclerotic cardiovascular disease.'
+      reference: 'LDL-cholesterol ≥190 mg/dL (≥4.9 mmol/L) is a high risk factor for developing atherosclerotic cardiovascular disease. Per 2019 ACC/AHA guidelines.'
 
     - id: has_diabetes
       title: Has diabetic mellitus?
@@ -477,15 +643,33 @@ assessments:
 
     - id: high_risk
       title: Ten Year risk score categorized as "High"
-      expression: $ascvd_ten_year_risk_score > 20.0
+      expression: $ascvd_ten_year_risk_score >= 20.0
       narrative:
         patient:
           True: |
-            Your calculated Ten-Year risk score is __$ascvd_ten_year_risk_score__. It is considered _high_ (over 20.0). 
-            Out of a 100 people, there is a higher risk of a cardiovascular event for $ascvd_ten_year_risk_score of the individuals
+            Your calculated Ten-Year risk score is __$ascvd_ten_year_risk_score__. It is considered _high_ (≥20%).
+            Out of 100 people like you, approximately $ascvd_ten_year_risk_score would be expected to have a cardiovascular event in the next 10 years.
           False: Not applicable to you
         provider:
           False: Not applicable to this patient
+
+    - id: age_20_to_39
+      title: Age 20 to 39 years
+      expression: $Age >= 20 and $Age < 40
+      narrative:
+        patient:
+          True: You are between 20 and 39 years of age. For younger adults, estimating lifetime risk and emphasizing lifestyle factors is recommended.
+        provider:
+          True: Patient is 20-39 years. Consider lifetime risk estimation and lifestyle emphasis. Statin therapy generally not indicated unless familial hypercholesterolemia or LDL-C ≥160 mg/dL.
+
+    - id: age_over_75
+      title: Age over 75 years
+      expression: $Age > 75
+      narrative:
+        patient:
+          True: You are over 75 years of age. Benefits of statin therapy should be discussed in the context of your overall health and life expectancy.
+        provider:
+          True: Patient is >75 years. Per 2019 ACC/AHA guidelines, clinician-patient discussion about benefits appropriate to age group, comorbidities, and life expectancy is recommended.
 
 
 
@@ -496,8 +680,8 @@ recommendations:
   - id: based_on_high_ldl
     title: Risk reduction for high LDL-cholesterol (190 mg/dL or more)
     category: medication
-    description: LDL-cholesterol 190 mg/dL or over enhances the risk of developing a heart attack, stroke or other cardiovascular event.
-    expression: $ldl_over_189 is True
+    description: LDL-cholesterol ≥190 mg/dL enhances the risk of developing a heart attack, stroke or other cardiovascular event.
+    expression: $ldl_over_190 is True
     compliance_expression: $med_statins is True
     narrative:
       compliance:
@@ -574,56 +758,129 @@ recommendations:
 
 
   - id: based_on_borderlinerisk_riskfactors
-    title: Borderline risk with multiple risk factors
+    title: Borderline risk with risk-enhancing factors
     category: medication
-    expression: $borderline_risk is True and $ascvd_risk_enhancing_factors > 2
+    expression: $borderline_risk is True and $has_any_risk_enhancer is True
     narrative:
       patient:
-        False: Further evaluation is needed for borderline risk ($ascvd_ten_year_risk_score) to ascertain risk factors. If more than 3, then a statin maybe recommended.
-        True: Your ten year risk score ($ascvd_ten_year_risk_score) is in borderline category and you have multiple risk factors. Having a risk discussion
+        True: |
+          Your ten-year risk score ($ascvd_ten_year_risk_score) is in the borderline category (5% to <7.5%).
+          You have risk-enhancing factors that may justify consideration of moderate-intensity statin therapy.
+          Discuss with your healthcare provider about the potential benefits of statin therapy.
       provider:
-        True: "Patient's ten year risk score ($ascvd_ten_year_risk_score) is in borderline category and has multiple risk factors. Having a risk discussion about a medication to control blood cholesterol to prevent cardiovascular is recommended."
+        True: |
+          Patient's 10-year ASCVD risk is borderline ($ascvd_ten_year_risk_score%).
+          Risk-enhancing factors present: $ascvd_risk_enhancing_factors factor(s).
+          Per 2019 ACC/AHA guidelines, presence of risk-enhancing factors may justify initiation of moderate-intensity statin therapy (Class IIb).
         False: Not applicable to this patient
     citations:
-      - In patients at borderline risk (5% to <7.5% 10- year ASCVD risk), in risk discussion, the presence of risk-enhancing factors may justify initiation of moderate-intensity statin therapy.S4.3-28,S4.3-35 Adapted from recommendations in the 2018 Cholesterol Clinical Practice Guidelines.S4.3-1
-      - In adults at borderline risk (5% to <7.5% 10-year ASCVD risk) or intermediate risk (≥7.5% to <20% 10-year ASCVD risk), it is reasonable to use additional risk-enhancing factors to guide decisions about preventive interventions (eg, statin therapy).S2.2-4–S2.2-14
+      - 'In patients at borderline risk (5% to <7.5% 10-year ASCVD risk), in risk discussion, the presence of risk-enhancing factors may justify initiation of moderate-intensity statin therapy. (2019 ACC/AHA, Class IIb, LOE B-R)'
+      - 'In adults at borderline risk or intermediate risk, it is reasonable to use additional risk-enhancing factors to guide decisions about preventive interventions (eg, statin therapy).'
     class_of_recommendation: IIb
     level_of_evidence: B-R
 
   - id: based_on_intermediaterisk
-    title: Therapy recommendation based on ASCVD Ten Year Risk Score
-    category: medication 
+    title: Intermediate risk - Statin therapy recommended
+    category: medication
     expression: $intermediate_risk is True and $has_diabetes is False
     narrative:
       patient:
-        True: People that match your profile, with an intermediate risk score of $ascvd_ten_year_risk_score, __have benefitted from a statin medication__ to control blood cholesterol to prevent developing of a heart attack or stroke or other cardiovascular event.
+        True: |
+          Your ten-year risk score ($ascvd_ten_year_risk_score) is in the intermediate category (≥7.5% to <20%).
+          Statin therapy reduces risk of ASCVD. If you and your provider decide on statin therapy, a moderate-intensity statin is recommended.
         False: Not applicable
       provider:
-        True: "People that match this patient's profile have benefitted from a medication to control blood cholesterol to prevent atherosclerotic cardiovascular disease."
+        True: |
+          Patient's 10-year ASCVD risk is intermediate ($ascvd_ten_year_risk_score%).
+          Per 2019 ACC/AHA: Statin therapy reduces ASCVD risk. If decision made for statin, moderate-intensity statin recommended (Class I, LOE A).
+          Target: LDL-C reduction of 30% or more.
         False: Not applicable
-    citations: 
-      - In intermediate-risk (&ge; 7.5% to <20% 10-year ASCVD risk) adults or selected borderline-risk (5% to <7.5% 10-year ASCVD risk) adults in whom a coronary artery calcium score is measured for the purpose of making a treatment decision, AND If the coronary artery calcium score is zero, it is reasonable to withhold statin therapy and reassess in 5 to 10 years, as long as higher-risk conditions are absent (eg, diabetes, family history of premature CHD, cigarette smoking); If coronary artery calcium score is 1 to 99, it is reasonable to initiate statin therapy for patients &ge;55 years of age; If coronary artery calcium score is 100 or higher or in the 75th percentile or higher, it is reasonable to initiate statin therapy.S4.3-28,S4.3-34. Adapted from recommendations in the 2018 Cholesterol Clinical Practice Guidelines.S4.3-1
-      -  In adults at intermediate risk (≥7.5% to <20% 10-year ASCVD risk), statin therapy reduces risk of ASCVD, and in the context of a risk discussion, if a decision is made for statin therapy, a moderate-intensity statin should be recommended.S4.3-2–S4.3-9. Adapted from recommendations in the 2018 Cholesterol Clinical Practice Guidelines.S4.3-1
-      -  In intermediate risk (≥7.5% to <20% 10-year ASCVD risk) patients, LDL-C levels should be reduced by 30% or more, and for optimal ASCVD risk reduction, especially in patients at high risk (≥20% 10-year ASCVD risk), levels should be reduced by 50% or more.S4.3-2,S4.3-5–S4.3-10 Adapted from recommendations in the 2018 Cholesterol Clinical Practice Guidelines.S4.3-1
+    citations:
+      - 'In adults at intermediate risk (≥7.5% to <20% 10-year ASCVD risk), statin therapy reduces risk of ASCVD. If a decision is made for statin therapy, a moderate-intensity statin should be recommended. (2019 ACC/AHA, Class I, LOE A)'
+      - 'In intermediate risk patients, LDL-C levels should be reduced by 30% or more. (2019 ACC/AHA)'
+    class_of_recommendation: I
+    level_of_evidence: A
+
+  - id: based_on_intermediaterisk_with_enhancers
+    title: Intermediate risk with risk-enhancing factors - Favor statin
+    category: medication
+    expression: $intermediate_risk is True and $has_diabetes is False and $has_any_risk_enhancer is True
+    narrative:
+      patient:
+        True: |
+          Your ten-year risk score ($ascvd_ten_year_risk_score) is intermediate (≥7.5% to <20%).
+          You also have risk-enhancing factors ($ascvd_risk_enhancing_factors) that favor initiation or intensification of statin therapy.
+      provider:
+        True: |
+          Patient's 10-year ASCVD risk is intermediate ($ascvd_ten_year_risk_score%).
+          Risk-enhancing factors present: $ascvd_risk_enhancing_factors factor(s).
+          Per 2019 ACC/AHA: Risk-enhancing factors favor initiation or intensification of statin therapy (Class IIa, LOE B-R).
+    citations:
+      - 'In intermediate-risk (≥7.5% to <20% 10-year ASCVD risk) adults, risk-enhancing factors favor initiation or intensification of statin therapy. (2019 ACC/AHA, Class IIa, LOE B-R)'
     class_of_recommendation: IIa
-    level_of_evidence: B-NR
+    level_of_evidence: B-R
 
 
   - id: based_on_highrisk
-    title: Therapy recommendation based on ASCVD Ten Year Risk Score expression
+    title: High risk - High-intensity statin recommended
     expression: $high_risk is True and $has_diabetes is False
-    category: medication 
+    category: medication
     narrative:
       patient:
+        True: |
+          Your ten-year risk score ($ascvd_ten_year_risk_score) is in the high-risk category (≥20%).
+          High-intensity statin therapy is recommended to reduce LDL-C by 50% or more.
         False: Not applicable
-        True: For people with a ten-year risk score between, ACC/AHA make recommendations for a medication to control blood cholesterol to prevent developing of a heart attack or stroke or other cardiovascular event.
       provider:
-        True: People similar to this patient profile (ten year risk of $ascvd_ten_year_risk_score) have benefited from a medication to control blood cholesterol to prevent cardiovascular diseases.
+        True: |
+          Patient's 10-year ASCVD risk is high ($ascvd_ten_year_risk_score%).
+          Per 2019 ACC/AHA: High-intensity statin therapy recommended with goal of reducing LDL-C by ≥50% (Class I, LOE A).
         False: Not applicable
-    citations: 
-      - In patients at high risk (≥20% 10-year ASCVD risk), levels should be reduced by 50% or more.S4.3-2,S4.3-5–S4.3-10 Adapted from recommendations in the 2018 Cholesterol Clinical Practice Guidelines.S4.3-1
+    citations:
+      - 'In patients at high risk (≥20% 10-year ASCVD risk), LDL-C levels should be reduced by 50% or more. (2019 ACC/AHA, Class I, LOE A)'
     class_of_recommendation: I
     level_of_evidence: A
+
+  - id: based_on_age_over_75
+    title: Age over 75 - Clinician-patient discussion
+    expression: $age_over_75 is True
+    category: evaluation
+    narrative:
+      patient:
+        True: |
+          You are over 75 years of age. The benefits and risks of statin therapy should be discussed with your healthcare provider,
+          taking into account your overall health, life expectancy, and personal preferences.
+      provider:
+        True: |
+          Patient is >75 years of age.
+          Per 2019 ACC/AHA: For patients >75 years, clinician and patient should engage in a discussion about
+          the potential benefits of preventive therapies appropriate to the age group in the context of
+          comorbidities and life expectancy. Evidence for statin initiation in this age group is limited.
+    citations:
+      - 'For patients >75 years of age, the clinician and patient should engage in a discussion about the possible benefits of preventive therapies appropriate to the age group in the context of comorbidities and life expectancy. (2019 ACC/AHA)'
+    class_of_recommendation: IIb
+    level_of_evidence: C-LD
+
+  - id: based_on_age_20_39
+    title: Age 20-39 - Lifestyle emphasis
+    expression: $age_20_to_39 is True
+    category: display_patient
+    narrative:
+      patient:
+        True: |
+          At your age (20-39 years), the focus should be on establishing healthy lifestyle habits to prevent
+          cardiovascular disease later in life. This includes healthy diet, regular physical activity,
+          maintaining healthy weight, and avoiding tobacco.
+      provider:
+        True: |
+          Patient is 20-39 years of age.
+          Per 2019 ACC/AHA: Priority should be given to estimating lifetime risk and promoting a healthy lifestyle.
+          Statin therapy is generally not indicated unless familial hypercholesterolemia is suspected (LDL-C ≥160 mg/dL)
+          or very high LDL-C (≥190 mg/dL).
+    citations:
+      - 'For adults 20 to 39 years of age, it is reasonable to assess traditional ASCVD risk factors at least every 4 to 6 years. (2019 ACC/AHA, Class IIa, LOE B-NR)'
+    class_of_recommendation: IIa
+    level_of_evidence: B-NR
 
 
   - id: display_uc

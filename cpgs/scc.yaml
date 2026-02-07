@@ -108,14 +108,23 @@ variables:
   # Procedures
   # ============================================================================================
   - id: hysterectemy_no_cervix
-    title: Undergone hysterectomy with no residual cervix? 
-    code: 
+    title: Undergone hysterectomy with no residual cervix?
+    code:
       cpt: *hysterectomy_no_residual_cervix_CPT
       icd10pcs: *hysterectomy_no_residual_cervix_ICD-10PCS
+    llm_prompt: |
+      Has the patient had a hysterectomy with removal of the cervix?
+      Look for: total hysterectomy, hysterectomy with cervix removed, no residual cervix,
+      complete hysterectomy. Note: supracervical/subtotal hysterectomy preserves cervix.
+      Return: true if hysterectomy with cervix removed, false if not or if cervix preserved, null if not mentioned.
 
   - id: individuals_without_cervix
     code:
       icd10cm: *absence_cervix_ICD-10CM
+    llm_prompt: |
+      Does the patient have an absent cervix?
+      Look for: absence of cervix, congenital absence, cervix removed, no cervix.
+      Return: true if cervix absent, false if cervix present, null if not mentioned.
   # ============================================================================================
   # Conditions
   # ============================================================================================
@@ -123,6 +132,11 @@ variables:
     title: HPV infection
     code:
       snomed: ['240532009']
+    llm_prompt: |
+      Does the patient have HPV (human papillomavirus) infection?
+      Look for: HPV positive, human papillomavirus, HPV infection, high-risk HPV,
+      HPV 16, HPV 18, abnormal HPV test.
+      Return: true if HPV positive, false if HPV negative, null if not mentioned.
   #https://www.flhealthcharts.gov/ChartsDashboards/_SupportFiles/CHSS_ICD_CODES.pdf
   - id: condition_cervicalcancer
     type: boolean
@@ -130,6 +144,11 @@ variables:
     code:
       icd10cm: ['C53', 'C53.1', 'N87.1', 'N87.2', 'D06.0', 'D06.1', 'D06.7', 'D06.9', 'N87.9']
       snomed:  ["M74007", "M74008", "M81402", "M74009", "M80702", "M80102", "M80772"]
+    llm_prompt: |
+      Does the patient have cervical cancer or precancerous cervical lesions?
+      Look for: cervical cancer, carcinoma of cervix, CIN (cervical intraepithelial neoplasia),
+      CIN 2, CIN 3, HSIL, cervical dysplasia, precancerous cervical lesion.
+      Return: true if cervical cancer or precancer, false if explicitly denied, null if not mentioned.
 
 # # adequate: ========================================
   - id: cervical_cytology_labtest_last10Years_recent3
@@ -237,6 +256,11 @@ assessments:
       patient:
         False: There is no record of Pap tests in your data.
         True: You have a record of Pap test
+    llm_prompt: |
+      Has the patient had prior Pap tests (cervical cytology)?
+      Look for: Pap smear, Pap test, cervical cytology, cervical screening,
+      Papanicolaou test, cervical cancer screening.
+      Return: true if prior Pap test documented, false if never had one, null if not mentioned.
 
 
   - id: Age_21_29

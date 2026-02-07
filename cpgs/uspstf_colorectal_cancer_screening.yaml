@@ -1,0 +1,840 @@
+CPG:
+  title: "USPSTF Colorectal Cancer Screening"
+  identifier: uspstf_colorectal_cancer_screening_2021
+  publisher: 'U.S. Preventive Services Task Force'
+  uri: https://www.uspreventiveservicestaskforce.org/uspstf/recommendation/colorectal-cancer-screening
+  doi: 10.1001/jama.2021.6238
+  type: [screening, preventive]
+  revision: 1.0
+  revision_date: 2024-01-15
+  description: >
+    The USPSTF recommends screening for colorectal cancer in adults aged 45 to 75 years.
+    Adults aged 50-75 receive a Grade A recommendation; adults aged 45-49 receive Grade B.
+    For adults aged 76-85, screening should be individualized based on overall health and
+    prior screening history (Grade C). Multiple screening modalities are available.
+
+
+variables:
+
+#--------------------------------------------------------
+# Demographics
+  - id: Age
+    title: Age
+    code:
+      concord: ['Age']
+
+  - id: Gender
+    title: Gender
+    required: False
+    code:
+      concord: ['Gender']
+
+  - id: Ethnicity
+    title: Race/Ethnicity
+    required: False
+    code:
+      concord: ['Ethnicity']
+
+#--------------------------------------------------------
+# Exclusion Conditions (High-Risk - requires specialized surveillance)
+  - id: prior_colorectal_cancer
+    title: Prior Colorectal Cancer Diagnosis
+    user_attestable: True
+    code:
+      snomed: ["363406005", "93761005", "93771007"]
+    llm_prompt: |
+      Does the patient have a prior diagnosis of colorectal cancer?
+      Look for: colon cancer, rectal cancer, colorectal carcinoma, CRC, history of colon/rectal malignancy.
+      Return: true if prior diagnosis documented, false if explicitly denied or no history noted, null if not mentioned.
+    narrative:
+      patient:
+        True: You have a history of colorectal cancer
+        False: No prior colorectal cancer diagnosis
+      provider:
+        True: History of colorectal cancer - requires specialized surveillance
+        False: No prior CRC
+
+  - id: history_adenomatous_polyps
+    title: History of Adenomatous Polyps
+    user_attestable: True
+    required: False
+    code:
+      snomed: ["68496003", "444408007"]
+    llm_prompt: |
+      Does the patient have a history of adenomatous polyps?
+      Look for: adenomatous polyps, adenomas, precancerous polyps, tubular adenoma, villous adenoma,
+      tubulovillous adenoma, sessile serrated polyps, advanced adenoma.
+      Return: true if history present, false if explicitly denied, null if not mentioned.
+    narrative:
+      patient:
+        True: You have a history of adenomatous polyps (precancerous growths)
+        False: No history of adenomatous polyps
+      provider:
+        True: History of adenomatous polyps - requires surveillance colonoscopy per polyp guidelines
+
+  - id: inflammatory_bowel_disease
+    title: Inflammatory Bowel Disease
+    user_attestable: True
+    required: False
+    code:
+      snomed: ["24526004", "34000006", "64766004"]
+    llm_prompt: |
+      Does the patient have inflammatory bowel disease (IBD)?
+      Look for: IBD, Crohn's disease, ulcerative colitis, UC, inflammatory bowel disease.
+      Return: true if IBD diagnosis present, false if explicitly denied, null if not mentioned.
+    narrative:
+      patient:
+        True: You have inflammatory bowel disease (Crohn's or ulcerative colitis)
+        False: No inflammatory bowel disease
+      provider:
+        True: IBD diagnosis - requires specialized CRC surveillance
+
+  - id: lynch_syndrome
+    title: Lynch Syndrome
+    user_attestable: True
+    required: False
+    type: boolean
+    code:
+      snomed: ["315058005"]
+    narrative:
+      patient:
+        True: You have Lynch syndrome (hereditary nonpolyposis colorectal cancer)
+      provider:
+        True: Lynch syndrome - requires intensive surveillance per genetic guidelines
+
+  - id: familial_adenomatous_polyposis
+    title: Familial Adenomatous Polyposis (FAP)
+    user_attestable: True
+    required: False
+    type: boolean
+    code:
+      snomed: ["72900001"]
+    narrative:
+      patient:
+        True: You have familial adenomatous polyposis (FAP)
+      provider:
+        True: FAP diagnosis - requires specialized management
+
+  - id: family_history_crc
+    title: Family History of Colorectal Cancer
+    user_attestable: True
+    required: False
+    type: boolean
+    llm_prompt: |
+      Does the patient have a family history of colorectal cancer?
+      Look for: mentions of first-degree relatives (parents, siblings, children) or second-degree
+      relatives (grandparents, aunts, uncles) with colon cancer, rectal cancer, or colorectal cancer.
+      Return: true if family history present, false if explicitly denied, null if not mentioned.
+    narrative:
+      patient:
+        True: You have a family history of colorectal cancer
+        False: No family history of colorectal cancer
+      provider:
+        True: Family history of CRC - may warrant earlier/more frequent screening
+
+  - id: family_history_advanced_polyps
+    title: Family History of Advanced Adenomas
+    user_attestable: True
+    required: False
+    type: boolean
+
+#--------------------------------------------------------
+# Symptoms (Exclude symptomatic patients)
+  - id: rectal_bleeding
+    title: Rectal Bleeding
+    user_attestable: True
+    required: False
+    type: boolean
+    llm_prompt: |
+      Does the patient report or have documented rectal bleeding?
+      Look for: rectal bleeding, hematochezia, blood in stool, bloody stools, BRBPR (bright red blood per rectum),
+      melena (if source is lower GI).
+      Return: true if bleeding reported/documented, false if explicitly denied, null if not mentioned.
+    narrative:
+      patient:
+        True: You have reported rectal bleeding - this requires diagnostic evaluation, not screening
+      provider:
+        True: Symptomatic (rectal bleeding) - requires diagnostic workup, not screening
+
+  - id: change_bowel_habits
+    title: Change in Bowel Habits
+    user_attestable: True
+    required: False
+    type: boolean
+
+  - id: unexplained_weight_loss
+    title: Unexplained Weight Loss
+    user_attestable: True
+    required: False
+    type: boolean
+
+  - id: abdominal_pain
+    title: Persistent Abdominal Pain
+    user_attestable: True
+    required: False
+    type: boolean
+
+#--------------------------------------------------------
+# Risk Factors
+  - id: obesity
+    title: Obesity
+    user_attestable: True
+    required: False
+    type: boolean
+
+  - id: diabetes_mellitus
+    title: Diabetes Mellitus
+    user_attestable: True
+    required: False
+    code:
+      snomed: ["44054006", "73211009"]
+    llm_prompt: |
+      Does the patient have diabetes mellitus?
+      Look for: diabetes, DM, Type 1 diabetes, Type 2 diabetes, T1DM, T2DM, diabetic,
+      HbA1c elevated, insulin use (for diabetes), metformin.
+      Exclude: pre-diabetes alone, gestational diabetes (unless developed into DM).
+      Return: true if diabetes diagnosed, false if explicitly denied, null if not mentioned.
+
+  - id: smoking_history
+    title: Smoking History
+    user_attestable: True
+    required: False
+    type: boolean
+    code:
+      loinc: ["72166-2"]
+    llm_prompt: |
+      Does the patient have a smoking history?
+      Look for: current smoker, former smoker, smoking history, tobacco use, cigarettes, pack-years.
+      Exclude: never smoker, non-smoker, denies tobacco use.
+      Return: true if current or former smoker, false if never smoked or explicitly denied, null if not mentioned.
+
+  - id: heavy_alcohol_use
+    title: Heavy Alcohol Use
+    user_attestable: True
+    required: False
+    type: boolean
+
+  - id: physical_inactivity
+    title: Physical Inactivity
+    user_attestable: True
+    required: False
+    type: boolean
+
+  - id: red_processed_meat_diet
+    title: High Red/Processed Meat Diet
+    user_attestable: True
+    required: False
+    type: boolean
+
+#--------------------------------------------------------
+# Prior Screening History
+  - id: prior_colonoscopy
+    title: Prior Colonoscopy
+    user_attestable: True
+    required: False
+    type: boolean
+    narrative:
+      patient:
+        True: You have had a colonoscopy before
+        False: You have not had a colonoscopy
+      provider:
+        True: Prior colonoscopy documented
+
+  - id: last_colonoscopy_date
+    title: Date of Last Colonoscopy
+    user_attestable: False
+    required: False
+    code:
+      cpt: ["45378", "45380", "45384", "45385"]
+
+  - id: colonoscopy_within_10_years
+    title: Colonoscopy Within Past 10 Years
+    user_attestable: True
+    required: False
+    type: boolean
+    llm_prompt: |
+      Has the patient had a colonoscopy within the past 10 years?
+      Look for: colonoscopy dates, most recent colonoscopy, last colonoscopy.
+      Calculate if the date mentioned falls within the last 10 years from today.
+      Return: true if colonoscopy within 10 years, false if more than 10 years or never had one, null if not mentioned.
+    narrative:
+      patient:
+        True: You have had a colonoscopy within the past 10 years
+        False: Your last colonoscopy was more than 10 years ago or you haven't had one
+      provider:
+        True: Colonoscopy within 10 years - up to date if results were normal
+
+  - id: fit_within_1_year
+    title: FIT Test Within Past Year
+    user_attestable: True
+    required: False
+    type: boolean
+
+  - id: stool_dna_within_3_years
+    title: Stool DNA Test Within Past 3 Years
+    user_attestable: True
+    required: False
+    type: boolean
+
+#--------------------------------------------------------
+# Health Status (for 76-85 age group decision)
+  - id: life_expectancy_over_10_years
+    title: Life Expectancy Greater Than 10 Years
+    user_attestable: True
+    required: False
+    type: boolean
+    narrative:
+      patient:
+        True: Your overall health suggests you would benefit from continued screening
+      provider:
+        True: Estimated life expectancy >10 years - screening benefit likely
+
+  - id: significant_comorbidities
+    title: Significant Comorbidities
+    user_attestable: True
+    required: False
+    type: boolean
+    narrative:
+      patient:
+        True: You have other significant health conditions that may affect screening decisions
+      provider:
+        True: Significant comorbidities present - weigh screening benefits vs risks
+
+
+#--------------------------------------------------------
+# Eligibility
+eligibility:
+
+  - id: age_45_or_older
+    title: Age 45 years or older
+    expression: $Age >= 45
+    narrative:
+      patient:
+        True: You are 45 years or older, which is the recommended age to begin colorectal cancer screening
+        False: Colorectal cancer screening typically begins at age 45
+      provider:
+        True: Patient meets minimum age criterion (>=45 years)
+        False: Patient under 45 - standard screening not yet indicated
+
+  - id: no_prior_crc
+    title: No prior colorectal cancer
+    expression: $prior_colorectal_cancer is not True
+    narrative:
+      patient:
+        True: You do not have a prior diagnosis of colorectal cancer
+        False: You have a history of colorectal cancer and require specialized surveillance
+      provider:
+        True: No prior CRC - eligible for screening guidelines
+        False: Prior CRC - requires surveillance per oncology guidelines
+
+  - id: no_high_risk_syndrome
+    title: No hereditary cancer syndrome
+    expression: $lynch_syndrome is not True and $familial_adenomatous_polyposis is not True
+    narrative:
+      patient:
+        True: You do not have a known hereditary colorectal cancer syndrome
+        False: You have a hereditary syndrome requiring specialized surveillance
+      provider:
+        True: No hereditary syndrome - average risk screening applies
+        False: Hereditary syndrome present - specialized surveillance required
+
+
+#--------------------------------------------------------
+# Assessments
+assessments:
+
+  # Age Group Classification
+  - id: age_45_to_49
+    title: Age 45-49 Years
+    description: Grade B recommendation age group
+    expression: $Age >= 45 and $Age < 50
+    required: False
+    narrative:
+      patient:
+        True: You are in the 45-49 age group. The USPSTF recommends colorectal cancer screening for this age group (Grade B).
+      provider:
+        True: Age 45-49 - Grade B recommendation
+
+  - id: age_50_to_75
+    title: Age 50-75 Years
+    description: Grade A recommendation age group
+    expression: $Age >= 50 and $Age <= 75
+    narrative:
+      patient:
+        True: You are in the 50-75 age group. The USPSTF strongly recommends colorectal cancer screening (Grade A).
+      provider:
+        True: Age 50-75 - Grade A recommendation (strongest evidence)
+
+  - id: age_76_to_85
+    title: Age 76-85 Years
+    description: Grade C recommendation - individualized decision
+    expression: $Age >= 76 and $Age <= 85
+    required: False
+    narrative:
+      patient:
+        True: |
+          You are in the 76-85 age group. The decision to continue screening should be individualized
+          based on your overall health, life expectancy, and prior screening history.
+      provider:
+        True: Age 76-85 - Grade C (selective screening based on health status and prior history)
+
+  - id: age_over_85
+    title: Age Over 85 Years
+    description: Screening generally not recommended
+    expression: $Age > 85
+    required: False
+    narrative:
+      patient:
+        True: At age 86 or older, routine colorectal cancer screening is generally not recommended.
+      provider:
+        True: Age >85 - routine screening not recommended
+
+  # Exclusion Assessment
+  - id: has_exclusion_condition
+    title: Has High-Risk Condition Requiring Specialized Surveillance
+    description: Patient has condition requiring surveillance outside standard screening
+    expression: $prior_colorectal_cancer is True or $history_adenomatous_polyps is True or $inflammatory_bowel_disease is True or $lynch_syndrome is True or $familial_adenomatous_polyposis is True
+    required: False
+    narrative:
+      patient:
+        True: |
+          You have a condition that requires specialized colorectal cancer surveillance rather than
+          standard screening guidelines. Please follow your doctor's recommendations.
+      provider:
+        True: High-risk condition present - standard screening guidelines do not apply
+
+  - id: is_symptomatic
+    title: Has Symptoms Requiring Diagnostic Evaluation
+    description: Patient has symptoms that warrant diagnostic workup, not screening
+    expression: $rectal_bleeding is True or $change_bowel_habits is True or $unexplained_weight_loss is True or $abdominal_pain is True
+    required: False
+    narrative:
+      patient:
+        True: |
+          You have reported symptoms that require diagnostic evaluation rather than routine screening.
+          Please discuss these symptoms with your healthcare provider promptly.
+      provider:
+        True: Symptomatic patient - requires diagnostic evaluation, not screening
+
+  # Risk Factor Assessment
+  - id: has_risk_factors
+    title: Has Colorectal Cancer Risk Factors
+    description: Patient has modifiable or non-modifiable risk factors
+    expression: $family_history_crc is True or $obesity is True or $diabetes_mellitus is True or $smoking_history is True or $heavy_alcohol_use is True or $physical_inactivity is True or $red_processed_meat_diet is True
+    required: False
+    narrative:
+      patient:
+        True: |
+          You have one or more risk factors for colorectal cancer. This makes screening even more important.
+          Risk factors include family history, obesity, diabetes, smoking, heavy alcohol use,
+          physical inactivity, and diet high in red/processed meats.
+      provider:
+        True: CRC risk factors present - reinforces importance of screening
+
+  - id: is_black_race
+    title: Black/African American
+    description: Higher CRC incidence in Black adults
+    expression: $Ethnicity == "urn:oid:2.16.840.1.113883.6.238|2054-5" or $Ethnicity == "urn:oid:2.16.840.1.113883.6.238|2058-6" or $Ethnicity == "black"
+    required: False
+    narrative:
+      patient:
+        True: Black/African American adults have a higher incidence of colorectal cancer, making screening particularly important.
+      provider:
+        True: Black race - higher CRC incidence; ensure screening is offered
+
+  # Screening Status
+  - id: up_to_date_colonoscopy
+    title: Up to Date with Colonoscopy
+    description: Had colonoscopy within past 10 years
+    expression: $colonoscopy_within_10_years is True
+    required: False
+    narrative:
+      patient:
+        True: You are up to date with colonoscopy screening (within past 10 years)
+        False: You may be due for colonoscopy screening
+      provider:
+        True: Up to date with colonoscopy (within 10 years)
+
+  - id: up_to_date_fit
+    title: Up to Date with FIT
+    description: Had FIT within past year
+    expression: $fit_within_1_year is True
+    required: False
+
+  - id: up_to_date_stool_dna
+    title: Up to Date with Stool DNA
+    description: Had stool DNA test within past 3 years
+    expression: $stool_dna_within_3_years is True
+    required: False
+
+  - id: screening_up_to_date
+    title: Currently Up to Date with Any Screening
+    description: Patient has had appropriate screening within recommended interval
+    expression: $up_to_date_colonoscopy is True or $up_to_date_fit is True or $up_to_date_stool_dna is True
+    required: False
+    narrative:
+      patient:
+        True: You are currently up to date with colorectal cancer screening
+        False: You may be due for colorectal cancer screening
+      provider:
+        True: Screening up to date
+        False: Screening may be due
+
+  # 76-85 Decision Support
+  - id: favorable_for_continued_screening
+    title: Favorable Profile for Continued Screening (76-85)
+    description: Older adult with good health profile may benefit from continued screening
+    expression: $age_76_to_85 is True and $life_expectancy_over_10_years is True and $significant_comorbidities is not True
+    required: False
+    narrative:
+      patient:
+        True: Based on your health status, continued colorectal cancer screening may be beneficial for you.
+      provider:
+        True: Good health profile in 76-85 age group - continued screening may be appropriate
+
+
+#--------------------------------------------------------
+# Recommendations
+recommendations:
+
+  - id: recommend_screening_grade_a
+    title: Colorectal Cancer Screening Strongly Recommended (Grade A)
+    category: medication
+    description: Strong recommendation for adults 50-75 years
+    expression: $age_50_to_75 is True and $has_exclusion_condition is not True and $is_symptomatic is not True
+    narrative:
+      patient:
+        True: |
+          ## Colorectal Cancer Screening Strongly Recommended
+
+          As an adult aged 50-75 years, the USPSTF **strongly recommends** (Grade A) that you
+          be screened for colorectal cancer.
+
+          **Why screening matters:**
+          - Colorectal cancer is the 3rd most common cancer and 2nd leading cause of cancer death
+          - When detected early through screening, it is highly treatable
+          - Screening can find and remove precancerous polyps before they become cancer
+
+          **Screening options (discuss with your provider):**
+          - Colonoscopy every 10 years
+          - Stool DNA test (Cologuard) every 1-3 years
+          - FIT (stool test) every year
+          - CT colonography every 5 years
+          - Flexible sigmoidoscopy every 5 years
+
+          All options are effective. The best test is one you will actually complete.
+        False: This recommendation does not currently apply to you
+      provider:
+        True: |
+          **USPSTF Grade A Recommendation**
+
+          Screen for colorectal cancer. Patient is 50-75 years old.
+
+          Screening options:
+          - Colonoscopy q10y
+          - sDNA-FIT (Cologuard) q1-3y
+          - FIT annually
+          - CT colonography q5y
+          - Flexible sigmoidoscopy q5y (or q10y + annual FIT)
+
+          Abnormal stool-based tests require colonoscopy follow-up.
+    citations:
+      - 'The USPSTF recommends screening for colorectal cancer in all adults aged 50 to 75 years. (A recommendation)'
+    class_of_recommendation: I
+    level_of_evidence: A
+    uspstf_grade: A
+
+  - id: recommend_screening_grade_b
+    title: Colorectal Cancer Screening Recommended (Grade B)
+    category: medication
+    description: Recommendation for adults 45-49 years
+    expression: $age_45_to_49 is True and $has_exclusion_condition is not True and $is_symptomatic is not True
+    narrative:
+      patient:
+        True: |
+          ## Colorectal Cancer Screening Recommended
+
+          As an adult aged 45-49 years, the USPSTF **recommends** (Grade B) that you
+          be screened for colorectal cancer.
+
+          In 2021, the USPSTF lowered the recommended starting age for screening from 50 to 45
+          based on increasing rates of colorectal cancer in younger adults.
+
+          **Screening options:**
+          - Colonoscopy every 10 years
+          - Stool DNA test (Cologuard) every 1-3 years
+          - FIT (stool test) every year
+          - Other options available
+
+          Talk to your healthcare provider about which screening option is right for you.
+        False: This recommendation does not currently apply to you
+      provider:
+        True: |
+          **USPSTF Grade B Recommendation**
+
+          Screen for colorectal cancer. Patient is 45-49 years old.
+
+          2021 update lowered screening age from 50 to 45 based on rising CRC incidence in younger adults.
+
+          Same screening modalities as 50-75 age group.
+    citations:
+      - 'The USPSTF recommends screening for colorectal cancer in adults aged 45 to 49 years. (B recommendation)'
+    class_of_recommendation: I
+    level_of_evidence: B-R
+    uspstf_grade: B
+
+  - id: selective_screening_76_85
+    title: Consider Continued Screening (Age 76-85)
+    category: evaluation
+    description: Individualized decision for adults 76-85 years
+    expression: $age_76_to_85 is True and $has_exclusion_condition is not True and $is_symptomatic is not True
+    narrative:
+      patient:
+        True: |
+          ## Discuss Continued Screening with Your Provider
+
+          At age 76-85, the decision to continue colorectal cancer screening should be individualized.
+
+          **Factors to consider:**
+          - Your overall health and life expectancy
+          - Your prior screening history (have you been screened before?)
+          - Your personal preferences
+          - Potential benefits vs. risks of screening
+
+          If you have never been screened, or it has been many years since your last screening,
+          you may benefit more from continued screening.
+
+          If you have been regularly screened with normal results, the additional benefit
+          of continued screening may be small.
+
+          Discuss with your healthcare provider what is right for you.
+        False: This recommendation does not currently apply to you
+      provider:
+        True: |
+          **USPSTF Grade C Recommendation**
+
+          Selective screening for ages 76-85. Individualize based on:
+          - Overall health and life expectancy
+          - Prior screening history
+          - Patient preferences
+          - Comorbidities
+
+          Greater benefit if never screened or not recently screened.
+          Limited benefit if regularly screened with normal results.
+    citations:
+      - 'The USPSTF recommends that clinicians selectively offer screening for colorectal cancer in adults aged 76 to 85 years.'
+    class_of_recommendation: IIa
+    level_of_evidence: C-LD
+    uspstf_grade: C
+
+  - id: favorable_continued_screening
+    title: Continued Screening May Be Beneficial
+    category: medication
+    description: Older adult with favorable health profile
+    expression: $favorable_for_continued_screening is True
+    narrative:
+      patient:
+        True: |
+          Based on your overall health status and life expectancy, continued colorectal cancer
+          screening may be beneficial for you, even though you are over 75 years old.
+
+          Discuss screening options with your healthcare provider.
+        False: Not applicable
+      provider:
+        True: |
+          Patient 76-85 with favorable health profile (life expectancy >10y, limited comorbidities).
+          Consider continued screening per Grade C recommendation.
+    class_of_recommendation: IIa
+    level_of_evidence: C-LD
+
+  - id: not_recommended_over_85
+    title: Routine Screening Not Recommended (Over 85)
+    category: evaluation
+    description: Screening generally not recommended for adults over 85
+    expression: $age_over_85 is True
+    narrative:
+      patient:
+        True: |
+          At age 86 or older, routine colorectal cancer screening is generally not recommended.
+
+          The potential harms of screening (such as complications from colonoscopy) may outweigh
+          the potential benefits at this age.
+
+          If you have specific concerns, discuss them with your healthcare provider.
+        False: Not applicable
+      provider:
+        True: |
+          Age >85 - routine CRC screening not recommended.
+          Screening-related harms may outweigh benefits.
+    class_of_recommendation: "III: Harm"
+    level_of_evidence: C-LD
+
+  - id: high_risk_surveillance
+    title: Specialized Surveillance Required
+    category: evaluation
+    description: Patient requires specialized surveillance, not standard screening
+    expression: $has_exclusion_condition is True
+    narrative:
+      patient:
+        True: |
+          ## You Require Specialized Surveillance
+
+          Based on your medical history, you need specialized colorectal cancer surveillance
+          rather than standard screening guidelines. This may include more frequent colonoscopies.
+
+          **Conditions requiring specialized surveillance:**
+          - Prior colorectal cancer
+          - History of adenomatous polyps
+          - Inflammatory bowel disease (Crohn's, ulcerative colitis)
+          - Lynch syndrome or other hereditary syndromes
+          - Familial adenomatous polyposis (FAP)
+
+          Please follow your gastroenterologist's or oncologist's recommendations for surveillance.
+        False: Standard screening guidelines apply to you
+      provider:
+        True: |
+          High-risk condition present. Standard screening guidelines do not apply.
+
+          Refer to specialized surveillance guidelines:
+          - Prior CRC: oncology surveillance protocols
+          - Adenomatous polyps: post-polypectomy surveillance
+          - IBD: colonoscopy q1-2y after 8-10y disease duration
+          - Lynch syndrome: colonoscopy q1-2y starting age 20-25
+          - FAP: annual sigmoidoscopy starting age 10-12
+    class_of_recommendation: I
+    level_of_evidence: B-R
+
+  - id: symptomatic_workup
+    title: Diagnostic Evaluation Needed
+    category: evaluation
+    description: Patient has symptoms requiring diagnostic workup
+    expression: $is_symptomatic is True
+    narrative:
+      patient:
+        True: |
+          ## You Need Diagnostic Evaluation
+
+          You have reported symptoms that require prompt diagnostic evaluation, not routine screening.
+
+          **Symptoms you reported may include:**
+          - Rectal bleeding
+          - Change in bowel habits
+          - Unexplained weight loss
+          - Persistent abdominal pain
+
+          Please discuss these symptoms with your healthcare provider as soon as possible.
+          They may recommend a colonoscopy or other tests to evaluate your symptoms.
+        False: No symptoms requiring diagnostic workup
+      provider:
+        True: |
+          **Symptomatic patient - requires diagnostic workup, not screening**
+
+          Reported symptoms: rectal bleeding, change in bowel habits, unexplained weight loss,
+          or abdominal pain.
+
+          Recommend diagnostic colonoscopy or appropriate workup.
+    class_of_recommendation: I
+    level_of_evidence: A
+
+  - id: screening_current
+    title: Screening Is Current
+    category: display
+    description: Patient is up to date with screening
+    expression: $screening_up_to_date is True
+    narrative:
+      patient:
+        True: |
+          ## You Are Up to Date with Colorectal Cancer Screening
+
+          Based on your screening history, you are currently up to date with colorectal cancer screening.
+
+          Continue to follow your screening schedule:
+          - If you had a colonoscopy: repeat in 10 years (unless polyps were found)
+          - If you use FIT: repeat annually
+          - If you use stool DNA test: repeat every 1-3 years
+        False: You may be due for screening
+      provider:
+        True: Patient reports being up to date with CRC screening.
+
+  - id: display_screening_options
+    category: display_patient
+    title: Understanding Your Screening Options
+    description: Educational content about screening modalities
+    expression: $age_45_to_49 is True or $age_50_to_75 is True or $age_76_to_85 is True
+    narrative:
+      patient:
+        True: |
+          ## Colorectal Cancer Screening Options
+
+          Several effective screening tests are available. All are designed to detect colorectal
+          cancer early or find precancerous polyps that can be removed.
+
+          ### Stool-Based Tests (done at home)
+
+          **FIT (Fecal Immunochemical Test)**
+          - Detects blood in stool
+          - Done annually
+          - Simple home collection kit
+          - No diet or medication restrictions
+
+          **Stool DNA Test (Cologuard)**
+          - Detects blood and abnormal DNA in stool
+          - Done every 1-3 years
+          - More sensitive than FIT but more false positives
+          - Home collection kit sent to lab
+
+          ### Direct Visualization Tests
+
+          **Colonoscopy**
+          - Views entire colon with camera
+          - Done every 10 years if normal
+          - Can remove polyps during procedure
+          - Requires bowel prep and sedation
+
+          **CT Colonography (Virtual Colonoscopy)**
+          - CT scan of the colon
+          - Done every 5 years
+          - Requires bowel prep but no sedation
+          - If abnormal, need follow-up colonoscopy
+
+          **Flexible Sigmoidoscopy**
+          - Views lower third of colon
+          - Done every 5 years (or q10y with annual FIT)
+          - Less bowel prep than colonoscopy
+
+          ### Important Notes
+
+          - If any stool-based test or CT colonography is abnormal, you will need a colonoscopy
+          - The best screening test is one you will actually do
+          - Talk to your provider about which option is right for you
+
+  - id: display_risk_reduction
+    category: display_patient
+    title: Reducing Your Colorectal Cancer Risk
+    description: Lifestyle modifications to reduce risk
+    expression: $age_45_to_49 is True or $age_50_to_75 is True or $age_76_to_85 is True
+    narrative:
+      patient:
+        True: |
+          ## How to Reduce Your Colorectal Cancer Risk
+
+          In addition to screening, you can take steps to lower your risk:
+
+          **Diet**
+          - Eat plenty of vegetables, fruits, and whole grains
+          - Limit red meat (beef, pork, lamb)
+          - Avoid processed meats (hot dogs, bacon, deli meats)
+          - Get enough fiber and calcium
+
+          **Lifestyle**
+          - Maintain a healthy weight
+          - Be physically active (at least 150 minutes per week)
+          - Don't smoke
+          - Limit alcohol (no more than 1-2 drinks per day)
+
+          **Medications** (discuss with your doctor)
+          - Aspirin may reduce risk in some people
+          - Talk to your doctor before starting any medication for prevention
+
+          **Know Your Family History**
+          - If close relatives had colorectal cancer or polyps, you may need earlier or more frequent screening

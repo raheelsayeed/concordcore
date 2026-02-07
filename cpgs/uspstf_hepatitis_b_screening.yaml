@@ -1,0 +1,390 @@
+CPG:
+  identifier: uspstf_hepatitis_b_screening
+  title: "USPSTF Hepatitis B Virus Screening"
+  publisher: "United States Preventive Services Task Force"
+  uri: "https://www.uspreventiveservicestaskforce.org/uspstf/recommendation/hepatitis-b-virus-infection-screening"
+  type: [screening, preventive]
+  revision: 1.0
+  revision_date: 2024-01-15
+  description: >
+    USPSTF Grade B recommendation for hepatitis B virus (HBV) screening in adolescents and adults
+    at increased risk for infection. High-risk populations include persons born in regions with
+    HBV prevalence >= 2%, persons who inject drugs, men who have sex with men, persons with HIV,
+    and household/sexual contacts of persons with chronic HBV.
+
+
+variables:
+  - id: Age
+    title: "Age"
+    type: integer
+    required: True
+    code:
+      concord: ['Age']
+
+  - id: known_hbv_positive
+    title: "Known HBV Positive Status"
+    type: boolean
+    required: False
+    user_attestable: True
+    code:
+      snomed: ["66071002"]
+    llm_prompt: |
+      Does the patient have known hepatitis B (HBV)?
+      Look for: hepatitis B, HBV positive, chronic HBV, HBsAg positive.
+      Return: true if HBV positive, false if HBV negative, null if not mentioned.
+
+  - id: has_had_hbv_test
+    title: "Has Had HBV Test Before"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Has the patient been tested for hepatitis B?
+      Look for: HBV test, hepatitis B screening, HBsAg, anti-HBs, anti-HBc test.
+      Return: true if previously tested, false if never tested, null if not mentioned.
+
+  - id: last_hbv_test_negative
+    title: "Last HBV Test Was Negative"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Was the patient's last HBV test negative?
+      Look for: HBV negative, hepatitis B negative, HBsAg negative.
+      Return: true if last test negative, false if positive, null if not mentioned.
+
+  - id: hbv_vaccinated
+    title: "Received HBV Vaccination"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Has the patient received hepatitis B vaccination?
+      Look for: HBV vaccine, hepatitis B vaccine, immunized against HBV.
+      Return: true if vaccinated, false if not vaccinated, null if not mentioned.
+
+  # Birth Region Risk
+  - id: born_in_high_prevalence_region
+    title: "Born in Region with HBV Prevalence >= 2%"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Was the patient born in a region with high HBV prevalence (>=2%)?
+      High prevalence regions include: Sub-Saharan Africa, East Asia, Southeast Asia,
+      Central Asia, Pacific Islands, parts of South America.
+      Return: true if born in high prevalence region, false if not, null if not mentioned.
+
+  - id: parents_born_high_prevalence_region
+    title: "Parents Born in High-Prevalence Region (Unvaccinated at Birth)"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Were the patient's parents born in a high HBV prevalence region and patient
+      unvaccinated at birth?
+      Look for: parents from high-prevalence country, not vaccinated at birth.
+      Return: true if applicable, false if not, null if not mentioned.
+
+  # Behavioral Risk Factors
+  - id: injection_drug_use
+    title: "Injection Drug Use"
+    type: boolean
+    required: False
+    user_attestable: True
+    code:
+      snomed: ["226034001"]
+    llm_prompt: |
+      Does the patient use or have history of injection drug use?
+      Look for: IV drug use, IVDU, injects drugs, heroin injection.
+      Return: true if injection drug use, false if denied, null if not mentioned.
+
+  - id: msm
+    title: "Man Who Has Sex with Men"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Is the patient a man who has sex with men?
+      Look for: MSM, gay, bisexual man.
+      Return: true if MSM, false if denied, null if not mentioned.
+
+  # Medical Risk Factors
+  - id: hiv_positive
+    title: "HIV Positive"
+    type: boolean
+    required: False
+    user_attestable: True
+    code:
+      snomed: ["86406008"]
+    llm_prompt: |
+      Is the patient HIV positive?
+      Look for: HIV positive, HIV+, AIDS, on ART.
+      Return: true if HIV positive, false if negative, null if not mentioned.
+
+  - id: on_hemodialysis
+    title: "On Hemodialysis"
+    type: boolean
+    required: False
+    user_attestable: True
+    code:
+      snomed: ["302497006"]
+    llm_prompt: |
+      Is the patient on hemodialysis?
+      Look for: hemodialysis, HD, dialysis, ESRD on dialysis.
+      Return: true if on hemodialysis, false if not, null if not mentioned.
+
+  - id: on_immunosuppressive_therapy
+    title: "On Immunosuppressive Therapy"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Is the patient on immunosuppressive therapy?
+      Look for: immunosuppression, biologics, chemotherapy, transplant medications,
+      TNF inhibitors, rituximab, methotrexate, prednisone (chronic).
+      Return: true if on immunosuppression, false if not, null if not mentioned.
+
+  # Contact Risk
+  - id: household_contact_hbv
+    title: "Household Contact of Person with Chronic HBV"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Is the patient a household contact of someone with chronic HBV?
+      Look for: family member with hepatitis B, lives with HBV positive person.
+      Return: true if household contact, false if denied, null if not mentioned.
+
+  - id: sexual_contact_hbv
+    title: "Sexual Contact of Person with Chronic HBV"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Is the patient a sexual contact of someone with chronic HBV?
+      Look for: partner has hepatitis B, sexual partner with HBV.
+      Return: true if sexual contact, false if denied, null if not mentioned.
+
+  - id: needle_sharing_contact_hbv
+    title: "Needle-Sharing Contact of Person with HBV"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Does the patient share needles with someone who has HBV?
+      Look for: shares needles with HBV positive person.
+      Return: true if shares needles with HBV+ person, false if not, null if not mentioned.
+
+  # Other Risk
+  - id: incarceration_history
+    title: "History of Incarceration"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Does the patient have a history of incarceration?
+      Look for: prison, jail, incarcerated, correctional facility.
+      Return: true if incarceration history, false if denied, null if not mentioned.
+
+  - id: is_pregnant
+    title: "Currently Pregnant"
+    type: boolean
+    required: False
+    user_attestable: True
+    code:
+      snomed: ["77386006"]
+    llm_prompt: |
+      Is the patient currently pregnant?
+      Look for: pregnant, pregnancy, gravid, prenatal care.
+      Return: true if pregnant, false if not pregnant, null if not mentioned.
+
+
+eligibility:
+  - id: not_known_hbv_positive
+    title: "Not Already Known HBV Positive"
+    expression: $known_hbv_positive is not True
+    narrative:
+      patient:
+        True: "These HBV screening recommendations apply to people who do not already have hepatitis B."
+        False: "Since you have hepatitis B, you should be receiving HBV care rather than screening."
+
+  - id: age_eligible
+    title: "Age Eligible"
+    expression: $Age >= 12
+    narrative:
+      patient:
+        True: "You are eligible for HBV screening."
+        False: "HBV screening is primarily recommended for adolescents and adults."
+
+
+assessments:
+  # Birth region risk
+  - id: high_prevalence_birth_region_risk
+    title: "Born in or Parents from High-Prevalence Region"
+    expression: $born_in_high_prevalence_region is True or $parents_born_high_prevalence_region is True
+    narrative:
+      patient:
+        True: "Being born in or having parents from a region with high HBV prevalence (>= 2%) increases your risk."
+
+  # Behavioral risks
+  - id: has_behavioral_risk
+    title: "Has Behavioral Risk Factors"
+    expression: $injection_drug_use is True or $msm is True
+    narrative:
+      patient:
+        True: "You have behavioral risk factors for HBV infection."
+
+  # Medical risks
+  - id: has_medical_risk
+    title: "Has Medical Risk Factors"
+    expression: $hiv_positive is True or $on_hemodialysis is True or $on_immunosuppressive_therapy is True
+    narrative:
+      patient:
+        True: "You have medical conditions that increase your risk for HBV complications."
+
+  # Contact risks
+  - id: has_contact_risk
+    title: "Has Contact Risk"
+    expression: $household_contact_hbv is True or $sexual_contact_hbv is True or $needle_sharing_contact_hbv is True
+    narrative:
+      patient:
+        True: "Contact with persons who have chronic HBV increases your risk."
+
+  # Other risks
+  - id: has_incarceration_risk
+    title: "Has Incarceration History"
+    expression: $incarceration_history is True
+    narrative:
+      patient:
+        True: "History of incarceration is associated with increased HBV risk."
+
+  # Combined risk assessment
+  - id: at_increased_risk
+    title: "At Increased Risk for HBV"
+    expression: $high_prevalence_birth_region_risk is True or $has_behavioral_risk is True or $has_medical_risk is True or $has_contact_risk is True or $has_incarceration_risk is True
+    narrative:
+      patient:
+        True: "Based on your risk factors, you are at increased risk for hepatitis B infection."
+        False: "You have not reported specific risk factors for HBV."
+
+  - id: has_ongoing_risk
+    title: "Has Ongoing Risk"
+    expression: $injection_drug_use is True or $msm is True or $on_hemodialysis is True
+    narrative:
+      patient:
+        True: "You have ongoing risk factors that may warrant periodic screening."
+
+  # Screening status
+  - id: never_screened
+    title: "Never Screened for HBV"
+    expression: $has_had_hbv_test is not True
+    narrative:
+      patient:
+        True: "You have not been screened for hepatitis B."
+
+  - id: previously_screened_negative
+    title: "Previously Screened Negative"
+    expression: $has_had_hbv_test is True and $last_hbv_test_negative is True
+
+  - id: needs_screening
+    title: "Needs HBV Screening"
+    expression: $at_increased_risk is True and $never_screened is True
+    narrative:
+      patient:
+        True: "Based on your risk factors and screening history, HBV testing is recommended."
+
+  - id: needs_repeat_screening
+    title: "Needs Repeat Screening"
+    expression: $has_ongoing_risk is True and $previously_screened_negative is True
+    narrative:
+      patient:
+        True: "Because of ongoing risk, periodic HBV screening may be appropriate."
+
+  - id: is_currently_pregnant
+    title: "Currently Pregnant"
+    expression: $is_pregnant is True
+    narrative:
+      patient:
+        True: "HBV screening is recommended during pregnancy."
+
+  - id: not_vaccinated
+    title: "Not Vaccinated Against HBV"
+    expression: $hbv_vaccinated is not True
+    narrative:
+      patient:
+        True: "You have not received the hepatitis B vaccine."
+
+  - id: eligible_for_vaccination
+    title: "Eligible for HBV Vaccination"
+    expression: $at_increased_risk is True and $not_vaccinated is True and $previously_screened_negative is True
+    narrative:
+      patient:
+        True: "You tested negative for HBV and have risk factors. Vaccination is recommended."
+
+
+recommendations:
+  - id: screen_increased_risk
+    title: "HBV Screening for Increased Risk"
+    category: evaluation
+    expression: $needs_screening is True
+    uspstf_grade: B
+    level_of_evidence: B-NR
+    class_of_recommendation: I
+    narrative:
+      patient:
+        True: "The USPSTF recommends HBV screening for adolescents and adults at increased risk. Based on your risk factors, you should be tested for hepatitis B."
+      provider:
+        True: "USPSTF Grade B: Screen for HBV infection in adolescents and adults at increased risk. Patient has identified risk factors. Order HBsAg, anti-HBs, and anti-HBc."
+
+  - id: screen_pregnancy
+    title: "HBV Screening in Pregnancy"
+    category: evaluation
+    expression: $is_currently_pregnant is True and $never_screened is True
+    uspstf_grade: A
+    level_of_evidence: A
+    class_of_recommendation: I
+    narrative:
+      patient:
+        True: "HBV screening is recommended for all pregnant women at the first prenatal visit."
+      provider:
+        True: "USPSTF Grade A: Screen all pregnant women for HBV at first prenatal visit. Order HBsAg. If positive, refer for perinatal management."
+
+  - id: periodic_screening_ongoing_risk
+    title: "Periodic Screening for Ongoing Risk"
+    category: evaluation
+    expression: $needs_repeat_screening is True
+    uspstf_grade: B
+    level_of_evidence: C-LD
+    class_of_recommendation: IIa
+    narrative:
+      patient:
+        True: "Because of ongoing risk factors, periodic HBV screening is recommended even if previous tests were negative."
+      provider:
+        True: "Patient has ongoing HBV risk factors (IDU, MSM, or hemodialysis). Consider periodic rescreening. Optimal frequency not established; use clinical judgment."
+
+  - id: recommend_vaccination
+    title: "Recommend HBV Vaccination"
+    category: display_patient
+    expression: $eligible_for_vaccination is True
+    uspstf_grade: B
+    level_of_evidence: A
+    class_of_recommendation: I
+    narrative:
+      patient:
+        True: "Since you tested negative for HBV and have risk factors, getting the hepatitis B vaccine is strongly recommended to protect you from infection."
+      provider:
+        True: "Patient HBsAg negative with risk factors and no documentation of HBV vaccination. Recommend completing HBV vaccine series."
+
+  - id: no_screening_needed_low_risk
+    title: "Screening Not Routinely Indicated"
+    category: display_patient
+    expression: $at_increased_risk is not True and $is_currently_pregnant is not True
+    uspstf_grade: B
+    level_of_evidence: B-NR
+    class_of_recommendation: IIb
+    narrative:
+      patient:
+        True: "Based on your responses, you do not have specific risk factors for hepatitis B. Routine screening is not currently recommended for you, though the CDC recommends all adults be screened at least once."
+      provider:
+        True: "Patient does not report increased risk factors for HBV. USPSTF recommends risk-based screening. Note: CDC recommends universal adult screening at least once."

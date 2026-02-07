@@ -1,0 +1,678 @@
+CPG:
+  title: "USPSTF Hypertension Screening in Adults"
+  identifier: uspstf_hypertension_screening_2021
+  publisher: 'U.S. Preventive Services Task Force'
+  uri: https://www.uspreventiveservicestaskforce.org/uspstf/recommendation/hypertension-in-adults-screening
+  doi: 10.1001/jama.2021.4987
+  type: [screening, preventive]
+  revision: 1.0
+  revision_date: 2024-01-15
+  description: >
+    The USPSTF recommends screening for hypertension in adults 18 years or older
+    with office blood pressure measurement (Grade A). Blood pressure measurements
+    should be obtained outside of the clinical setting for diagnostic confirmation
+    before starting treatment.
+
+
+# LOINC codes for blood pressure
+define: &bp_systolic_code ["8480-6"]
+define: &bp_diastolic_code ["8462-4"]
+define: &bp_panel_code ["55284-4", "85354-9"]
+define: &bmi_code ["39156-5"]
+
+
+variables:
+
+#--------------------------------------------------------
+# Demographics
+  - id: Age
+    title: Age
+    code:
+      concord: ['Age']
+
+  - id: Gender
+    title: Gender
+    required: False
+    code:
+      concord: ['Gender']
+
+  - id: Ethnicity
+    title: Race/Ethnicity
+    required: False
+    code:
+      concord: ['Ethnicity']
+
+#--------------------------------------------------------
+# Vital Signs - Blood Pressure
+  - id: bloodpressure
+    title: Blood Pressure
+    user_attestable: False
+    required: False
+    code:
+      loinc: *bp_panel_code
+    narrative:
+      patient:
+        HasValue: Your most recent blood pressure reading is $self.values mmHg
+        NoValue: No blood pressure readings found in your record
+      provider:
+        HasValue: Blood pressure $self.values ($self.date)
+        NoValue: No blood pressure data available
+
+  - id: systolic_bp
+    title: Systolic Blood Pressure
+    user_attestable: False
+    code:
+      loinc: *bp_systolic_code
+    validator:
+      plausible: '$value > 60 and $value < 300'
+    narrative:
+      patient:
+        HasValue: Your systolic (top number) blood pressure is $value mmHg
+      provider:
+        HasValue: Systolic BP $value mmHg ($self.date)
+
+  - id: diastolic_bp
+    title: Diastolic Blood Pressure
+    user_attestable: False
+    code:
+      loinc: *bp_diastolic_code
+    validator:
+      plausible: '$value > 30 and $value < 200'
+    narrative:
+      patient:
+        HasValue: Your diastolic (bottom number) blood pressure is $value mmHg
+      provider:
+        HasValue: Diastolic BP $value mmHg ($self.date)
+
+#--------------------------------------------------------
+# Body Mass Index
+  - id: BMI
+    title: Body Mass Index
+    user_attestable: False
+    required: False
+    code:
+      loinc: *bmi_code
+    validator:
+      plausible: '$value > 10 and $value < 80'
+    narrative:
+      patient:
+        HasValue: Your BMI is $value
+      provider:
+        HasValue: BMI $value ($self.date)
+
+#--------------------------------------------------------
+# Existing Conditions
+  - id: known_hypertension
+    title: Known Hypertension Diagnosis
+    user_attestable: True
+    code:
+      snomed: ["38341003", "59621000"]
+    llm_prompt: |
+      Does the patient have a known diagnosis of hypertension?
+      Look for: hypertension, HTN, high blood pressure, essential hypertension,
+      on antihypertensive medications.
+      Return: true if hypertension diagnosed, false if explicitly denied, null if not mentioned.
+    narrative:
+      patient:
+        True: You have a diagnosis of hypertension in your medical record
+        False: No hypertension diagnosis found
+      provider:
+        True: Patient has documented hypertension diagnosis
+        False: No prior hypertension diagnosis
+
+  - id: cardiovascular_disease
+    title: Cardiovascular Disease
+    user_attestable: True
+    required: False
+    code:
+      snomed: ["49601007", "22298006", "399211009"]
+    llm_prompt: |
+      Does the patient have cardiovascular disease?
+      Look for: coronary artery disease, CAD, heart attack, MI, myocardial infarction, angina,
+      heart failure, CHF, stroke, TIA, peripheral vascular disease, PVD, PAD.
+      Return: true if CVD present, false if denied, null if not mentioned.
+    narrative:
+      patient:
+        True: You have a history of cardiovascular disease
+      provider:
+        True: Patient has CVD history
+
+  - id: chronic_kidney_disease
+    title: Chronic Kidney Disease
+    user_attestable: True
+    required: False
+    code:
+      snomed: ["709044004"]
+    llm_prompt: |
+      Does the patient have chronic kidney disease?
+      Look for: CKD, chronic kidney disease, renal insufficiency, reduced GFR, eGFR <60,
+      elevated creatinine, on dialysis.
+      Return: true if CKD present, false if denied, null if not mentioned.
+
+  - id: diabetes_mellitus
+    title: Diabetes Mellitus
+    user_attestable: True
+    required: False
+    code:
+      snomed: ["44054006", "73211009"]
+    llm_prompt: |
+      Does the patient have diabetes mellitus?
+      Look for: diabetes, DM, Type 1, Type 2, diabetic, HbA1c elevated, on insulin, on metformin.
+      Return: true if diabetes diagnosed, false if denied, null if not mentioned.
+
+#--------------------------------------------------------
+# Risk Factors
+  - id: is_smoker
+    title: Tobacco Smoking Status
+    user_attestable: True
+    required: False
+    code:
+      loinc: ["72166-2"]
+    llm_prompt: |
+      Is the patient a current tobacco smoker?
+      Look for: current smoker, active smoker, cigarettes, tobacco use.
+      Exclude: former smoker, quit smoking.
+      Return: true if current smoker, false if non-smoker or former smoker, null if not mentioned.
+    narrative:
+      patient:
+        True: You are a current tobacco user
+        False: You are not a current tobacco user
+      provider:
+        True: Current smoker
+        False: Non-smoker
+
+  - id: family_history_hypertension
+    title: Family History of Hypertension
+    user_attestable: True
+    required: False
+    type: boolean
+    llm_prompt: |
+      Does the patient have a family history of hypertension?
+      Look for: family history of high blood pressure, parents/siblings with hypertension.
+      Return: true if family history present, false if denied, null if not mentioned.
+    narrative:
+      patient:
+        True: You have a family history of high blood pressure
+        False: No family history of high blood pressure reported
+
+  - id: overweight_obese
+    title: Overweight or Obese
+    user_attestable: True
+    required: False
+    type: boolean
+    llm_prompt: |
+      Is the patient overweight or obese?
+      Look for: obesity, obese, overweight, BMI >25, BMI >30, elevated BMI.
+      Return: true if overweight/obese, false if normal weight, null if not mentioned.
+    narrative:
+      patient:
+        True: You are overweight or obese
+        False: Your weight is in normal range
+
+  - id: physically_inactive
+    title: Physical Inactivity
+    user_attestable: True
+    required: False
+    type: boolean
+    llm_prompt: |
+      Is the patient physically inactive or sedentary?
+      Look for: sedentary lifestyle, lack of exercise, no regular physical activity, inactive.
+      Return: true if physically inactive, false if exercises regularly, null if not mentioned.
+    narrative:
+      patient:
+        True: You have a sedentary lifestyle
+        False: You engage in regular physical activity
+
+  - id: high_sodium_diet
+    title: High Sodium Diet
+    user_attestable: True
+    required: False
+    type: boolean
+    llm_prompt: |
+      Does the patient have a high sodium diet?
+      Look for: high salt intake, high sodium diet, excessive salt consumption.
+      Return: true if high sodium diet, false if low sodium, null if not mentioned.
+
+  - id: excessive_alcohol
+    title: Excessive Alcohol Consumption
+    user_attestable: True
+    required: False
+    type: boolean
+    llm_prompt: |
+      Does the patient have excessive alcohol consumption?
+      Look for: heavy drinking, alcohol abuse, >2 drinks/day for men or >1 drink/day for women,
+      binge drinking, alcohol use disorder.
+      Return: true if excessive alcohol, false if moderate/none, null if not mentioned.
+
+#--------------------------------------------------------
+# Medications
+  - id: antihypertensive_medications
+    title: Antihypertensive Medications
+    reconcile: True
+    required: False
+    code:
+      rxnorm: ["104375", "104376", "104377", "104378", "206771", "213482", "206764", "206765", "206766", "207965", "823971", "823982", "823986", "1806890", "197884", "197885", "197886", "197887", "205326", "311353", "311354", "314076", "314077", "1806884"]
+
+
+#--------------------------------------------------------
+# Eligibility
+eligibility:
+
+  - id: adult_age
+    title: Adult 18 years or older
+    expression: $Age >= 18
+    narrative:
+      patient:
+        True: You are an adult (18 years or older)
+        False: This screening guideline applies to adults 18 years and older
+      provider:
+        True: Patient meets age criteria (>=18 years)
+        False: Patient does not meet age criteria (<18 years)
+
+  - id: no_known_hypertension
+    title: No known hypertension diagnosis
+    expression: $known_hypertension is not True
+    narrative:
+      patient:
+        True: You do not have a prior diagnosis of hypertension
+        False: You already have a diagnosis of hypertension
+      provider:
+        True: No prior hypertension diagnosis - eligible for screening
+        False: Patient has existing hypertension diagnosis - not for initial screening
+
+
+#--------------------------------------------------------
+# Assessments
+assessments:
+
+  # Blood Pressure Classification (ACC/AHA 2017 Guidelines)
+  - id: bp_normal
+    title: Normal Blood Pressure
+    description: Systolic <120 AND Diastolic <80 mmHg
+    expression: $systolic_bp < 120 and $diastolic_bp < 80
+    narrative:
+      patient:
+        True: |
+          Your blood pressure ($systolic_bp/$diastolic_bp mmHg) is in the __normal__ range.
+
+          - Systolic (top number): Less than 120 mmHg
+          - Diastolic (bottom number): Less than 80 mmHg
+        False: Your blood pressure is above the normal range
+      provider:
+        True: BP $systolic_bp/$diastolic_bp mmHg - Normal
+        False: BP not in normal range
+
+  - id: bp_elevated
+    title: Elevated Blood Pressure
+    description: Systolic 120-129 AND Diastolic <80 mmHg
+    expression: $systolic_bp >= 120 and $systolic_bp < 130 and $diastolic_bp < 80
+    narrative:
+      patient:
+        True: |
+          Your blood pressure ($systolic_bp/$diastolic_bp mmHg) is __elevated__.
+
+          This is not yet hypertension, but lifestyle changes are recommended to prevent progression.
+        False: Your blood pressure is not in the elevated category
+      provider:
+        True: BP $systolic_bp/$diastolic_bp mmHg - Elevated (pre-hypertension)
+
+  - id: bp_stage1_hypertension
+    title: Stage 1 Hypertension
+    description: Systolic 130-139 OR Diastolic 80-89 mmHg
+    expression: ($systolic_bp >= 130 and $systolic_bp < 140) or ($diastolic_bp >= 80 and $diastolic_bp < 90)
+    narrative:
+      patient:
+        True: |
+          Your blood pressure ($systolic_bp/$diastolic_bp mmHg) indicates __Stage 1 Hypertension__.
+
+          This reading should be confirmed with measurements outside the clinical setting before diagnosis.
+        False: Your blood pressure is not in the Stage 1 hypertension range
+      provider:
+        True: BP $systolic_bp/$diastolic_bp mmHg - Stage 1 HTN (requires out-of-office confirmation)
+
+  - id: bp_stage2_hypertension
+    title: Stage 2 Hypertension
+    description: Systolic >=140 OR Diastolic >=90 mmHg
+    expression: $systolic_bp >= 140 or $diastolic_bp >= 90
+    narrative:
+      patient:
+        True: |
+          Your blood pressure ($systolic_bp/$diastolic_bp mmHg) indicates __Stage 2 Hypertension__.
+
+          This is a significantly elevated reading that requires prompt medical attention and confirmation.
+        False: Your blood pressure is not in the Stage 2 hypertension range
+      provider:
+        True: BP $systolic_bp/$diastolic_bp mmHg - Stage 2 HTN (requires confirmation and likely treatment)
+
+  - id: hypertensive_crisis
+    title: Hypertensive Crisis
+    description: Systolic >180 OR Diastolic >120 mmHg
+    expression: $systolic_bp > 180 or $diastolic_bp > 120
+    narrative:
+      patient:
+        True: |
+          __URGENT:__ Your blood pressure ($systolic_bp/$diastolic_bp mmHg) is severely elevated.
+
+          This is a hypertensive crisis. Seek immediate medical attention if you experience symptoms
+          such as chest pain, shortness of breath, severe headache, or vision changes.
+        False: Your blood pressure is not in the crisis range
+      provider:
+        True: "**HYPERTENSIVE CRISIS** - BP $systolic_bp/$diastolic_bp mmHg - Immediate evaluation needed"
+
+  # Risk Assessment
+  - id: is_black_race
+    title: Black/African American Race
+    description: Black race is associated with higher hypertension risk
+    expression: $Ethnicity == "urn:oid:2.16.840.1.113883.6.238|2054-5" or $Ethnicity == "urn:oid:2.16.840.1.113883.6.238|2058-6" or $Ethnicity == "urn:oid:2.16.840.1.113883.6.238|2060-2"
+    required: False
+    narrative:
+      patient:
+        True: You are Black/African American, which is associated with higher risk of hypertension
+      provider:
+        True: Patient is Black/African American - increased HTN risk population
+
+  - id: high_normal_bp
+    title: High-Normal Blood Pressure
+    description: BP in the elevated or stage 1 range
+    expression: $bp_elevated is True or $bp_stage1_hypertension is True
+    required: False
+    narrative:
+      patient:
+        True: Your blood pressure is in the high-normal range, which increases your risk
+      provider:
+        True: High-normal BP - increased risk population
+
+  - id: bmi_overweight
+    title: BMI Indicates Overweight/Obese
+    description: BMI >= 25 indicates overweight, >= 30 indicates obesity
+    expression: $BMI >= 25
+    required: False
+    narrative:
+      patient:
+        True: Your BMI of $BMI indicates you are overweight or obese, which increases hypertension risk
+        False: Your BMI is in the normal range
+      provider:
+        True: BMI $BMI - overweight/obese (increased HTN risk)
+
+  - id: increased_risk_population
+    title: Increased Risk for Hypertension
+    description: Person is in a population at increased risk for hypertension
+    expression: $Age >= 40 or $is_black_race is True or $high_normal_bp is True or $bmi_overweight is True or $overweight_obese is True or $family_history_hypertension is True or $is_smoker is True or $diabetes_mellitus is True
+    narrative:
+      patient:
+        True: |
+          You are in a population at __increased risk__ for developing hypertension based on one or more factors:
+          - Age 40 or older
+          - Black/African American race
+          - High-normal blood pressure readings
+          - Overweight or obesity
+          - Family history of hypertension
+          - Tobacco use
+          - Diabetes
+        False: You do not have identified risk factors for increased hypertension risk
+      provider:
+        True: Patient is in increased-risk population for HTN - recommend annual screening
+        False: Patient not in increased-risk population - standard screening interval appropriate
+
+  - id: young_low_risk
+    title: Young Adult with Low Risk
+    description: Adult 18-39 without increased risk factors
+    expression: $Age >= 18 and $Age < 40 and $increased_risk_population is not True
+    narrative:
+      patient:
+        True: You are a younger adult without identified increased risk factors for hypertension
+      provider:
+        True: Patient is 18-39 years without increased risk factors
+
+
+#--------------------------------------------------------
+# Recommendations
+recommendations:
+
+  - id: annual_screening
+    title: Annual Blood Pressure Screening
+    category: medication
+    description: Recommend annual blood pressure screening for adults at increased risk
+    expression: $increased_risk_population is True
+    narrative:
+      patient:
+        True: |
+          ## Annual Blood Pressure Screening Recommended
+
+          Based on your risk profile, the USPSTF recommends __annual__ blood pressure screening.
+
+          You have one or more factors that increase your risk for hypertension:
+          - Age 40 years or older
+          - Black/African American race
+          - High-normal blood pressure
+          - Overweight or obesity
+          - Family history of high blood pressure
+          - Tobacco use
+          - Diabetes
+
+          Regular screening helps detect high blood pressure early when treatment is most effective.
+        False: Standard screening intervals apply to you
+      provider:
+        True: |
+          **USPSTF Grade A Recommendation**
+
+          Annual BP screening indicated based on increased-risk population status.
+
+          Risk factors present: Age $Age, Ethnicity $Ethnicity
+
+          Screen with office BP measurement (OBPM). Confirm elevated readings with ambulatory (ABPM)
+          or home (HBPM) monitoring before initiating treatment.
+    citations:
+      - 'The USPSTF recommends screening for hypertension in adults 18 years or older with office blood pressure measurement.'
+      - 'The USPSTF suggests screening adults 40 years or older and those at increased risk for hypertension annually.'
+    class_of_recommendation: I
+    level_of_evidence: A
+    uspstf_grade: A
+
+  - id: standard_screening
+    title: Blood Pressure Screening Every 3-5 Years
+    category: medication
+    description: Standard screening interval for young adults without increased risk
+    expression: $young_low_risk is True and $bp_normal is True
+    narrative:
+      patient:
+        True: |
+          ## Blood Pressure Screening Every 3-5 Years
+
+          Based on your age ($Age years) and risk profile, the USPSTF recommends blood pressure
+          screening __every 3 to 5 years__.
+
+          You are a younger adult (18-39 years) without identified risk factors and with
+          prior normal blood pressure readings.
+
+          Continue healthy lifestyle habits to maintain your blood pressure.
+        False: More frequent screening may be indicated based on your risk factors
+      provider:
+        True: |
+          Patient is 18-39 years without increased risk factors and with normal BP.
+
+          USPSTF suggests screening every 3-5 years.
+    citations:
+      - 'The USPSTF suggests adults aged 18 to 39 years who are not at increased risk and have a prior normal blood pressure reading be screened every 3 to 5 years.'
+    class_of_recommendation: I
+    level_of_evidence: A
+    uspstf_grade: A
+
+  - id: confirm_with_abpm_hbpm
+    title: Confirm Elevated BP Before Treatment
+    category: evaluation
+    description: Obtain out-of-office BP measurements to confirm hypertension diagnosis
+    expression: $bp_stage1_hypertension is True or $bp_stage2_hypertension is True
+    narrative:
+      patient:
+        True: |
+          ## Confirm Your Blood Pressure Before Starting Treatment
+
+          Your office blood pressure reading ($systolic_bp/$diastolic_bp mmHg) is elevated.
+
+          Before starting any treatment, the USPSTF recommends confirming this reading with
+          blood pressure measurements __outside of the clinical setting__:
+
+          - **Ambulatory Blood Pressure Monitoring (ABPM)**: A device worn for 12-24 hours
+            that automatically takes readings every 20-30 minutes
+          - **Home Blood Pressure Monitoring (HBPM)**: Self-measurements using a validated
+            automated device, typically 1-2 times daily over several days
+
+          This helps ensure an accurate diagnosis and avoids unnecessary treatment.
+        False: Blood pressure confirmation not indicated at this time
+      provider:
+        True: |
+          **Diagnostic Confirmation Required**
+
+          Office BP $systolic_bp/$diastolic_bp mmHg suggests hypertension.
+
+          USPSTF recommends obtaining out-of-office BP measurements (ABPM or HBPM)
+          for diagnostic confirmation before initiating treatment.
+
+          - ABPM: Automated measurements every 20-30 min over 12-24 hours
+          - HBPM: Patient self-measurement 1-2x daily using validated device
+    citations:
+      - 'The USPSTF recommends obtaining blood pressure measurements outside of the clinical setting for diagnostic confirmation before starting treatment.'
+    class_of_recommendation: I
+    level_of_evidence: A
+    uspstf_grade: A
+
+  - id: lifestyle_modifications
+    title: Lifestyle Modifications for Elevated BP
+    category: display
+    description: Recommend lifestyle changes to prevent progression to hypertension
+    expression: $bp_elevated is True or $bp_stage1_hypertension is True
+    narrative:
+      patient:
+        True: |
+          ## Lifestyle Changes to Lower Blood Pressure
+
+          Your blood pressure ($systolic_bp/$diastolic_bp mmHg) is elevated.
+          The following lifestyle changes can help lower your blood pressure:
+
+          - **Reduce sodium intake**: Aim for less than 2,300 mg per day (ideally 1,500 mg)
+          - **DASH diet**: Emphasize fruits, vegetables, whole grains, and low-fat dairy
+          - **Physical activity**: At least 150 minutes of moderate-intensity exercise per week
+          - **Weight management**: Losing even 5-10 pounds can lower blood pressure
+          - **Limit alcohol**: No more than 1 drink/day for women, 2 for men
+          - **Quit smoking**: Tobacco raises blood pressure and heart disease risk
+          - **Manage stress**: Practice relaxation techniques
+
+          These changes can significantly reduce your risk of developing hypertension.
+        False: Continue healthy lifestyle habits
+      provider:
+        True: |
+          Counsel patient on lifestyle modifications for BP reduction:
+          - Sodium restriction (<2300 mg/day, ideally <1500 mg)
+          - DASH diet
+          - Regular aerobic exercise (150 min/week moderate intensity)
+          - Weight loss if overweight/obese
+          - Alcohol moderation
+          - Smoking cessation
+    citations:
+      - 'Lifestyle modifications including dietary changes, physical activity, and weight management are effective first-line interventions for elevated blood pressure.'
+    class_of_recommendation: I
+    level_of_evidence: B-R
+
+  - id: urgent_evaluation_crisis
+    title: Urgent Evaluation for Hypertensive Crisis
+    category: medication
+    description: Immediate medical evaluation for severely elevated blood pressure
+    expression: $hypertensive_crisis is True
+    narrative:
+      patient:
+        True: |
+          ## URGENT: Severely Elevated Blood Pressure
+
+          Your blood pressure reading ($systolic_bp/$diastolic_bp mmHg) is severely elevated.
+
+          **Seek immediate medical attention if you experience any of these symptoms:**
+          - Severe headache
+          - Chest pain
+          - Shortness of breath
+          - Vision changes
+          - Confusion
+          - Nausea or vomiting
+
+          Even without symptoms, blood pressure this high requires prompt medical evaluation.
+        False: Your blood pressure is not in the crisis range
+      provider:
+        True: |
+          **HYPERTENSIVE CRISIS - URGENT**
+
+          BP $systolic_bp/$diastolic_bp mmHg
+
+          Immediate evaluation required. Assess for:
+          - Target organ damage (cardiac, renal, neurologic, ophthalmologic)
+          - Hypertensive emergency vs urgency
+          - Secondary causes
+
+          Consider immediate treatment if evidence of acute end-organ damage.
+    citations:
+      - 'Hypertensive crisis (BP >180/120 mmHg) requires prompt evaluation and management.'
+    class_of_recommendation: I
+    level_of_evidence: C_EO
+
+  - id: display_understanding_bp
+    category: display_patient
+    title: Understanding Blood Pressure
+    description: Educational content about blood pressure
+    expression: True
+    narrative:
+      patient:
+        True: |
+          ## Understanding Your Blood Pressure
+
+          Blood pressure is measured in millimeters of mercury (mmHg) and written as two numbers:
+
+          - **Systolic (top number)**: Pressure when your heart beats
+          - **Diastolic (bottom number)**: Pressure when your heart rests between beats
+
+          ### Blood Pressure Categories
+
+          | Category | Systolic | | Diastolic |
+          |----------|----------|---|-----------|
+          | Normal | <120 | and | <80 |
+          | Elevated | 120-129 | and | <80 |
+          | Stage 1 HTN | 130-139 | or | 80-89 |
+          | Stage 2 HTN | >=140 | or | >=90 |
+          | Crisis | >180 | or | >120 |
+
+          ### Why It Matters
+
+          High blood pressure (hypertension) is called the "silent killer" because it often has
+          no symptoms but significantly increases your risk of:
+          - Heart attack
+          - Stroke
+          - Kidney disease
+          - Vision loss
+          - Heart failure
+
+  - id: display_proper_measurement
+    category: display_patient
+    title: How to Measure Blood Pressure Correctly
+    description: Instructions for accurate blood pressure measurement
+    expression: True
+    narrative:
+      patient:
+        True: |
+          ## Taking an Accurate Blood Pressure Reading
+
+          For the most accurate results:
+
+          **Before the measurement:**
+          - Avoid caffeine, exercise, and smoking for 30 minutes
+          - Empty your bladder
+          - Rest quietly for 5 minutes
+
+          **During the measurement:**
+          - Sit with your back supported and feet flat on the floor
+          - Rest your arm on a flat surface at heart level
+          - Do not talk during the reading
+          - Use a properly sized cuff (covers 80% of your upper arm)
+
+          **For home monitoring:**
+          - Take readings at the same time each day
+          - Take 2-3 readings, 1 minute apart
+          - Record all readings to share with your healthcare provider
+          - Use a validated, automated device

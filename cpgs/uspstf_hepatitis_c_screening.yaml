@@ -1,0 +1,311 @@
+CPG:
+  identifier: uspstf_hepatitis_c_screening
+  title: "USPSTF Hepatitis C Virus Screening"
+  publisher: "United States Preventive Services Task Force"
+  uri: "https://www.uspreventiveservicestaskforce.org/uspstf/recommendation/hepatitis-c-screening"
+  type: [screening, preventive]
+  revision: 1.0
+  revision_date: 2024-01-15
+  description: >
+    USPSTF Grade B recommendation for hepatitis C virus (HCV) screening in adults aged 18 to 79 years.
+    One-time screening is recommended for all adults in this age range, with periodic screening for
+    those with ongoing risk factors such as injection drug use.
+
+
+variables:
+  - id: Age
+    title: "Age"
+    type: integer
+    required: True
+    code:
+      concord: ['Age']
+
+  - id: known_hcv_positive
+    title: "Known HCV Positive Status"
+    type: boolean
+    required: False
+    user_attestable: True
+    code:
+      snomed: ["128302006"]
+    llm_prompt: |
+      Does the patient have known hepatitis C (HCV)?
+      Look for: hepatitis C, HCV positive, chronic HCV, treated for HCV.
+      Return: true if HCV positive, false if HCV negative, null if not mentioned.
+
+  - id: has_had_hcv_test
+    title: "Has Had HCV Test Before"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Has the patient been tested for hepatitis C before?
+      Look for: HCV test, hepatitis C screening, HCV antibody test.
+      Return: true if previously tested, false if never tested, null if not mentioned.
+
+  - id: last_hcv_test_negative
+    title: "Last HCV Test Was Negative"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Was the patient's last HCV test negative?
+      Look for: HCV negative, hepatitis C negative.
+      Return: true if last test negative, false if positive, null if not mentioned.
+
+  # Risk Factors
+  - id: current_injection_drug_use
+    title: "Current Injection Drug Use"
+    type: boolean
+    required: False
+    user_attestable: True
+    code:
+      snomed: ["226034001"]
+    llm_prompt: |
+      Does the patient currently use injection drugs?
+      Look for: current IV drug use, active IVDU, currently injects drugs.
+      Return: true if current injection drug use, false if denied, null if not mentioned.
+
+  - id: past_injection_drug_use
+    title: "Past Injection Drug Use"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Does the patient have a history of past injection drug use?
+      Look for: former IV drug user, history of IVDU, previous injection drug use,
+      used to inject drugs.
+      Return: true if past injection drug use, false if denied, null if not mentioned.
+
+  - id: received_blood_transfusion_before_1992
+    title: "Received Blood Transfusion Before 1992"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Did the patient receive a blood transfusion before 1992?
+      Look for: blood transfusion history, received blood products before 1992.
+      Note: HCV screening of blood supply began in 1992.
+      Return: true if transfusion before 1992, false if after or none, null if not mentioned.
+
+  - id: long_term_hemodialysis
+    title: "Long-term Hemodialysis"
+    type: boolean
+    required: False
+    user_attestable: True
+    code:
+      snomed: ["302497006"]
+    llm_prompt: |
+      Is the patient on long-term hemodialysis?
+      Look for: hemodialysis, dialysis, HD, ESRD on dialysis, renal replacement therapy.
+      Return: true if on hemodialysis, false if not, null if not mentioned.
+
+  - id: born_to_hcv_positive_mother
+    title: "Born to HCV-Positive Mother"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Was the patient born to an HCV-positive mother?
+      Look for: mother had hepatitis C, maternal HCV.
+      Return: true if mother was HCV positive, false if denied, null if not mentioned.
+
+  - id: incarceration_history
+    title: "History of Incarceration"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Does the patient have a history of incarceration?
+      Look for: prison, jail, incarcerated, correctional facility, detained.
+      Return: true if incarceration history, false if denied, null if not mentioned.
+
+  - id: intranasal_drug_use
+    title: "Intranasal Drug Use"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Does the patient use intranasal drugs (snorting)?
+      Look for: snorts drugs, intranasal cocaine, snorts cocaine, nasal drug use.
+      Return: true if intranasal drug use, false if denied, null if not mentioned.
+
+  - id: unregulated_tattoo
+    title: "Unregulated Tattoo or Piercing"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Does the patient have tattoos or piercings from unregulated settings?
+      Look for: prison tattoo, amateur tattoo, non-professional piercing, tattoo outside licensed shop.
+      Return: true if unregulated tattoo/piercing, false if professional only, null if not mentioned.
+
+  - id: hiv_positive
+    title: "HIV Positive"
+    type: boolean
+    required: False
+    user_attestable: True
+    code:
+      snomed: ["86406008"]
+    llm_prompt: |
+      Is the patient HIV positive?
+      Look for: HIV positive, HIV+, AIDS, on antiretroviral therapy.
+      Return: true if HIV positive, false if HIV negative, null if not mentioned.
+
+
+eligibility:
+  - id: not_known_hcv_positive
+    title: "Not Already Known HCV Positive"
+    expression: $known_hcv_positive is not True
+    narrative:
+      patient:
+        True: "These HCV screening recommendations apply to people who do not already have hepatitis C."
+        False: "Since you have hepatitis C, you should be receiving HCV care rather than screening."
+
+  - id: age_eligible
+    title: "Age Eligible for Screening"
+    expression: $Age >= 18
+    narrative:
+      patient:
+        True: "You are eligible for HCV screening based on your age."
+        False: "HCV screening is primarily recommended for adults 18 years and older."
+
+
+assessments:
+  - id: age_18_to_79
+    title: "Age 18-79 (Universal Screening Population)"
+    expression: $Age >= 18 and $Age <= 79
+    narrative:
+      patient:
+        True: "You are in the age range (18-79 years) for which universal HCV screening is recommended."
+        False: "You are outside the 18-79 age range for universal screening."
+
+  - id: age_under_18
+    title: "Under Age 18"
+    expression: $Age < 18
+
+  - id: age_over_79
+    title: "Over Age 79"
+    expression: $Age > 79
+
+  - id: has_injection_drug_use_risk
+    title: "Has Injection Drug Use Risk"
+    expression: $current_injection_drug_use is True or $past_injection_drug_use is True
+    narrative:
+      patient:
+        True: "Injection drug use is the most important risk factor for HCV infection."
+        False: "You have not reported injection drug use."
+
+  - id: has_other_risk_factors
+    title: "Has Other HCV Risk Factors"
+    expression: $received_blood_transfusion_before_1992 is True or $long_term_hemodialysis is True or $born_to_hcv_positive_mother is True or $incarceration_history is True or $intranasal_drug_use is True or $unregulated_tattoo is True or $hiv_positive is True
+    narrative:
+      patient:
+        True: "You have risk factors that increase your chance of HCV infection."
+
+  - id: has_any_risk_factor
+    title: "Has Any HCV Risk Factor"
+    expression: $has_injection_drug_use_risk is True or $has_other_risk_factors is True
+    narrative:
+      patient:
+        True: "Based on your risk factors, HCV screening is especially important for you."
+        False: "You have not reported specific risk factors for HCV."
+
+  - id: has_ongoing_risk
+    title: "Has Ongoing Risk for HCV"
+    expression: $current_injection_drug_use is True
+    narrative:
+      patient:
+        True: "You have ongoing risk for HCV infection and may need periodic screening."
+
+  - id: never_screened
+    title: "Never Screened for HCV"
+    expression: $has_had_hcv_test is not True
+    narrative:
+      patient:
+        True: "You have not been screened for hepatitis C."
+        False: "You have been screened for hepatitis C before."
+
+  - id: needs_initial_screening
+    title: "Needs Initial HCV Screening"
+    expression: $age_18_to_79 is True and $never_screened is True
+    narrative:
+      patient:
+        True: "As an adult aged 18-79 who has not been screened, you should receive HCV testing."
+
+  - id: previously_screened_negative
+    title: "Previously Screened Negative"
+    expression: $has_had_hcv_test is True and $last_hcv_test_negative is True
+
+  - id: needs_repeat_screening
+    title: "Needs Repeat Screening Due to Ongoing Risk"
+    expression: $has_ongoing_risk is True and $previously_screened_negative is True
+    narrative:
+      patient:
+        True: "Because of ongoing risk factors, periodic HCV screening is recommended even though you tested negative before."
+
+
+recommendations:
+  - id: universal_screening_18_79
+    title: "Universal HCV Screening Recommended"
+    category: evaluation
+    expression: $needs_initial_screening is True
+    uspstf_grade: B
+    level_of_evidence: B-R
+    class_of_recommendation: I
+    narrative:
+      patient:
+        True: "The USPSTF recommends one-time screening for hepatitis C for all adults aged 18-79 years. You should discuss HCV testing with your healthcare provider."
+      provider:
+        True: "USPSTF Grade B: Screen for HCV infection in adults aged 18-79 years. Patient has no documented prior HCV test. Order HCV antibody test with reflex to HCV RNA if positive."
+
+  - id: screening_high_risk_younger
+    title: "HCV Screening for High-Risk Person Under 18"
+    category: evaluation
+    expression: $age_under_18 is True and $has_any_risk_factor is True
+    uspstf_grade: B
+    level_of_evidence: C-LD
+    class_of_recommendation: IIa
+    narrative:
+      patient:
+        True: "Although you are under 18, HCV testing is recommended because you have risk factors for hepatitis C."
+      provider:
+        True: "Consider HCV screening for adolescent with risk factors (injection drug use, born to HCV+ mother, etc.)."
+
+  - id: screening_high_risk_older
+    title: "HCV Screening for High-Risk Person Over 79"
+    category: evaluation
+    expression: $age_over_79 is True and $has_any_risk_factor is True and $never_screened is True
+    uspstf_grade: B
+    level_of_evidence: C-LD
+    class_of_recommendation: IIa
+    narrative:
+      patient:
+        True: "Although you are over 79, HCV testing is recommended because you have risk factors for hepatitis C."
+      provider:
+        True: "Consider HCV screening for adult over 79 with risk factors who has never been screened."
+
+  - id: periodic_screening_ongoing_risk
+    title: "Periodic Screening for Ongoing Risk"
+    category: evaluation
+    expression: $needs_repeat_screening is True
+    uspstf_grade: B
+    level_of_evidence: C-LD
+    class_of_recommendation: IIa
+    narrative:
+      patient:
+        True: "Because of ongoing risk factors like current injection drug use, you should be screened for HCV periodically, even if previous tests were negative."
+      provider:
+        True: "Patient has ongoing HCV risk (current IDU). Periodic rescreening is recommended. Frequency should be based on clinical judgment and ongoing risk level."
+
+  - id: one_time_screening_sufficient
+    title: "One-Time Screening Sufficient"
+    category: display_patient
+    expression: $previously_screened_negative is True and $has_ongoing_risk is not True
+    uspstf_grade: B
+    level_of_evidence: B-R
+    class_of_recommendation: I
+    narrative:
+      patient:
+        True: "Since you have been screened for HCV and tested negative, and you do not have ongoing risk factors, additional screening is generally not needed."
+      provider:
+        True: "Patient previously screened negative for HCV without ongoing risk factors. Repeat screening not routinely indicated."

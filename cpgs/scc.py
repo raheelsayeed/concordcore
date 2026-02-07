@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
+"""Screening for cervical cancer (SCC) CPG functions."""
+
+import logging
 from datetime import datetime, date, timedelta
 from primitives.errors import VariableEvaluationError
+
+log = logging.getLogger(__name__)
 
 today = datetime.now().date()
 
@@ -36,29 +41,27 @@ def nextDatePolicy_hrHPVTest_Alone(healthcontext):
     return get_next_date(test_date, interval) 
 
 
-def nextDatePolicy_CoTesting(healthcontext): 
-    # 5 years with CoTesting alone
-    print('Do not know code for co-testing, therefore, checking both Pap and hrHPV')
+def nextDatePolicy_CoTesting(healthcontext):
+    """Calculate next date for co-testing (5 years with cotesting)."""
+    log.debug('Checking both Pap and hrHPV for co-testing policy')
     pap_date = healthcontext['cervical_cytology_labtest'].date.date()
     hrhpv_date = (healthcontext['hpv_test'].date.date())
 
-    # if both tests done within a month, assume-- Co_tested
+    # if both tests done within a month, assume co-tested
     if pap_date and hrhpv_date:
         within_a_month = (pap_date - hrhpv_date).days < 30
         if within_a_month:
             return get_next_date(hrhpv_date, 5 * 365)
 
     if pap_date:
-        #Q: If pap_date done within 3 years, the next cotesting should be done when?
         # Cotesting done after 3 years
         return get_next_date(pap_date, 3 * 365)
-
 
     if hrhpv_date:
         # cotesting done after 5 years
         return get_next_date(hrhpv_date, 5 * 365)
 
-    print('no history of tests done')
+    log.debug('No history of tests done')
     return today
 
 
@@ -67,15 +70,16 @@ def nextDatePolicy_CoTesting(healthcontext):
 
 
 def nextDate_PapTest_Age21_29(healthcontext):
-
-    print('>>>> age')    
+    """Calculate next Pap test date for ages 21-29."""
     age = healthcontext['Age'].value
-    print('>>>> GIT IT', age)
-    
-    if age < 21 or age > 29:
-        raise VariableEvaluationError([ValueError(f'Function errorAge out of range {age}')], 'nextDate_PapTest_Age21_29')
+    log.debug(f'Calculating next Pap test for age={age}')
 
-    print('>>>> age', age)
+    if age < 21 or age > 29:
+        raise VariableEvaluationError(
+            [ValueError(f'Age out of range: {age}')],
+            'nextDate_PapTest_Age21_29'
+        )
+
     return nextDatePolicy_PapTest_Alone(healthcontext)
     
 

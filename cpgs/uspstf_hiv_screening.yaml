@@ -1,0 +1,464 @@
+CPG:
+  identifier: uspstf_hiv_screening
+  title: "USPSTF HIV Screening"
+  publisher: "United States Preventive Services Task Force"
+  uri: "https://www.uspreventiveservicestaskforce.org/uspstf/recommendation/human-immunodeficiency-virus-hiv-infection-screening"
+  type: [screening, preventive]
+  revision: 1.0
+  revision_date: 2024-01-15
+  description: >
+    USPSTF Grade A recommendation for HIV screening in adolescents, adults, and pregnant persons.
+    Screening recommended for all persons aged 15-65 years, younger adolescents and older adults
+    at increased risk, and all pregnant persons.
+
+
+variables:
+  # Demographics
+  - id: Age
+    title: "Age"
+    type: integer
+    required: True
+    code:
+      concord: ['Age']
+
+  - id: is_pregnant
+    title: "Currently Pregnant"
+    type: boolean
+    required: False
+    user_attestable: True
+    code:
+      snomed: ["77386006"]
+    llm_prompt: |
+      Is the patient currently pregnant?
+      Look for: pregnant, pregnancy, gravid, expecting, prenatal care.
+      Return: true if pregnant, false if not pregnant, null if not mentioned.
+
+  - id: in_labor
+    title: "Currently in Labor"
+    type: boolean
+    required: False
+    user_attestable: False
+    llm_prompt: |
+      Is the patient currently in labor?
+      Look for: in labor, active labor, labor and delivery, contractions.
+      Return: true if in labor, false if not, null if not mentioned.
+
+  # HIV Status
+  - id: known_hiv_positive
+    title: "Known HIV Positive Status"
+    type: boolean
+    required: False
+    user_attestable: True
+    code:
+      snomed: ["86406008"]
+    llm_prompt: |
+      Does the patient have a known HIV positive status?
+      Look for: HIV positive, HIV+, HIV diagnosis, on antiretroviral therapy (ART), AIDS.
+      Return: true if HIV positive, false if HIV negative documented, null if not mentioned.
+
+  - id: has_had_hiv_test
+    title: "Has Had HIV Test Before"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Has the patient ever been tested for HIV?
+      Look for: HIV test, HIV screening, prior HIV testing.
+      Return: true if previously tested, false if never tested, null if not mentioned.
+
+  - id: last_hiv_test_date
+    title: "Date of Last HIV Test"
+    type: date
+    required: False
+    user_attestable: False
+    code:
+      loinc: ["75622-1"]
+
+  - id: last_hiv_test_negative
+    title: "Last HIV Test Result Negative"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Was the patient's last HIV test negative?
+      Look for: HIV negative, HIV test negative.
+      Return: true if last test was negative, false if positive, null if not mentioned.
+
+  # Risk Factors - Sexual Behaviors
+  - id: msm
+    title: "Man Who Has Sex with Men"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Is the patient a man who has sex with men (MSM)?
+      Look for: MSM, gay, bisexual man, sex with men.
+      Return: true if MSM, false if explicitly denied, null if not mentioned.
+
+  - id: multiple_sex_partners
+    title: "Multiple Sex Partners"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Does the patient have multiple sexual partners?
+      Look for: multiple partners, several partners, new partners, non-monogamous.
+      Return: true if multiple partners, false if monogamous, null if not mentioned.
+
+  - id: unprotected_sex
+    title: "Unprotected Anal or Vaginal Intercourse"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Does the patient engage in unprotected sex?
+      Look for: unprotected sex, condomless sex, no barrier protection.
+      Return: true if unprotected sex, false if always uses protection, null if not mentioned.
+
+  - id: transactional_sex
+    title: "Transactional Sex"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Does the patient engage in transactional sex (sex for money, drugs, or shelter)?
+      Look for: sex work, prostitution, exchange sex, survival sex.
+      Return: true if transactional sex, false if denied, null if not mentioned.
+
+  - id: partner_hiv_positive
+    title: "Sex Partner is HIV Positive"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Does the patient have a sexual partner who is HIV positive?
+      Look for: HIV positive partner, partner with HIV, serodiscordant relationship.
+      Return: true if partner is HIV positive, false if partner negative, null if not mentioned.
+
+  - id: partner_high_risk
+    title: "Sex Partner Has High-Risk Behaviors"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Does the patient have a sexual partner with high-risk behaviors?
+      Look for: partner who injects drugs, partner with multiple partners, bisexual partner.
+      Return: true if partner has high-risk behaviors, false if denied, null if not mentioned.
+
+  # Risk Factors - Injection Drug Use
+  - id: injection_drug_use
+    title: "Injection Drug Use"
+    type: boolean
+    required: False
+    user_attestable: True
+    code:
+      snomed: ["226034001"]
+    llm_prompt: |
+      Does the patient use injection drugs?
+      Look for: IV drug use, IVDU, injection drug use, injects drugs, heroin use,
+      intravenous drug use.
+      Return: true if injection drug use, false if denied, null if not mentioned.
+
+  - id: shares_needles
+    title: "Shares Needles or Injection Equipment"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Does the patient share needles or injection equipment?
+      Look for: shares needles, shares syringes, shares injection equipment.
+      Return: true if shares needles, false if uses clean needles, null if not mentioned.
+
+  # Other Risk Factors
+  - id: has_sti
+    title: "Has Sexually Transmitted Infection"
+    type: boolean
+    required: False
+    user_attestable: True
+    code:
+      snomed: ["8098009"]
+    llm_prompt: |
+      Does the patient have a sexually transmitted infection (STI)?
+      Look for: STI, STD, sexually transmitted disease, gonorrhea, chlamydia, syphilis,
+      herpes, HPV (genital warts).
+      Return: true if STI present, false if denied, null if not mentioned.
+
+  - id: requested_sti_testing
+    title: "Requested STI Testing"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Has the patient requested STI testing?
+      Look for: requesting STI test, concerned about STI exposure, wants STI screening.
+      Return: true if requested STI testing, false if not, null if not mentioned.
+
+  # High Prevalence Setting
+  - id: high_prevalence_setting
+    title: "Receives Care in High-Prevalence Setting"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Does the patient receive care in a high HIV prevalence setting?
+      Look for: STD clinic, TB clinic, correctional facility, homeless shelter,
+      substance abuse treatment center.
+      Return: true if high prevalence setting, false if standard clinic, null if not mentioned.
+
+  # Screening Interval Tracking
+  - id: months_since_last_hiv_test
+    title: "Months Since Last HIV Test"
+    type: integer
+    required: False
+    user_attestable: False
+
+
+eligibility:
+
+  - id: not_known_hiv_positive
+    title: "Not Already Known HIV Positive"
+    expression: $known_hiv_positive is not True
+    narrative:
+      patient:
+        True: "These HIV screening recommendations apply to people who do not already have a known HIV diagnosis."
+        False: "Since you have a known HIV positive status, you should be receiving HIV care rather than screening."
+
+  - id: age_eligible_or_special_criteria
+    title: "Age Eligible or Has Special Criteria"
+    expression: $Age >= 10 or $is_pregnant is True
+    narrative:
+      patient:
+        True: "You are eligible for HIV screening recommendations."
+        False: "These screening recommendations typically apply to those 10 years and older."
+
+
+assessments:
+  # Age-based eligibility
+  - id: age_15_to_65
+    title: "Age 15-65 (Routine Screening Population)"
+    expression: $Age >= 15 and $Age <= 65
+    narrative:
+      patient:
+        True: "You are in the age range (15-65 years) for which routine HIV screening is recommended for everyone."
+        False: "You are outside the 15-65 age range; screening is recommended if you have risk factors."
+
+  - id: age_under_15
+    title: "Under Age 15"
+    expression: $Age < 15
+
+  - id: age_over_65
+    title: "Over Age 65"
+    expression: $Age > 65
+
+  # Pregnancy status
+  - id: currently_pregnant
+    title: "Currently Pregnant"
+    expression: $is_pregnant is True
+    narrative:
+      patient:
+        True: "All pregnant persons should be screened for HIV."
+        False: "You are not currently pregnant."
+
+  - id: pregnant_in_labor_unknown_status
+    title: "Pregnant in Labor with Unknown HIV Status"
+    expression: $is_pregnant is True and $in_labor is True and $last_hiv_test_negative is not True
+    narrative:
+      patient:
+        True: "Urgent HIV testing is recommended for persons in labor without documented HIV status this pregnancy."
+
+  # Risk factor assessments
+  - id: has_sexual_risk_factors
+    title: "Has Sexual Risk Factors"
+    expression: $msm is True or $multiple_sex_partners is True or $unprotected_sex is True or $transactional_sex is True or $partner_hiv_positive is True or $partner_high_risk is True
+    narrative:
+      patient:
+        True: "You have reported sexual behaviors that increase HIV risk. More frequent HIV testing is recommended."
+        False: "You have not reported sexual behaviors that increase HIV risk."
+
+  - id: has_injection_risk
+    title: "Has Injection Drug Use Risk"
+    expression: $injection_drug_use is True or $shares_needles is True
+    narrative:
+      patient:
+        True: "Injection drug use is associated with increased HIV risk. Regular testing is recommended."
+        False: "You have not reported injection drug use."
+
+  - id: has_sti_indicator
+    title: "Has STI Indicator of Risk"
+    expression: $has_sti is True or $requested_sti_testing is True
+    narrative:
+      patient:
+        True: "Having an STI or seeking STI testing may indicate increased HIV risk."
+
+  - id: msm_high_risk
+    title: "MSM with High-Risk Behaviors"
+    expression: $msm is True and ($multiple_sex_partners is True or $unprotected_sex is True)
+    narrative:
+      patient:
+        True: "Men who have sex with men with multiple partners or unprotected sex may benefit from more frequent testing (every 3-6 months)."
+
+  - id: in_high_prevalence_setting
+    title: "Receives Care in High-Prevalence Setting"
+    expression: $high_prevalence_setting is True
+    narrative:
+      patient:
+        True: "You receive care in a high-prevalence setting where HIV testing is especially important."
+        False: "You do not receive care in a high-prevalence setting."
+
+  - id: has_any_increased_risk
+    title: "Has Any Increased Risk Factor"
+    expression: $has_sexual_risk_factors is True or $has_injection_risk is True or $has_sti_indicator is True or $in_high_prevalence_setting is True
+    narrative:
+      patient:
+        True: "Based on your risk factors, you should be tested for HIV and may benefit from repeat screening."
+        False: "You have not reported increased risk factors for HIV."
+
+  # Screening status
+  - id: never_tested
+    title: "Never Tested for HIV"
+    expression: $has_had_hiv_test is not True
+    narrative:
+      patient:
+        True: "You have not had an HIV test. Getting tested is recommended."
+        False: "You have been tested for HIV previously."
+
+  - id: needs_initial_screening
+    title: "Needs Initial HIV Screening"
+    expression: $age_15_to_65 is True and $never_tested is True
+    narrative:
+      patient:
+        True: "As someone aged 15-65 who has not been tested, you should receive an HIV screening test."
+
+  - id: tested_over_12_months_ago
+    title: "Last Test Over 12 Months Ago"
+    expression: $months_since_last_hiv_test is not None and $months_since_last_hiv_test > 12
+
+  - id: high_risk_needs_annual
+    title: "High Risk Needs Annual Testing"
+    expression: $has_any_increased_risk is True and ($never_tested is True or $tested_over_12_months_ago is True)
+    narrative:
+      patient:
+        True: "Based on your risk factors, you should have HIV testing at least annually."
+
+  - id: msm_needs_frequent_testing
+    title: "MSM May Benefit from Frequent Testing"
+    expression: $msm_high_risk is True and ($months_since_last_hiv_test is None or $months_since_last_hiv_test > 3)
+    narrative:
+      patient:
+        True: "Men who have sex with men with ongoing risk behaviors may benefit from HIV testing every 3-6 months."
+
+
+recommendations:
+  # Routine screening for all 15-65
+  - id: routine_screening_15_65
+    title: "Routine HIV Screening Recommended"
+    category: evaluation
+    expression: $age_15_to_65 is True and $never_tested is True
+    uspstf_grade: A
+    level_of_evidence: A
+    narrative:
+      patient:
+        True: "The USPSTF recommends that all adolescents and adults aged 15-65 years be screened for HIV at least once. You should discuss HIV testing with your healthcare provider."
+      provider:
+        True: "USPSTF Grade A: Screen all adolescents and adults 15-65 years for HIV. Patient has no documented prior HIV test. Order HIV 1/2 Ag/Ab immunoassay."
+
+  # Screening for at-risk younger/older
+  - id: screening_younger_at_risk
+    title: "HIV Screening for At-Risk Person Under 15"
+    category: evaluation
+    expression: $age_under_15 is True and $has_any_increased_risk is True
+    uspstf_grade: A
+    level_of_evidence: A
+    narrative:
+      patient:
+        True: "Although you are under 15, HIV testing is recommended because you have risk factors for HIV infection."
+      provider:
+        True: "USPSTF Grade A: Screen adolescents younger than 15 years who are at increased risk. Patient has documented risk factors. Order HIV testing."
+
+  - id: screening_older_at_risk
+    title: "HIV Screening for At-Risk Person Over 65"
+    category: evaluation
+    expression: $age_over_65 is True and $has_any_increased_risk is True
+    uspstf_grade: A
+    level_of_evidence: A
+    narrative:
+      patient:
+        True: "Although you are over 65, HIV testing is recommended because you have risk factors for HIV infection."
+      provider:
+        True: "USPSTF Grade A: Screen adults older than 65 years who are at increased risk. Patient has documented risk factors. Order HIV testing."
+
+  # Pregnancy screening
+  - id: pregnancy_screening
+    title: "HIV Screening in Pregnancy"
+    category: evaluation
+    expression: $currently_pregnant is True and $never_tested is True
+    uspstf_grade: A
+    level_of_evidence: A
+    narrative:
+      patient:
+        True: "All pregnant persons should be screened for HIV. Early detection allows treatment that significantly reduces the risk of transmitting HIV to your baby."
+      provider:
+        True: "USPSTF Grade A: Screen all pregnant persons for HIV. Early ART initiation substantially reduces perinatal transmission. Order HIV 1/2 Ag/Ab immunoassay."
+
+  - id: urgent_labor_screening
+    title: "Urgent HIV Testing in Labor"
+    category: evaluation
+    expression: $pregnant_in_labor_unknown_status is True
+    uspstf_grade: A
+    level_of_evidence: A
+    narrative:
+      patient:
+        True: "Urgent HIV testing is needed because you are in labor without a documented HIV test this pregnancy. If positive, immediate treatment can reduce transmission to your baby."
+      provider:
+        True: "URGENT: Patient in labor without documented HIV status. Order rapid HIV test immediately. If positive, initiate intrapartum ART prophylaxis per guidelines."
+
+  # Repeat screening for high-risk
+  - id: annual_screening_high_risk
+    title: "Annual HIV Screening for High-Risk Individuals"
+    category: evaluation
+    expression: $high_risk_needs_annual is True
+    uspstf_grade: A
+    level_of_evidence: B-NR
+    narrative:
+      patient:
+        True: "Because of your risk factors, HIV testing at least once per year is recommended. Regular testing helps ensure early detection if exposure occurs."
+      provider:
+        True: "USPSTF supports repeat screening for individuals at increased risk. CDC recommends at least annual testing. Patient has risk factors and is due for screening."
+
+  - id: frequent_screening_msm
+    title: "More Frequent Testing for High-Risk MSM"
+    category: evaluation
+    expression: $msm_needs_frequent_testing is True
+    uspstf_grade: A
+    level_of_evidence: B-NR
+    narrative:
+      patient:
+        True: "For men who have sex with men with ongoing risk behaviors, HIV testing every 3-6 months may be appropriate. Discuss the right testing frequency with your healthcare provider."
+      provider:
+        True: "Consider more frequent HIV testing (every 3-6 months) for MSM with ongoing high-risk behaviors. Also discuss PrEP if not already on it."
+
+  # PrEP consideration
+  - id: consider_prep
+    title: "Consider HIV Pre-Exposure Prophylaxis (PrEP)"
+    category: display_provider
+    expression: $has_any_increased_risk is True
+    uspstf_grade: A
+    level_of_evidence: A
+    narrative:
+      patient:
+        True: "Based on your risk factors, you may be a candidate for PrEP (Pre-Exposure Prophylaxis), a medication that significantly reduces the risk of getting HIV. Talk to your healthcare provider."
+      provider:
+        True: "Patient has HIV risk factors. Per USPSTF Grade A recommendation, discuss PrEP (Pre-Exposure Prophylaxis) if patient is HIV-negative. See USPSTF PrEP recommendation for prescribing guidance."
+
+  # High prevalence setting
+  - id: repeat_screening_high_prevalence
+    title: "Repeat Screening in High-Prevalence Setting"
+    category: evaluation
+    expression: $in_high_prevalence_setting is True and $tested_over_12_months_ago is True
+    uspstf_grade: A
+    level_of_evidence: B-NR
+    narrative:
+      patient:
+        True: "Because you receive care in a setting with higher HIV rates, regular HIV screening is recommended."
+      provider:
+        True: "Patient receives care in high-prevalence setting (STD clinic, TB clinic, correctional facility, or homeless shelter). Repeat screening is reasonable per USPSTF."

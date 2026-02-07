@@ -1,0 +1,870 @@
+CPG:
+  title: "USPSTF Prediabetes and Type 2 Diabetes Screening"
+  identifier: uspstf_diabetes_screening_2021
+  publisher: 'U.S. Preventive Services Task Force'
+  uri: https://www.uspreventiveservicestaskforce.org/uspstf/recommendation/screening-for-prediabetes-and-type-2-diabetes
+  doi: 10.1001/jama.2021.12531
+  type: [screening, preventive]
+  revision: 1.0
+  revision_date: 2024-01-15
+  description: >
+    The USPSTF recommends screening for prediabetes and type 2 diabetes in adults
+    aged 35 to 70 years who have overweight or obesity (Grade B). Clinicians should
+    offer or refer patients with prediabetes to effective preventive interventions.
+    Consider earlier screening for high-risk populations and lower BMI threshold
+    (>=23) for Asian Americans.
+
+
+# LOINC codes
+define: &fasting_glucose_code ["1558-6", "1554-5", "2345-7"]
+define: &hba1c_code ["4548-4", "17856-6"]
+define: &ogtt_code ["1518-0"]
+define: &bmi_code ["39156-5"]
+define: &weight_code ["29463-7", "3141-9"]
+define: &height_code ["8302-2"]
+
+
+variables:
+
+#--------------------------------------------------------
+# Demographics
+  - id: Age
+    title: Age
+    code:
+      concord: ['Age']
+
+  - id: Gender
+    title: Gender
+    required: False
+    code:
+      concord: ['Gender']
+
+  - id: Ethnicity
+    title: Race/Ethnicity
+    required: False
+    user_attestable: True
+    code:
+      concord: ['Ethnicity']
+    narrative:
+      patient:
+        HasValue: Your race/ethnicity is recorded as $value
+      provider:
+        HasValue: Race/Ethnicity $value
+
+#--------------------------------------------------------
+# Anthropometrics
+  - id: BMI
+    title: Body Mass Index
+    user_attestable: False
+    code:
+      loinc: *bmi_code
+    validator:
+      plausible: '$value > 10 and $value < 80'
+    narrative:
+      patient:
+        HasValue: Your BMI is $value kg/m2
+        NoValue: BMI not found in your records
+      provider:
+        HasValue: BMI $value ($self.date)
+
+  - id: weight_kg
+    title: Body Weight
+    user_attestable: True
+    required: False
+    code:
+      loinc: *weight_code
+    narrative:
+      patient:
+        HasValue: Your weight is $value
+
+  - id: height_cm
+    title: Height
+    user_attestable: True
+    required: False
+    code:
+      loinc: *height_code
+
+#--------------------------------------------------------
+# Laboratory Tests - Diabetes Screening
+  - id: fasting_glucose
+    title: Fasting Plasma Glucose
+    user_attestable: False
+    required: False
+    code:
+      loinc: *fasting_glucose_code
+    validator:
+      plausible: '$value > 20 and $value < 600'
+    narrative:
+      patient:
+        HasValue: Your fasting blood glucose is $value mg/dL (recorded $self.date)
+        NoValue: Fasting glucose test not found in your records
+      provider:
+        HasValue: Fasting glucose $value mg/dL ($self.date)
+
+  - id: HbA1c
+    title: Hemoglobin A1c
+    user_attestable: False
+    required: False
+    code:
+      loinc: *hba1c_code
+    validator:
+      plausible: '$value > 3.0 and $value < 20.0'
+    narrative:
+      patient:
+        HasValue: Your HbA1c (average blood sugar over 3 months) is $value% (recorded $self.date)
+        NoValue: HbA1c test not found in your records
+      provider:
+        HasValue: HbA1c $value% ($self.date)
+
+  - id: ogtt_2hr
+    title: 2-Hour Oral Glucose Tolerance Test
+    user_attestable: False
+    required: False
+    code:
+      loinc: *ogtt_code
+    validator:
+      plausible: '$value > 20 and $value < 600'
+    narrative:
+      patient:
+        HasValue: Your 2-hour glucose tolerance test result is $value mg/dL
+      provider:
+        HasValue: OGTT 2-hour $value mg/dL ($self.date)
+
+#--------------------------------------------------------
+# Existing Conditions
+  - id: known_diabetes
+    title: Known Diabetes Diagnosis
+    user_attestable: True
+    code:
+      snomed: ["44054006", "73211009", "46635009"]
+    llm_prompt: |
+      Does the patient have a known diagnosis of diabetes (Type 1 or Type 2)?
+      Look for: diabetes mellitus, DM, Type 1 diabetes, Type 2 diabetes, T1DM, T2DM,
+      on insulin for diabetes, on oral hypoglycemics.
+      Exclude: prediabetes, gestational diabetes (unless progressed to DM).
+      Return: true if diabetes diagnosed, false if denied, null if not mentioned.
+    narrative:
+      patient:
+        True: You have a diagnosis of diabetes in your medical record
+        False: No diabetes diagnosis found
+      provider:
+        True: Patient has documented diabetes diagnosis
+        False: No prior diabetes diagnosis
+
+  - id: known_prediabetes
+    title: Known Prediabetes Diagnosis
+    user_attestable: True
+    required: False
+    code:
+      snomed: ["15777000", "714628002"]
+    llm_prompt: |
+      Does the patient have prediabetes?
+      Look for: prediabetes, pre-diabetes, impaired fasting glucose, impaired glucose tolerance,
+      borderline diabetes, HbA1c 5.7-6.4%.
+      Return: true if prediabetes diagnosed, false if denied, null if not mentioned.
+    narrative:
+      patient:
+        True: You have been diagnosed with prediabetes
+        False: No prediabetes diagnosis found
+      provider:
+        True: Patient has documented prediabetes
+
+  - id: gestational_diabetes_history
+    title: History of Gestational Diabetes
+    user_attestable: True
+    required: False
+    type: boolean
+    code:
+      snomed: ["11687002"]
+    llm_prompt: |
+      Does the patient have a history of gestational diabetes?
+      Look for: gestational diabetes, GDM, diabetes during pregnancy, diabetes in pregnancy.
+      Return: true if gestational diabetes history, false if denied, null if not mentioned.
+    narrative:
+      patient:
+        True: You have a history of gestational diabetes (diabetes during pregnancy)
+        False: No history of gestational diabetes
+      provider:
+        True: History of gestational diabetes
+
+  - id: polycystic_ovary_syndrome
+    title: Polycystic Ovary Syndrome (PCOS)
+    user_attestable: True
+    required: False
+    type: boolean
+    code:
+      snomed: ["69878008"]
+    llm_prompt: |
+      Does the patient have polycystic ovary syndrome (PCOS)?
+      Look for: PCOS, polycystic ovary syndrome, polycystic ovarian syndrome.
+      Return: true if PCOS diagnosed, false if denied, null if not mentioned.
+    narrative:
+      patient:
+        True: You have been diagnosed with PCOS
+      provider:
+        True: History of PCOS
+
+#--------------------------------------------------------
+# Risk Factors
+  - id: family_history_diabetes
+    title: Family History of Diabetes
+    user_attestable: True
+    required: False
+    type: boolean
+    llm_prompt: |
+      Does the patient have a family history of diabetes?
+      Look for: first-degree relatives (parents, siblings) with diabetes, Type 1 or Type 2 diabetes.
+      Return: true if family history present, false if explicitly denied, null if not mentioned.
+    narrative:
+      patient:
+        True: You have a family history of diabetes (parent or sibling)
+        False: No family history of diabetes reported
+      provider:
+        True: Family history of diabetes in first-degree relative
+
+  - id: hypertension
+    title: Hypertension
+    user_attestable: True
+    required: False
+    code:
+      snomed: ["38341003"]
+    llm_prompt: |
+      Does the patient have hypertension?
+      Look for: hypertension, HTN, high blood pressure, on antihypertensive medications.
+      Return: true if hypertension present, false if denied, null if not mentioned.
+    narrative:
+      patient:
+        True: You have high blood pressure
+      provider:
+        True: History of hypertension
+
+  - id: dyslipidemia
+    title: Dyslipidemia
+    user_attestable: True
+    required: False
+    code:
+      snomed: ["55822004"]
+    llm_prompt: |
+      Does the patient have dyslipidemia (abnormal cholesterol)?
+      Look for: dyslipidemia, hyperlipidemia, high cholesterol, elevated LDL, low HDL,
+      elevated triglycerides, on statins.
+      Return: true if dyslipidemia present, false if denied, null if not mentioned.
+    narrative:
+      patient:
+        True: You have abnormal cholesterol levels
+      provider:
+        True: History of dyslipidemia
+
+  - id: cardiovascular_disease
+    title: History of Cardiovascular Disease
+    user_attestable: True
+    required: False
+    code:
+      snomed: ["49601007", "22298006"]
+    llm_prompt: |
+      Does the patient have cardiovascular disease?
+      Look for: CAD, coronary artery disease, heart attack, MI, angina, heart failure,
+      stroke, TIA, peripheral vascular disease.
+      Return: true if CVD present, false if denied, null if not mentioned.
+
+  - id: physical_inactivity
+    title: Physical Inactivity
+    user_attestable: True
+    required: False
+    type: boolean
+    llm_prompt: |
+      Is the patient physically inactive?
+      Look for: sedentary, inactive, no regular exercise, limited physical activity.
+      Return: true if inactive, false if exercises regularly, null if not mentioned.
+
+#--------------------------------------------------------
+# Current Medications
+  - id: on_metformin
+    title: Currently Taking Metformin
+    user_attestable: True
+    required: False
+    code:
+      rxnorm: ["6809", "860974", "860978", "860981", "860995", "860999", "861004", "861007", "861010", "861014"]
+    narrative:
+      patient:
+        True: You are currently taking metformin
+        False: You are not taking metformin
+      provider:
+        True: Patient on metformin therapy
+
+
+#--------------------------------------------------------
+# Eligibility
+eligibility:
+
+  - id: adult_age_range
+    title: Adult aged 35 to 70 years
+    expression: $Age >= 35 and $Age <= 70
+    narrative:
+      patient:
+        True: You are in the recommended screening age range (35-70 years)
+        False: This screening guideline is for adults aged 35 to 70 years
+      provider:
+        True: Patient meets age criteria (35-70 years)
+        False: Patient outside recommended age range
+
+  - id: no_known_diabetes
+    title: No known diabetes diagnosis
+    expression: $known_diabetes is not True
+    narrative:
+      patient:
+        True: You do not have a prior diagnosis of diabetes
+        False: You already have a diagnosis of diabetes - this screening does not apply
+      provider:
+        True: No prior diabetes diagnosis - eligible for screening
+        False: Patient has existing diabetes diagnosis - screening not indicated
+
+
+#--------------------------------------------------------
+# Assessments
+assessments:
+
+  # BMI Classification
+  - id: bmi_overweight
+    title: Overweight (BMI 25-29.9)
+    description: BMI indicates overweight status
+    expression: $BMI >= 25 and $BMI < 30
+    required: False
+    narrative:
+      patient:
+        True: Your BMI of $BMI indicates you are __overweight__ (BMI 25-29.9)
+        False: Your BMI is not in the overweight range
+      provider:
+        True: BMI $BMI - Overweight
+
+  - id: bmi_obese
+    title: Obese (BMI >= 30)
+    description: BMI indicates obesity
+    expression: $BMI >= 30
+    required: False
+    narrative:
+      patient:
+        True: Your BMI of $BMI indicates __obesity__ (BMI 30 or higher)
+        False: Your BMI is not in the obese range
+      provider:
+        True: BMI $BMI - Obese
+
+  - id: bmi_overweight_or_obese
+    title: Overweight or Obese
+    description: BMI >= 25 indicates overweight or obesity
+    expression: $BMI >= 25
+    narrative:
+      patient:
+        True: Your BMI of $BMI indicates you are overweight or obese, which is the primary risk factor for diabetes
+        False: Your BMI is in the normal range
+      provider:
+        True: BMI $BMI - meets overweight/obesity criterion for screening
+
+  - id: bmi_asian_threshold
+    title: Asian BMI Threshold (>=23)
+    description: Lower BMI threshold for Asian Americans
+    expression: $BMI >= 23
+    required: False
+    narrative:
+      patient:
+        True: Your BMI of $BMI meets the screening threshold
+      provider:
+        True: BMI $BMI meets Asian-specific threshold (>=23)
+
+  - id: bmi_asian_only_range
+    title: BMI in Asian-Only Range (23-24.9)
+    description: BMI between 23 and 24.9 - qualifies for screening only with Asian threshold
+    expression: $BMI >= 23 and $BMI < 25
+    required: False
+
+  # High-Risk Population Identification
+  - id: is_asian_american
+    title: Asian American
+    description: Patient is Asian American (lower BMI threshold applies)
+    expression: $Ethnicity == "urn:oid:2.16.840.1.113883.6.238|2028-9" or $Ethnicity == "asian"
+    required: False
+    narrative:
+      patient:
+        True: As an Asian American, you may benefit from diabetes screening at a lower BMI threshold (23 instead of 25)
+      provider:
+        True: Asian American - consider screening at BMI >=23
+
+  - id: is_high_risk_ethnicity
+    title: High-Risk Racial/Ethnic Group
+    description: Member of population with higher diabetes prevalence
+    expression: $Ethnicity == "urn:oid:2.16.840.1.113883.6.238|2054-5" or $Ethnicity == "urn:oid:2.16.840.1.113883.6.238|2076-8" or $Ethnicity == "urn:oid:2.16.840.1.113883.6.238|2131-1" or $Ethnicity == "urn:oid:2.16.840.1.113883.6.238|2028-9" or $Ethnicity == "black" or $Ethnicity == "hispanic" or $Ethnicity == "asian" or $Ethnicity == "pacific_islander" or $Ethnicity == "native_american"
+    required: False
+    narrative:
+      patient:
+        True: |
+          You belong to a racial/ethnic group with higher diabetes prevalence.
+          The USPSTF recommends considering earlier screening for:
+          - American Indian/Alaska Native
+          - Asian American
+          - Black/African American
+          - Hispanic/Latino
+          - Native Hawaiian/Pacific Islander
+      provider:
+        True: High-risk ethnicity - consider earlier screening
+
+  # Glucose/HbA1c Classification
+  - id: glucose_normal
+    title: Normal Fasting Glucose
+    description: Fasting glucose <100 mg/dL
+    expression: $fasting_glucose < 100
+    required: False
+    narrative:
+      patient:
+        True: Your fasting glucose of $fasting_glucose mg/dL is in the __normal__ range (below 100)
+      provider:
+        True: Fasting glucose $fasting_glucose mg/dL - Normal
+
+  - id: glucose_prediabetes
+    title: Prediabetes Range (Fasting Glucose)
+    description: Fasting glucose 100-125 mg/dL indicates prediabetes
+    expression: $fasting_glucose >= 100 and $fasting_glucose < 126
+    required: False
+    narrative:
+      patient:
+        True: |
+          Your fasting glucose of $fasting_glucose mg/dL is in the __prediabetes__ range (100-125 mg/dL).
+
+          Prediabetes means your blood sugar is higher than normal but not yet high enough to be diabetes.
+          With lifestyle changes, you may be able to prevent or delay type 2 diabetes.
+      provider:
+        True: Fasting glucose $fasting_glucose mg/dL - Prediabetes range (100-125)
+
+  - id: glucose_diabetes
+    title: Diabetes Range (Fasting Glucose)
+    description: Fasting glucose >=126 mg/dL indicates diabetes
+    expression: $fasting_glucose >= 126
+    required: False
+    narrative:
+      patient:
+        True: |
+          Your fasting glucose of $fasting_glucose mg/dL is in the __diabetes__ range (126 mg/dL or higher).
+
+          This result should be confirmed with a repeat test. Please discuss with your healthcare provider.
+      provider:
+        True: Fasting glucose $fasting_glucose mg/dL - Diabetes range (>=126) - confirm with repeat testing
+
+  - id: hba1c_normal
+    title: Normal HbA1c
+    description: HbA1c <5.7%
+    expression: $HbA1c < 5.7
+    required: False
+    narrative:
+      patient:
+        True: Your HbA1c of $HbA1c% is in the __normal__ range (below 5.7%)
+      provider:
+        True: HbA1c $HbA1c% - Normal
+
+  - id: hba1c_prediabetes
+    title: Prediabetes Range (HbA1c)
+    description: HbA1c 5.7-6.4% indicates prediabetes
+    expression: $HbA1c >= 5.7 and $HbA1c < 6.5
+    required: False
+    narrative:
+      patient:
+        True: |
+          Your HbA1c of $HbA1c% is in the __prediabetes__ range (5.7-6.4%).
+
+          HbA1c reflects your average blood sugar over the past 2-3 months.
+          This result indicates you have prediabetes and are at increased risk for developing type 2 diabetes.
+      provider:
+        True: HbA1c $HbA1c% - Prediabetes range (5.7-6.4%)
+
+  - id: hba1c_diabetes
+    title: Diabetes Range (HbA1c)
+    description: HbA1c >=6.5% indicates diabetes
+    expression: $HbA1c >= 6.5
+    required: False
+    narrative:
+      patient:
+        True: |
+          Your HbA1c of $HbA1c% is in the __diabetes__ range (6.5% or higher).
+
+          This result should be confirmed. Please discuss with your healthcare provider.
+      provider:
+        True: HbA1c $HbA1c% - Diabetes range (>=6.5%) - confirm diagnosis
+
+  # Has prediabetes (by any criterion)
+  - id: has_prediabetes
+    title: Has Prediabetes
+    description: Patient meets criteria for prediabetes by glucose or HbA1c
+    expression: $glucose_prediabetes is True or $hba1c_prediabetes is True or $known_prediabetes is True
+    required: False
+    narrative:
+      patient:
+        True: Based on your test results, you have __prediabetes__
+      provider:
+        True: Patient meets prediabetes criteria
+
+  # Additional assessments for metformin candidacy
+  - id: bmi_very_obese
+    title: Very Obese (BMI >= 35)
+    description: BMI 35 or higher - metformin particularly effective
+    expression: $BMI >= 35
+    required: False
+
+  - id: has_gdm_history
+    title: Has Gestational Diabetes History
+    description: History of gestational diabetes
+    expression: $gestational_diabetes_history is True
+    required: False
+
+  - id: age_under_60
+    title: Age Under 60
+    description: Patient is younger than 60 years
+    expression: $Age < 60
+    required: False
+
+  - id: age_under_35
+    title: Age Under 35
+    description: Patient is younger than 35 years (for early screening consideration)
+    expression: $Age < 35
+    required: False
+
+  - id: age_18_or_older
+    title: Adult 18 or Older
+    description: Patient is 18 years or older
+    expression: $Age >= 18
+    required: False
+
+  - id: glucose_elevated_for_metformin
+    title: Elevated Fasting Glucose (>=110)
+    description: Fasting glucose 110 mg/dL or higher - metformin more effective
+    expression: $fasting_glucose >= 110
+    required: False
+
+  - id: metformin_candidate
+    title: Metformin Candidate
+    description: Patient meets criteria where metformin is particularly effective
+    expression: $has_prediabetes is True and ($bmi_very_obese is True or $has_gdm_history is True or ($age_under_60 is True and $glucose_elevated_for_metformin is True))
+    required: False
+    narrative:
+      patient:
+        True: You may be a good candidate for metformin therapy based on your profile
+      provider:
+        True: Patient meets criteria for metformin consideration (BMI >=35, GDM history, or age <60 with FPG >=110)
+
+  # Risk factor assessment
+  - id: has_additional_risk_factors
+    title: Has Additional Diabetes Risk Factors
+    description: Patient has risk factors beyond BMI
+    expression: $family_history_diabetes is True or $gestational_diabetes_history is True or $polycystic_ovary_syndrome is True or $hypertension is True or $dyslipidemia is True or $cardiovascular_disease is True
+    required: False
+    narrative:
+      patient:
+        True: |
+          You have additional risk factors for type 2 diabetes:
+          - Family history of diabetes
+          - History of gestational diabetes
+          - Polycystic ovary syndrome (PCOS)
+          - High blood pressure
+          - Abnormal cholesterol
+          - Heart disease
+      provider:
+        True: Additional diabetes risk factors present
+
+  # Meets screening criteria
+  - id: meets_screening_criteria
+    title: Meets USPSTF Screening Criteria
+    description: Patient meets criteria for diabetes screening
+    expression: ($bmi_overweight_or_obese is True) or ($is_asian_american is True and $bmi_asian_threshold is True)
+    narrative:
+      patient:
+        True: Based on your BMI and age, you meet the criteria for diabetes screening
+        False: You do not currently meet the primary criteria for diabetes screening based on BMI
+      provider:
+        True: Patient meets USPSTF screening criteria (BMI >=25 or >=23 if Asian)
+
+
+#--------------------------------------------------------
+# Recommendations
+recommendations:
+
+  - id: recommend_screening
+    title: Diabetes Screening Recommended
+    category: medication
+    description: USPSTF recommends screening for prediabetes and type 2 diabetes
+    expression: $meets_screening_criteria is True
+    narrative:
+      patient:
+        True: |
+          ## Diabetes Screening Recommended
+
+          Based on your age ($Age years) and BMI ($BMI), the USPSTF recommends screening for prediabetes and type 2 diabetes.
+
+          **Screening can be done with one of these tests:**
+          - Fasting plasma glucose (blood test after overnight fast)
+          - Hemoglobin A1c (HbA1c) - does not require fasting
+          - Oral glucose tolerance test (2-hour test)
+
+          **How often:** If your results are normal, repeat screening every 3 years.
+
+          Early detection of prediabetes allows you to make lifestyle changes that can prevent or delay type 2 diabetes.
+        False: Based on your current BMI, you do not meet the primary screening criteria
+      provider:
+        True: |
+          **USPSTF Grade B Recommendation**
+
+          Screen for prediabetes and type 2 diabetes.
+
+          Patient profile: Age $Age, BMI $BMI
+
+          Screening methods (any one):
+          - Fasting plasma glucose
+          - HbA1c
+          - 2-hour OGTT
+
+          Re-screen every 3 years if normal.
+    citations:
+      - 'The USPSTF recommends screening for prediabetes and type 2 diabetes in adults aged 35 to 70 years who have overweight or obesity.'
+      - 'Screening every 3 years may be a reasonable approach for adults with normal blood glucose levels.'
+    class_of_recommendation: I
+    level_of_evidence: B-R
+    uspstf_grade: B
+
+  - id: consider_earlier_screening
+    title: Consider Earlier Screening for High-Risk Group
+    category: medication
+    description: Earlier screening may be appropriate for high-risk populations
+    expression: $is_high_risk_ethnicity is True and $age_18_or_older is True and $age_under_35 is True
+    narrative:
+      patient:
+        True: |
+          ## Consider Earlier Diabetes Screening
+
+          Although standard screening begins at age 35, the USPSTF recommends considering earlier
+          screening for populations with higher diabetes prevalence, including:
+
+          - American Indian/Alaska Native persons
+          - Asian Americans
+          - Black/African American persons
+          - Hispanic/Latino persons
+          - Native Hawaiian/Pacific Islander persons
+
+          You may benefit from diabetes screening even though you are younger than 35.
+          Discuss with your healthcare provider whether screening is appropriate for you.
+        False: Standard screening age guidelines apply
+      provider:
+        True: |
+          Patient is in high-risk ethnic group and under 35.
+          Consider earlier screening per USPSTF guidance.
+    citations:
+      - 'Clinicians should consider screening at an earlier age in persons from groups with disproportionately high incidence and prevalence.'
+    class_of_recommendation: IIa
+    level_of_evidence: C-LD
+    uspstf_grade: B
+
+  - id: lower_bmi_threshold_asian
+    title: Lower BMI Threshold for Asian Americans
+    category: evaluation
+    description: Use BMI >=23 threshold for Asian Americans
+    expression: $is_asian_american is True and $bmi_asian_only_range is True
+    narrative:
+      patient:
+        True: |
+          ## Screening Recommended at Lower BMI
+
+          As an Asian American, diabetes screening is recommended at a lower BMI threshold (23 instead of 25).
+
+          Your BMI of $BMI meets this adjusted threshold. Standard BMI cutoffs may underestimate
+          diabetes risk in Asian Americans, so earlier screening is appropriate.
+        False: Standard BMI threshold applies
+      provider:
+        True: |
+          Asian American with BMI $BMI (23-24.9).
+          USPSTF recommends lower BMI threshold (>=23) for this population.
+          Proceed with diabetes screening.
+    citations:
+      - 'Consider screening at a lower BMI (>=23) in Asian American persons, in whom the association of BMI with diabetes risk may differ.'
+    class_of_recommendation: I
+    level_of_evidence: B-NR
+    uspstf_grade: B
+
+  - id: prediabetes_lifestyle_intervention
+    title: Lifestyle Intervention for Prediabetes
+    category: medication
+    description: Recommend lifestyle intervention for patients with prediabetes
+    expression: $has_prediabetes is True
+    narrative:
+      patient:
+        True: |
+          ## Lifestyle Changes to Prevent Diabetes
+
+          You have prediabetes. The good news is that with lifestyle changes, you can prevent or
+          delay progression to type 2 diabetes.
+
+          **Evidence-based lifestyle interventions:**
+
+          1. **Weight loss**: Aim to lose 5-7% of your body weight if overweight
+          2. **Physical activity**: At least 150 minutes per week of moderate-intensity exercise
+          3. **Healthy diet**: Focus on whole grains, fruits, vegetables, lean proteins
+          4. **Reduce refined carbohydrates and sugary foods**
+
+          **Diabetes Prevention Program (DPP)**:
+          Ask your healthcare provider about structured lifestyle programs like the CDC's National DPP.
+          These programs have been shown to reduce diabetes risk by 58% (71% in adults over 60).
+        False: Lifestyle intervention for prediabetes not indicated at this time
+      provider:
+        True: |
+          **Prediabetes Confirmed - Recommend Lifestyle Intervention**
+
+          Refer to or offer:
+          - CDC National Diabetes Prevention Program (DPP)
+          - Structured lifestyle intervention targeting:
+            - 5-7% weight loss
+            - 150 min/week moderate physical activity
+            - Dietary modification
+
+          DPP reduces diabetes incidence by 58% overall, 71% in adults >60.
+    citations:
+      - 'Clinicians should offer or refer patients with prediabetes to effective preventive interventions.'
+      - 'Lifestyle interventions that focus on diet, physical activity, or both have demonstrated efficacy in preventing or delaying progression to diabetes.'
+    class_of_recommendation: I
+    level_of_evidence: A
+    uspstf_grade: B
+
+  - id: prediabetes_consider_metformin
+    title: Consider Metformin for Prediabetes
+    category: medication
+    description: Metformin may be considered for select patients with prediabetes
+    expression: $metformin_candidate is True
+    compliance_expression: $on_metformin is True
+    narrative:
+      compliance:
+        patient:
+          True: You are currently taking metformin
+          False: You are not currently taking metformin
+        provider:
+          True: Patient on metformin therapy
+          False: Patient not currently on metformin
+      patient:
+        True: |
+          ## Metformin May Be an Option
+
+          In addition to lifestyle changes, your healthcare provider may discuss metformin as an
+          option to help prevent diabetes. Metformin is particularly effective for people with:
+
+          - BMI 35 or higher
+          - History of gestational diabetes
+          - Younger adults (under 60) with higher fasting glucose
+
+          Metformin is a safe, well-tolerated medication that can help prevent progression to diabetes
+          when combined with lifestyle changes. Discuss with your provider whether it's right for you.
+        False: Metformin is not specifically indicated at this time
+      provider:
+        True: |
+          Consider metformin for diabetes prevention.
+
+          Patient meets criteria (one or more):
+          - BMI >=35
+          - History of gestational diabetes
+          - Age <60 with fasting glucose >=110 mg/dL
+
+          Metformin is particularly effective in these subgroups per DPP trial.
+    citations:
+      - 'Metformin was effective in the DPP trial, particularly in persons younger than 60 years, BMI >=35, fasting glucose >=110 mg/dL, and those with history of gestational diabetes.'
+    class_of_recommendation: IIa
+    level_of_evidence: B-R
+    uspstf_grade: B
+
+  - id: rescreen_interval
+    title: Repeat Screening in 3 Years
+    category: evaluation
+    description: Recommend repeat screening every 3 years if normal results
+    expression: $glucose_normal is True or $hba1c_normal is True
+    narrative:
+      patient:
+        True: |
+          ## Your Screening Results are Normal
+
+          Your blood sugar test results are in the normal range.
+
+          **Next steps:**
+          - Continue healthy lifestyle habits
+          - Repeat diabetes screening in **3 years**
+          - Return sooner if you develop symptoms or additional risk factors
+        False: Follow-up based on your test results
+      provider:
+        True: |
+          Normal screening results.
+          Recommend repeat screening in 3 years per USPSTF guidance.
+    citations:
+      - 'Screening every 3 years may be a reasonable approach for adults with normal blood glucose levels.'
+    class_of_recommendation: I
+    level_of_evidence: C-LD
+
+  - id: display_understanding_diabetes
+    category: display_patient
+    title: Understanding Diabetes and Prediabetes
+    description: Educational content about diabetes
+    expression: $age_18_or_older is True
+    narrative:
+      patient:
+        True: |
+          ## Understanding Prediabetes and Type 2 Diabetes
+
+          **What is prediabetes?**
+          Prediabetes means your blood sugar levels are higher than normal but not high enough
+          to be diagnosed as diabetes. About 1 in 3 US adults have prediabetes, and most don't know it.
+
+          **What is type 2 diabetes?**
+          Type 2 diabetes is a chronic condition where your body doesn't use insulin properly,
+          leading to high blood sugar. It can cause serious health problems including:
+          - Heart disease and stroke
+          - Kidney disease
+          - Vision problems
+          - Nerve damage
+
+          **Diagnostic Thresholds:**
+
+          | Test | Normal | Prediabetes | Diabetes |
+          |------|--------|-------------|----------|
+          | Fasting Glucose | <100 mg/dL | 100-125 mg/dL | >=126 mg/dL |
+          | HbA1c | <5.7% | 5.7-6.4% | >=6.5% |
+
+          **Risk Factors:**
+          - Overweight or obesity (BMI >=25)
+          - Age 35 or older
+          - Family history of diabetes
+          - Physical inactivity
+          - History of gestational diabetes
+          - Certain racial/ethnic groups
+
+  - id: display_prevention_tips
+    category: display_patient
+    title: Tips for Diabetes Prevention
+    description: Actionable prevention advice
+    expression: $age_18_or_older is True
+    narrative:
+      patient:
+        True: |
+          ## How to Lower Your Diabetes Risk
+
+          Even small changes can make a big difference in preventing type 2 diabetes:
+
+          **1. Move More**
+          - Aim for 150 minutes of moderate activity per week (like brisk walking)
+          - Break up sitting time - stand or walk every 30 minutes
+          - Find activities you enjoy to stay consistent
+
+          **2. Eat Well**
+          - Choose whole grains over refined carbohydrates
+          - Fill half your plate with vegetables
+          - Limit sugary drinks and processed foods
+          - Watch portion sizes
+
+          **3. Manage Your Weight**
+          - Losing just 5-7% of body weight significantly reduces diabetes risk
+          - For a 200 lb person, that's only 10-14 pounds
+
+          **4. Get Quality Sleep**
+          - Aim for 7-9 hours per night
+          - Poor sleep can affect blood sugar control
+
+          **5. Manage Stress**
+          - Chronic stress can raise blood sugar levels
+          - Practice relaxation techniques

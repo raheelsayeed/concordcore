@@ -1,0 +1,379 @@
+CPG:
+  identifier: uspstf_depression_screening
+  title: "USPSTF Depression Screening in Adults"
+  publisher: "United States Preventive Services Task Force"
+  uri: "https://www.uspreventiveservicestaskforce.org/uspstf/recommendation/screening-depression-suicide-risk-adults"
+  type: [screening, preventive, mental_health]
+  revision: 1.0
+  revision_date: 2024-01-15
+  description: >
+    USPSTF Grade B recommendation for depression screening in adults 19 years and older,
+    including pregnant and postpartum persons and older adults. Screening should be
+    implemented with adequate systems in place to ensure accurate diagnosis, effective
+    treatment, and appropriate follow-up.
+
+
+# LOINC codes for depression screening instruments
+define: &phq9_code ["44249-1"]
+define: &phq2_code ["55758-7"]
+define: &cesd_code ["70273-3"]
+define: &gds_code ["48545-8"]
+define: &epds_code ["71354-0"]
+
+
+variables:
+  - id: Age
+    title: "Age"
+    type: integer
+    required: True
+    code:
+      concord: ['Age']
+
+  - id: is_pregnant
+    title: "Currently Pregnant"
+    type: boolean
+    required: False
+    user_attestable: True
+    code:
+      snomed: ["77386006"]
+    llm_prompt: |
+      Is the patient currently pregnant?
+      Look for: pregnant, pregnancy, gravid, prenatal care, gestational age,
+      trimester, expecting.
+      Return: true if pregnant, false if not pregnant, null if not mentioned.
+
+  - id: is_postpartum
+    title: "Postpartum (Within 12 Months of Delivery)"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Is the patient postpartum (within 12 months of giving birth)?
+      Look for: postpartum, recently delivered, gave birth, new mother,
+      postnatal, delivered baby.
+      Return: true if postpartum, false if not, null if not mentioned.
+
+  - id: known_depression_diagnosis
+    title: "Known Depression Diagnosis"
+    type: boolean
+    required: False
+    user_attestable: True
+    code:
+      snomed: ["35489007"]
+    llm_prompt: |
+      Does the patient have a known diagnosis of depression?
+      Look for: major depressive disorder, MDD, depression, depressive episode,
+      clinical depression, bipolar depression.
+      Return: true if depression diagnosis, false if explicitly denied, null if not mentioned.
+
+  - id: currently_in_treatment
+    title: "Currently in Depression Treatment"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Is the patient currently receiving treatment for depression?
+      Look for: antidepressant medication (SSRI, SNRI, etc.), psychotherapy,
+      counseling for depression, seeing psychiatrist/therapist for depression,
+      on Prozac/Zoloft/Lexapro/Wellbutrin/etc.
+      Return: true if in treatment, false if not, null if not mentioned.
+
+  # Screening status
+  - id: has_been_screened_past_year
+    title: "Screened for Depression in Past Year"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Has the patient been screened for depression in the past year?
+      Look for: PHQ-9, PHQ-2, depression screening, mental health screening,
+      completed depression questionnaire.
+      Return: true if screened within past year, false if not screened, null if not mentioned.
+
+  - id: last_screening_negative
+    title: "Last Depression Screen Was Negative"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Was the patient's last depression screen negative?
+      Look for: PHQ-9 negative, PHQ-9 < 10, depression screen negative,
+      no depression symptoms, screened negative for depression.
+      Return: true if last screen negative, false if positive, null if not mentioned.
+
+  # Screening results
+  - id: phq9_score
+    title: "PHQ-9 Score"
+    type: integer
+    required: False
+    user_attestable: False
+    code:
+      loinc: *phq9_code
+    validator:
+      plausible: '$value >= 0 and $value <= 27'
+    llm_prompt: |
+      What is the patient's PHQ-9 score?
+      Look for: PHQ-9 score, PHQ9, depression questionnaire score.
+      The score should be between 0 and 27.
+      Return: the numeric score as an integer, or null if not mentioned.
+
+  - id: phq2_score
+    title: "PHQ-2 Score"
+    type: integer
+    required: False
+    user_attestable: False
+    code:
+      loinc: *phq2_code
+    validator:
+      plausible: '$value >= 0 and $value <= 6'
+    llm_prompt: |
+      What is the patient's PHQ-2 score?
+      Look for: PHQ-2 score, PHQ2, two-question depression screen.
+      The score should be between 0 and 6.
+      Return: the numeric score as an integer, or null if not mentioned.
+
+  # Risk factors
+  - id: family_history_depression
+    title: "Family History of Depression"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Does the patient have a family history of depression?
+      Look for: family member with depression, parent/sibling with depression,
+      family history of mood disorder, mother/father had depression.
+      Return: true if family history present, false if denied, null if not mentioned.
+
+  - id: history_of_depression
+    title: "Personal History of Depression"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Does the patient have a personal history of depression?
+      Look for: prior depression, previous depressive episode, history of MDD,
+      past depression treatment, prior antidepressant use.
+      Return: true if personal history, false if no history, null if not mentioned.
+
+  - id: chronic_medical_condition
+    title: "Has Chronic Medical Condition"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Does the patient have any chronic medical conditions?
+      Look for: diabetes, heart disease, cancer, chronic pain, autoimmune disease,
+      COPD, kidney disease, multiple sclerosis, Parkinson's, chronic illness.
+      Return: true if chronic condition present, false if none, null if not mentioned.
+
+  - id: recent_major_life_stressor
+    title: "Recent Major Life Stressor"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Has the patient experienced a recent major life stressor?
+      Look for: death of loved one, divorce, job loss, major illness,
+      financial hardship, relationship problems, trauma, major life change.
+      Return: true if recent stressor, false if denied, null if not mentioned.
+
+  - id: substance_use_disorder
+    title: "Substance Use Disorder"
+    type: boolean
+    required: False
+    user_attestable: True
+    code:
+      snomed: ["66214007"]
+    llm_prompt: |
+      Does the patient have a substance use disorder?
+      Look for: alcohol use disorder, drug abuse, substance abuse,
+      addiction, alcoholism, opioid use disorder, cocaine use, heroin use.
+      Return: true if substance use disorder, false if denied, null if not mentioned.
+
+
+eligibility:
+  - id: adult_age
+    title: "Adult Age (19 or Older)"
+    expression: $Age >= 19
+    narrative:
+      patient:
+        True: "You are in the age range for adult depression screening."
+        False: "Adult depression screening applies to those 19 years and older."
+
+  - id: not_currently_in_treatment
+    title: "Not Currently in Active Treatment"
+    expression: $currently_in_treatment is not True
+    narrative:
+      patient:
+        True: "Depression screening applies to those not currently receiving depression treatment."
+        False: "Since you are currently in treatment for depression, screening is not needed."
+
+
+assessments:
+  # Age groups
+  - id: is_adult_19_plus
+    title: "Adult 19 Years or Older"
+    expression: $Age >= 19
+    narrative:
+      patient:
+        True: "You are an adult eligible for depression screening."
+
+  - id: is_older_adult
+    title: "Older Adult (65+)"
+    expression: $Age >= 65
+    narrative:
+      patient:
+        True: "As an older adult, depression screening is especially important and may use age-appropriate tools like the GDS."
+
+  # Perinatal status
+  - id: is_perinatal
+    title: "Pregnant or Postpartum"
+    expression: $is_pregnant is True or $is_postpartum is True
+    narrative:
+      patient:
+        True: "Depression screening is particularly important during and after pregnancy."
+        False: "You are not currently pregnant or postpartum."
+
+  # Risk factors
+  - id: has_risk_factors
+    title: "Has Depression Risk Factors"
+    expression: $family_history_depression is True or $history_of_depression is True or $chronic_medical_condition is True or $recent_major_life_stressor is True or $substance_use_disorder is True
+    narrative:
+      patient:
+        True: "You have factors that may increase your risk for depression."
+        False: "You have not reported specific risk factors for depression."
+
+  # Screening status
+  - id: not_recently_screened
+    title: "Not Recently Screened"
+    expression: $has_been_screened_past_year is not True
+    narrative:
+      patient:
+        True: "You have not been screened for depression in the past year."
+        False: "You have been screened for depression within the past year."
+
+  - id: needs_screening
+    title: "Needs Depression Screening"
+    expression: $is_adult_19_plus is True and $not_recently_screened is True
+    narrative:
+      patient:
+        True: "You should be screened for depression."
+
+  # Screening result assessments
+  - id: phq2_positive
+    title: "PHQ-2 Positive (Score >= 3)"
+    expression: $phq2_score is not None and $phq2_score >= 3
+    narrative:
+      patient:
+        True: "Your PHQ-2 score suggests further evaluation is needed."
+
+  - id: phq9_minimal
+    title: "PHQ-9 Minimal Depression (0-4)"
+    expression: $phq9_score is not None and $phq9_score >= 0 and $phq9_score <= 4
+
+  - id: phq9_mild
+    title: "PHQ-9 Mild Depression (5-9)"
+    expression: $phq9_score is not None and $phq9_score >= 5 and $phq9_score <= 9
+
+  - id: phq9_moderate
+    title: "PHQ-9 Moderate Depression (10-14)"
+    expression: $phq9_score is not None and $phq9_score >= 10 and $phq9_score <= 14
+
+  - id: phq9_moderately_severe
+    title: "PHQ-9 Moderately Severe (15-19)"
+    expression: $phq9_score is not None and $phq9_score >= 15 and $phq9_score <= 19
+
+  - id: phq9_severe
+    title: "PHQ-9 Severe Depression (20-27)"
+    expression: $phq9_score is not None and $phq9_score >= 20
+
+  - id: phq9_positive
+    title: "PHQ-9 Positive (Score >= 10)"
+    expression: $phq9_score is not None and $phq9_score >= 10
+    narrative:
+      patient:
+        True: "Your PHQ-9 score suggests you may have depression and should discuss this with your provider."
+
+  - id: previous_screen_negative
+    title: "Previous Screen Negative"
+    expression: $has_been_screened_past_year is True and $last_screening_negative is True
+
+
+recommendations:
+  - id: recommend_screening
+    title: "Depression Screening Recommended"
+    category: evaluation
+    expression: $needs_screening is True
+    uspstf_grade: B
+    level_of_evidence: B-R
+    class_of_recommendation: I
+    narrative:
+      patient:
+        True: "The USPSTF recommends screening for depression in all adults. You should complete a depression screening questionnaire like the PHQ-9."
+      provider:
+        True: "USPSTF Grade B: Screen for depression in adults 19+. Administer PHQ-2 or PHQ-9. Ensure systems are in place for diagnosis, treatment, and follow-up if positive."
+
+  - id: perinatal_screening
+    title: "Perinatal Depression Screening"
+    category: evaluation
+    expression: $is_perinatal is True and $not_recently_screened is True
+    uspstf_grade: B
+    level_of_evidence: B-R
+    class_of_recommendation: I
+    narrative:
+      patient:
+        True: "Depression screening is especially important during and after pregnancy. Perinatal depression can affect both you and your baby."
+      provider:
+        True: "USPSTF Grade B: Screen pregnant and postpartum persons for depression. Consider using EPDS or PHQ-9. If positive, ensure connection to appropriate mental health resources."
+
+  - id: older_adult_screening
+    title: "Older Adult Depression Screening"
+    category: evaluation
+    expression: $is_older_adult is True and $not_recently_screened is True
+    uspstf_grade: B
+    level_of_evidence: B-R
+    class_of_recommendation: I
+    narrative:
+      patient:
+        True: "Depression screening is recommended for older adults. Depression in older adults can present differently and is treatable."
+      provider:
+        True: "USPSTF Grade B: Screen older adults (65+) for depression. GDS or PHQ-9 are appropriate. Depression may present with cognitive symptoms in older adults."
+
+  - id: positive_screen_followup
+    title: "Positive Screen - Further Evaluation Needed"
+    category: display_provider
+    expression: $phq9_positive is True
+    uspstf_grade: B
+    level_of_evidence: B-R
+    class_of_recommendation: I
+    narrative:
+      patient:
+        True: "Your depression screening score suggests you may be experiencing depression. Please discuss these results with your healthcare provider for further evaluation and to discuss treatment options."
+      provider:
+        True: "PHQ-9 >= 10 indicates probable depression. Conduct diagnostic interview to confirm MDD. Assess for suicidal ideation. Discuss treatment options including psychotherapy and/or pharmacotherapy."
+
+  - id: severe_depression_urgent
+    title: "Severe Depression - Prompt Treatment"
+    category: display_provider
+    expression: $phq9_severe is True
+    uspstf_grade: B
+    level_of_evidence: B-R
+    class_of_recommendation: I
+    narrative:
+      patient:
+        True: "Your screening indicates severe depressive symptoms. It is important to speak with your healthcare provider as soon as possible about treatment options."
+      provider:
+        True: "URGENT: PHQ-9 >= 20 indicates severe depression. Assess suicide risk immediately. Consider prompt referral to mental health specialist. Discuss treatment initiation."
+
+  - id: annual_rescreening
+    title: "Annual Rescreening Appropriate"
+    category: display_patient
+    expression: $previous_screen_negative is True
+    uspstf_grade: B
+    level_of_evidence: C-LD
+    class_of_recommendation: IIa
+    narrative:
+      patient:
+        True: "Your previous depression screen was negative. Annual rescreening is reasonable to monitor for changes in your mental health."
+      provider:
+        True: "Patient previously screened negative. USPSTF does not specify optimal screening interval. Annual screening is a reasonable approach."

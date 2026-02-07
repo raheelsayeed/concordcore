@@ -1,6 +1,8 @@
 CPG:
   title: "Statin Use for the Primary Prevention of Cardiovascular Disease in Adults"
   identifier: uspstfStatinUse
+  version: "1.0.0"
+  last_updated: "2024-08-22"
   publisher: US Preventive Services Task Force (USPSTF)
   uri: https://jamanetwork.com/journals/jama/fullarticle/2795193
   doi: 10.1001/jama.2022.13044
@@ -100,26 +102,41 @@ variables:
     # DIAGNOSIS/CONDITIONS
     - id: diabetesMellitus
       user_attestable: True
-      code: 
+      code:
         snomed: ["44054006"]
-      narrative: 
+      narrative:
         patient:
           True: Condition Type 2 Diabetes Mellitus recorded $self.date. Self-Attested|EHR
         provider:
-          True: | 
-            __Type 2 Diabetes Mellitus__ 
+          True: |
+            __Type 2 Diabetes Mellitus__
             Source: Self-Attested | Hospital Name
             Date: $self.date
+      llm_prompt: |
+        Does the patient have diabetes mellitus (type 1 or type 2)?
+        Look for: diabetes, DM, DM2, type 2 diabetes, diabetic, hyperglycemia,
+        elevated blood sugar, HbA1c elevated, on metformin/insulin for diabetes.
+        Return: true if diabetic, false if explicitly denied, null if not mentioned.
 
     - id: htn
       title: Hypertension
       code:
         snomed: ["38341003"]
+      llm_prompt: |
+        Does the patient have hypertension (high blood pressure)?
+        Look for: hypertension, HTN, high blood pressure, elevated BP,
+        on antihypertensive medications.
+        Return: true if hypertension present, false if explicitly denied, null if not mentioned.
 
     - id: is_smoker
       title: Tobacco smoking status
       code:
         loinc: ["72166-2"]
+      llm_prompt: |
+        Is the patient a current smoker?
+        Look for: smoker, smoking, cigarettes, tobacco use, nicotine use, current smoker.
+        Note: Former smoker or quit smoking should return false for current smoking.
+        Return: true if current smoker, false if non-smoker or former smoker, null if not mentioned.
 
 
 
