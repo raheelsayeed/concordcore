@@ -1,0 +1,69 @@
+# Example Institution Configuration
+# This file shows how a healthcare institution can customize CPG evaluation
+# without modifying the base CPG definitions.
+
+institution_config:
+  institution_id: hospital_abc
+  institution_name: "ABC Medical Center"
+
+  metadata:
+    contact: "clinical-informatics@abcmedical.org"
+    version: "1.0.0"
+    last_updated: "2024-01-15"
+    approved_by: "Chief Medical Officer"
+
+  # Threshold Overrides
+  # Change specific values used in assessments or recommendations
+  threshold_overrides:
+    # Use 7.5% ASCVD risk threshold instead of 10% for statin initiation
+    - target_id: MED_B
+      parameter: risk_threshold
+      original_value: 10.0
+      override_value: 7.5
+      reason: "Cardiology department prefers more aggressive prevention based on recent evidence"
+
+    # Lower LDL target for diabetic patients
+    - target_id: highLDL
+      parameter: ldl_threshold
+      original_value: 140
+      override_value: 100
+      reason: "Institutional protocol for diabetic patients"
+
+  # Expression Overrides
+  # Replace entire expressions with institution-specific logic
+  expression_overrides:
+    # More aggressive definition of high-risk for our patient population
+    - target_id: risk_factors
+      original_expression: "$has_diabetes == True or $has_dyslipidemia == True or $htn == True"
+      override_expression: "$has_diabetes == True or $has_dyslipidemia == True or $htn == True or $Age > 55"
+      reason: "Include age over 55 as additional risk factor per institutional guidelines"
+
+  # Recommendation Filters
+  # Include or exclude specific recommendations
+  recommendation_filters:
+    # Exclude a recommendation not covered by formulary
+    # - recommendation_id: SOME_MED
+    #   action: exclude
+    #   reason: "Medication not on hospital formulary"
+
+  # Local Rules
+  # Add institution-specific assessments or recommendations
+  local_rules:
+    # Add a local assessment for patients with multiple comorbidities
+    - id: high_complexity_patient
+      title: "High Complexity Patient Flag"
+      expression: "$has_diabetes == True and $htn == True and $is_smoker == True"
+      type: assessment
+      applies_to_cpg:
+        - uspstfStatinUse
+        - cholesterol
+      priority: 50
+
+    # Add local recommendation for care coordination
+    - id: cardiology_referral
+      title: "Consider Cardiology Referral"
+      expression: "$ascvd_ten_year_risk_score > 20"
+      type: recommendation
+      applies_to_cpg:
+        - uspstfStatinUse
+      priority: 60

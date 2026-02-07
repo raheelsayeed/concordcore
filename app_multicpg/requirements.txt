@@ -1,0 +1,8 @@
+# Requirements for the Multi-CPG Evaluation App
+# Install with: pip install -r app_multicpg/requirements.txt
+
+# Web framework
+streamlit>=1.28.0
+
+# The app also requires the main ConcordCore dependencies
+# which should be installed from the project root requirements.txt

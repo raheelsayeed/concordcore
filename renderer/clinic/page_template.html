@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ cpg_title }} - Clinical Report</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-light: #dbeafe;
+            --success: #059669;
+            --success-light: #d1fae5;
+            --success-dark: #065f46;
+            --warning: #d97706;
+            --warning-light: #fef3c7;
+            --warning-dark: #92400e;
+            --danger: #dc2626;
+            --danger-light: #fee2e2;
+            --muted: #6b7280;
+            --muted-light: #f3f4f6;
+            --purple: #7c3aed;
+            --purple-light: #ede9fe;
+            --border: #e5e7eb;
+            --text: #1f2937;
+            --text-light: #6b7280;
+            --text-muted: #9ca3af;
+            --bg: #f8fafc;
+            --card: #ffffff;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            font-size: 14px;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+            color: white;
+            padding: 20px 32px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        .header-content {
+            max-width: 1600px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 1.35rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+
+        .header-subtitle {
+            opacity: 0.85;
+            font-size: 0.8rem;
+            margin-top: 4px;
+            font-weight: 400;
+        }
+
+        .header-meta {
+            text-align: right;
+            font-size: 0.75rem;
+            opacity: 0.9;
+        }
+
+        /* Main Layout */
+        .main-layout {
+            max-width: 1600px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 24px;
+            padding: 24px;
+            min-height: calc(100vh - 80px);
+        }
+
+        /* Left Panel - Patient Data */
+        .patient-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .card {
+            background: var(--card);
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            background: var(--muted-light);
+        }
+
+        .card-title {
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-light);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-title .count {
+            background: var(--primary-light);
+            color: var(--primary);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+        }
+
+        .card-body {
+            padding: 16px 20px;
+        }
+
+        /* Summary Stats */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .summary-stat {
+            text-align: center;
+            padding: 16px 12px;
+            border-radius: 10px;
+            background: var(--muted-light);
+        }
+
+        .summary-stat .value {
+            font-size: 2rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .summary-stat .label {
+            font-size: 0.7rem;
+            color: var(--text-light);
+            margin-top: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .summary-stat.green { background: var(--success-light); }
+        .summary-stat.green .value { color: var(--success); }
+        .summary-stat.amber { background: var(--warning-light); }
+        .summary-stat.amber .value { color: var(--warning); }
+        .summary-stat.blue { background: var(--primary-light); }
+        .summary-stat.blue .value { color: var(--primary); }
+        .summary-stat.purple { background: var(--purple-light); }
+        .summary-stat.purple .value { color: var(--purple); }
+
+        /* Lab Value Cards */
+        .lab-card {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+            transition: background 0.15s;
+        }
+
+        .lab-card:last-child { border-bottom: none; }
+        .lab-card:hover { background: var(--muted-light); }
+
+        .lab-card.missing {
+            background: var(--warning-light);
+            border-left: 3px solid var(--warning);
+        }
+
+        .lab-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 4px;
+        }
+
+        .lab-name {
+            font-size: 0.75rem;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            font-weight: 500;
+        }
+
+        .lab-code {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            background: var(--muted-light);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .lab-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text);
+            line-height: 1.2;
+        }
+
+        .lab-value.missing-val {
+            color: var(--warning);
+            font-size: 1rem;
+        }
+
+        /* Sparkline Chart */
+        .sparkline-container {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed var(--border);
+        }
+
+        .sparkline-label {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .sparkline {
+            display: flex;
+            align-items: flex-end;
+            gap: 3px;
+            height: 40px;
+        }
+
+        .spark-bar {
+            flex: 1;
+            background: var(--primary);
+            border-radius: 2px 2px 0 0;
+            min-width: 8px;
+            max-width: 24px;
+            position: relative;
+            transition: opacity 0.15s;
+        }
+
+        .spark-bar:hover {
+            opacity: 0.8;
+        }
+
+        .spark-bar:last-child {
+            background: var(--primary);
+            box-shadow: 0 0 0 2px var(--primary-light);
+        }
+
+        .spark-bar .tooltip {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--text);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.65rem;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.15s;
+            margin-bottom: 4px;
+        }
+
+        .spark-bar:hover .tooltip {
+            opacity: 1;
+        }
+
+        .sparkline-range {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* Progress Bar */
+        .progress-section {
+            padding: 16px 20px;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .progress-label {
+            font-size: 0.75rem;
+            color: var(--text-light);
+        }
+
+        .progress-value {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--success);
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: var(--muted-light);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--success), #34d399);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .progress-missing {
+            font-size: 0.7rem;
+            color: var(--warning);
+            margin-top: 10px;
+            line-height: 1.5;
+        }
+
+        /* Right Panel - CPG Content */
+        .cpg-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Dashboard Row */
+        .dashboard-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+        }
+
+        .dash-card {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .dash-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            margin-bottom: 12px;
+        }
+
+        .dash-value {
+            font-size: 2.25rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .dash-label {
+            font-size: 0.75rem;
+            color: var(--text-light);
+            margin-top: 6px;
+        }
+
+        .dash-card.green .dash-icon { background: var(--success-light); color: var(--success); }
+        .dash-card.green .dash-value { color: var(--success); }
+        .dash-card.amber .dash-icon { background: var(--warning-light); color: var(--warning); }
+        .dash-card.amber .dash-value { color: var(--warning); }
+        .dash-card.blue .dash-icon { background: var(--primary-light); color: var(--primary); }
+        .dash-card.blue .dash-value { color: var(--primary); }
+        .dash-card.purple .dash-icon { background: var(--purple-light); color: var(--purple); }
+        .dash-card.purple .dash-value { color: var(--purple); }
+        .dash-card.muted .dash-icon { background: var(--muted-light); color: var(--muted); }
+        .dash-card.muted .dash-value { color: var(--muted); }
+
+        /* Recommendation Sections */
+        .rec-section {
+            background: var(--card);
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .rec-section-header {
+            padding: 18px 24px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .rec-section-header.action { background: var(--warning-light); }
+        .rec-section-header.supported { background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); }
+        .rec-section-header.assessment { background: var(--purple-light); }
+        .rec-section-header.na { background: var(--muted-light); }
+
+        .rec-section-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            background: white;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .rec-section-header h2 {
+            flex: 1;
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .rec-section-badge {
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 5px 12px;
+            border-radius: 20px;
+            background: rgba(0,0,0,0.08);
+        }
+
+        .rec-section-header.action .rec-section-badge { background: var(--warning); color: white; }
+        .rec-section-header.supported .rec-section-badge { background: var(--success); color: white; }
+
+        /* Recommendation Items */
+        .rec-item {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .rec-item:last-child { border-bottom: none; }
+
+        .rec-item-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .rec-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-top: 6px;
+            flex-shrink: 0;
+        }
+
+        .rec-indicator.action { background: var(--warning); }
+        .rec-indicator.supported { background: var(--success); }
+        .rec-indicator.na { background: var(--muted); }
+
+        .rec-title {
+            flex: 1;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text);
+            line-height: 1.4;
+        }
+
+        .rec-status-tag {
+            font-size: 0.65rem;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .rec-status-tag.action { background: var(--warning-light); color: var(--warning-dark); }
+        .rec-status-tag.supported { background: var(--success-light); color: var(--success-dark); }
+        .rec-status-tag.na { background: var(--muted-light); color: var(--muted); }
+
+        .rec-description {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            margin: 8px 0 12px 20px;
+            line-height: 1.6;
+        }
+
+        .rec-narrative {
+            background: var(--muted-light);
+            padding: 14px 16px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            margin: 12px 0 12px 20px;
+            border-left: 3px solid var(--primary);
+            line-height: 1.6;
+        }
+
+        .rec-narrative.action-style {
+            border-left-color: var(--warning);
+            background: #fffbeb;
+        }
+
+        .rec-evidence {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin: 12px 0 0 20px;
+        }
+
+        .evidence-pill {
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 5px 10px;
+            border-radius: 6px;
+        }
+
+        .evidence-pill.cor { background: var(--primary-light); color: #1e40af; }
+        .evidence-pill.loe { background: var(--purple-light); color: var(--purple); }
+        .evidence-pill.uspstf { background: #fce7f3; color: #be185d; }
+
+        .rec-based-on {
+            margin: 14px 0 0 20px;
+            padding-top: 12px;
+            border-top: 1px dashed var(--border);
+        }
+
+        .based-on-label {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+        }
+
+        .based-on-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .based-on-chip {
+            font-size: 0.8rem;
+            padding: 6px 12px;
+            border-radius: 6px;
+            background: var(--muted-light);
+            border: 1px solid var(--border);
+        }
+
+        .based-on-chip strong {
+            color: var(--primary);
+        }
+
+        /* Assessment Grid */
+        .assessment-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 12px;
+            padding: 16px 20px;
+        }
+
+        .assessment-item {
+            background: var(--muted-light);
+            border-radius: 10px;
+            padding: 16px;
+            border: 1px solid var(--border);
+        }
+
+        .assessment-item.positive {
+            background: var(--warning-light);
+            border-color: var(--warning);
+        }
+
+        .assessment-item.negative {
+            background: #f0fdf4;
+            border-color: var(--success);
+        }
+
+        .assessment-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .assessment-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .assessment-dot.positive { background: var(--warning); }
+        .assessment-dot.negative { background: var(--success); }
+        .assessment-dot.unknown { background: var(--muted); }
+
+        .assessment-name {
+            flex: 1;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .assessment-result {
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 6px;
+        }
+
+        .assessment-result.positive { background: var(--warning); color: white; }
+        .assessment-result.negative { background: var(--success); color: white; }
+        .assessment-result.unknown { background: var(--muted); color: white; }
+
+        .assessment-desc {
+            font-size: 0.8rem;
+            color: var(--text-light);
+            line-height: 1.5;
+        }
+
+        .assessment-narrative {
+            font-size: 0.8rem;
+            color: var(--text);
+            margin-top: 8px;
+            font-style: italic;
+        }
+
+        .assessment-sources {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed var(--border);
+        }
+
+        .assessment-sources span {
+            display: inline-block;
+            background: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            margin: 2px 4px 2px 0;
+            border: 1px solid var(--border);
+        }
+
+        .assessment-error {
+            font-size: 0.75rem;
+            color: var(--danger);
+            margin-top: 8px;
+            padding: 8px 10px;
+            background: var(--danger-light);
+            border-radius: 6px;
+        }
+
+        /* Citations */
+        .citations-list {
+            padding: 16px 20px;
+        }
+
+        .citation {
+            font-size: 0.8rem;
+            color: var(--text-light);
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+            line-height: 1.5;
+        }
+
+        .citation:last-child { border-bottom: none; }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 24px;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            background: var(--card);
+            border-top: 1px solid var(--border);
+            margin-top: 24px;
+        }
+
+        /* Print */
+        @media print {
+            .header { position: static; }
+            .main-layout { display: block; }
+            .patient-panel { margin-bottom: 24px; }
+            .card, .rec-section, .dash-card { box-shadow: none; break-inside: avoid; }
+        }
+
+        /* Responsive */
+        @media (max-width: 1100px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+            .patient-panel {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+                gap: 20px;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .dashboard-row { grid-template-columns: repeat(2, 1fr); }
+            .assessment-grid { grid-template-columns: 1fr; }
+            .header-content { flex-direction: column; text-align: center; gap: 12px; }
+            .header-meta { text-align: center; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div>
+                <h1>{{ cpg_title }}</h1>
+                <div class="header-subtitle">
+                    {% if cpg_publisher %}{{ cpg_publisher }}{% endif %}
+                    {% if cpg_doi %} &bull; DOI: {{ cpg_doi }}{% endif %}
+                </div>
+            </div>
+            <div class="header-meta">
+                <div style="font-weight: 500;">Clinical Compliance Report</div>
+                <div>{{ dated.strftime('%B %d, %Y at %H:%M') }}</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Compute Statistics -->
+    {% set compliant_count = recommendations | selectattr('applies', 'equalto', true) | selectattr('compliant', 'equalto', true) | list | length %}
+    {% set action_count = recommendations | selectattr('applies', 'equalto', true) | selectattr('compliant', 'equalto', false) | list | length %}
+    {% set applicable_count = recommendations | selectattr('applies', 'equalto', true) | list | length %}
+    {% set na_count = recommendations | selectattr('applies', 'equalto', false) | list | length %}
+    {% set total_assessments = assessments | length %}
+    {% set positive_assessments = [] %}
+    {% set negative_assessments = [] %}
+    {% for ea in assessments %}
+        {% if ea.record.value and ea.record.value.value == true %}
+            {% set _ = positive_assessments.append(ea) %}
+        {% elif ea.record.value and ea.record.value.value == false %}
+            {% set _ = negative_assessments.append(ea) %}
+        {% endif %}
+    {% endfor %}
+    {% set missing_data = [] %}
+    {% set available_data = [] %}
+    {% for er in records %}
+        {% if not er.record.has_value %}
+            {% set _ = missing_data.append(er) %}
+        {% else %}
+            {% set _ = available_data.append(er) %}
+        {% endif %}
+    {% endfor %}
+    {% set completeness = ((available_data | length) / (records | length) * 100) | round | int if records | length > 0 else 0 %}
+
+    <div class="main-layout">
+        <!-- Left Panel: Patient Data -->
+        <div class="patient-panel">
+            <!-- Quick Summary -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Summary Overview</div>
+                </div>
+                <div class="card-body">
+                    <div class="summary-grid">
+                        <div class="summary-stat green">
+                            <div class="value">{{ applicable_count }}</div>
+                            <div class="label">Recommendations</div>
+                        </div>
+                        <div class="summary-stat amber">
+                            <div class="value">{{ action_count }}</div>
+                            <div class="label">Action Items</div>
+                        </div>
+                        <div class="summary-stat purple">
+                            <div class="value">{{ positive_assessments | length }}</div>
+                            <div class="label">Risk Factors</div>
+                        </div>
+                        <div class="summary-stat blue">
+                            <div class="value">{{ completeness }}%</div>
+                            <div class="label">Data Complete</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Patient Lab Values -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        Patient Data
+                        <span class="count">{{ records | length }}</span>
+                    </div>
+                </div>
+                <div style="max-height: 600px; overflow-y: auto;">
+                    {% for er in records %}
+                    {% set is_missing = not er.record.has_value %}
+                    <div class="lab-card {% if is_missing %}missing{% endif %}">
+                        <div class="lab-header">
+                            <span class="lab-name">{{ er.record.title or er.id }}</span>
+                            {% if er.record.code %}
+                            <span class="lab-code">{{ er.record.code }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="lab-value {% if is_missing %}missing-val{% endif %}">
+                            {% if er.record.has_value %}
+                                {{ er.record.value.representation }}
+                            {% else %}
+                                Not Available
+                            {% endif %}
+                        </div>
+
+                        {% if er.record.values and er.record.values | length > 1 %}
+                        {% set values_list = er.record.values %}
+                        {% set numeric_values = [] %}
+                        {% for v in values_list %}
+                            {% if v.value is number %}
+                                {% set _ = numeric_values.append(v.value) %}
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if numeric_values | length > 1 %}
+                        {% set max_val = numeric_values | max %}
+                        {% set min_val = numeric_values | min %}
+                        {% set range_val = max_val - min_val if max_val != min_val else 1 %}
+                        <div class="sparkline-container">
+                            <div class="sparkline-label">Historical Values ({{ numeric_values | length }} readings)</div>
+                            <div class="sparkline">
+                                {% for val in numeric_values %}
+                                {% set height = ((val - min_val) / range_val * 30 + 10) | round | int %}
+                                <div class="spark-bar" style="height: {{ height }}px;">
+                                    <span class="tooltip">{{ val }}</span>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <div class="sparkline-range">
+                                <span>{{ min_val }}</span>
+                                <span>{{ max_val }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% endif %}
+
+                        {% if er.error %}
+                        <div style="font-size: 0.7rem; color: var(--danger); margin-top: 6px;">Error: {{ er.error }}</div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Data Completeness -->
+                <div class="progress-section" style="border-top: 1px solid var(--border);">
+                    <div class="progress-header">
+                        <span class="progress-label">Data Completeness</span>
+                        <span class="progress-value">{{ completeness }}%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: {{ completeness }}%;"></div>
+                    </div>
+                    {% if missing_data | length > 0 %}
+                    <div class="progress-missing">
+                        Missing: {{ missing_data | map(attribute='id') | join(', ') }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel: CPG Content -->
+        <div class="cpg-panel">
+            <!-- Dashboard Cards -->
+            <div class="dashboard-row">
+                <div class="dash-card green">
+                    <div class="dash-icon">&#10003;</div>
+                    <div class="dash-value">{{ applicable_count }}</div>
+                    <div class="dash-label">Total Recommendations</div>
+                </div>
+                <div class="dash-card amber">
+                    <div class="dash-icon">!</div>
+                    <div class="dash-value">{{ action_count }}</div>
+                    <div class="dash-label">Action Required</div>
+                </div>
+                <div class="dash-card purple">
+                    <div class="dash-icon">&#9733;</div>
+                    <div class="dash-value">{{ total_assessments }}</div>
+                    <div class="dash-label">Assessments</div>
+                </div>
+                <div class="dash-card blue">
+                    <div class="dash-icon">&#9679;</div>
+                    <div class="dash-value">{{ positive_assessments | length }}</div>
+                    <div class="dash-label">Risk Factors</div>
+                </div>
+                <div class="dash-card muted">
+                    <div class="dash-icon">-</div>
+                    <div class="dash-value">{{ na_count }}</div>
+                    <div class="dash-label">Not Applicable</div>
+                </div>
+            </div>
+
+            <!-- Action Required -->
+            {% set action_recs = [] %}
+            {% for r in recommendations if r.applies == true and r.compliant == false %}
+                {% set _ = action_recs.append(r) %}
+            {% endfor %}
+
+            {% if action_recs | length > 0 %}
+            <div class="rec-section">
+                <div class="rec-section-header action">
+                    <div class="rec-section-icon" style="color: var(--warning);">!</div>
+                    <h2>Action Required</h2>
+                    <span class="rec-section-badge">{{ action_recs | length }} items</span>
+                </div>
+                {% for r in recommendations if r.applies == true and r.compliant == false %}
+                <div class="rec-item">
+                    <div class="rec-item-header">
+                        <div class="rec-indicator action"></div>
+                        <div class="rec-title">{{ r.recommendation.title }}</div>
+                        <span class="rec-status-tag action">Action</span>
+                    </div>
+
+                    {% if r.recommendation.description %}
+                    <p class="rec-description">{{ r.recommendation.description }}</p>
+                    {% endif %}
+
+                    {% if r.narrative %}
+                    <div class="rec-narrative action-style">{{ r.narrative }}</div>
+                    {% endif %}
+
+                    {% if r.compliance_narrative %}
+                    <div class="rec-narrative action-style">
+                        <strong>Compliance Note:</strong> {{ r.compliance_narrative }}
+                    </div>
+                    {% endif %}
+
+                    {% if r.recommendation.class_of_recommendation or r.recommendation.level_of_evidence or r.recommendation.uspstf_grade %}
+                    <div class="rec-evidence">
+                        {% if r.recommendation.class_of_recommendation %}
+                        <span class="evidence-pill cor">COR: {{ r.recommendation.class_of_recommendation }}</span>
+                        {% endif %}
+                        {% if r.recommendation.level_of_evidence %}
+                        <span class="evidence-pill loe">LOE: {{ r.recommendation.level_of_evidence }}</span>
+                        {% endif %}
+                        {% if r.recommendation.uspstf_grade %}
+                        <span class="evidence-pill uspstf">USPSTF: {{ r.recommendation.uspstf_grade }}</span>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    {% if r.based_on %}
+                    <div class="rec-based-on">
+                        <div class="based-on-label">Based On</div>
+                        <div class="based-on-chips">
+                            {% for b in r.based_on %}
+                            <span class="based-on-chip">{{ b.title or b.id }}: <strong>{{ b.value.representation if b.value else 'N/A' }}</strong></span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Guideline Supported Recommendations -->
+            {% set supported_recs = [] %}
+            {% for r in recommendations if r.applies == true and (r.compliant == true or r.compliant is none) %}
+                {% set _ = supported_recs.append(r) %}
+            {% endfor %}
+
+            {% if supported_recs | length > 0 %}
+            <div class="rec-section">
+                <div class="rec-section-header supported">
+                    <div class="rec-section-icon" style="color: var(--success);">&#10003;</div>
+                    <h2>Guideline Supported Recommendations</h2>
+                    <span class="rec-section-badge">{{ supported_recs | length }} items</span>
+                </div>
+                {% for r in recommendations if r.applies == true and (r.compliant == true or r.compliant is none) %}
+                <div class="rec-item">
+                    <div class="rec-item-header">
+                        <div class="rec-indicator supported"></div>
+                        <div class="rec-title">{{ r.recommendation.title }}</div>
+                        <span class="rec-status-tag supported">Supported</span>
+                    </div>
+
+                    {% if r.recommendation.description %}
+                    <p class="rec-description">{{ r.recommendation.description }}</p>
+                    {% endif %}
+
+                    {% if r.narrative %}
+                    <div class="rec-narrative">{{ r.narrative }}</div>
+                    {% endif %}
+
+                    {% if r.recommendation.class_of_recommendation or r.recommendation.level_of_evidence or r.recommendation.uspstf_grade %}
+                    <div class="rec-evidence">
+                        {% if r.recommendation.class_of_recommendation %}
+                        <span class="evidence-pill cor">COR: {{ r.recommendation.class_of_recommendation }}</span>
+                        {% endif %}
+                        {% if r.recommendation.level_of_evidence %}
+                        <span class="evidence-pill loe">LOE: {{ r.recommendation.level_of_evidence }}</span>
+                        {% endif %}
+                        {% if r.recommendation.uspstf_grade %}
+                        <span class="evidence-pill uspstf">USPSTF: {{ r.recommendation.uspstf_grade }}</span>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    {% if r.based_on %}
+                    <div class="rec-based-on">
+                        <div class="based-on-label">Based On</div>
+                        <div class="based-on-chips">
+                            {% for b in r.based_on %}
+                            <span class="based-on-chip">{{ b.title or b.id }}: <strong>{{ b.value.representation if b.value else 'N/A' }}</strong></span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Risk Assessments -->
+            <div class="rec-section">
+                <div class="rec-section-header assessment">
+                    <div class="rec-section-icon" style="color: var(--purple);">&#9733;</div>
+                    <h2>Risk Assessments</h2>
+                    <span class="rec-section-badge" style="background: var(--purple); color: white;">{{ assessments | length }}</span>
+                </div>
+                <div class="assessment-grid">
+                    {% for ea in assessments %}
+                    {% set is_positive = ea.record.value and ea.record.value.value == true %}
+                    {% set is_negative = ea.record.value and ea.record.value.value == false %}
+                    {% set item_class = 'positive' if is_positive else ('negative' if is_negative else '') %}
+                    {% set dot_class = 'positive' if is_positive else ('negative' if is_negative else 'unknown') %}
+                    {% set result_class = 'positive' if is_positive else ('negative' if is_negative else 'unknown') %}
+
+                    <div class="assessment-item {{ item_class }}">
+                        <div class="assessment-header">
+                            <div class="assessment-dot {{ dot_class }}"></div>
+                            <div class="assessment-name">{{ ea.record.title or ea.record.id }}</div>
+                            <span class="assessment-result {{ result_class }}">
+                                {% if ea.record.value %}{{ ea.record.value.representation }}{% else %}N/A{% endif %}
+                            </span>
+                        </div>
+
+                        {% if ea.record.var.description %}
+                        <p class="assessment-desc">{{ ea.record.var.description }}</p>
+                        {% endif %}
+
+                        {% if ea.record.narrative %}
+                        <p class="assessment-narrative">{{ ea.record.narrative }}</p>
+                        {% endif %}
+
+                        {% if ea.record.value and ea.record.value.source %}
+                        <div class="assessment-sources">
+                            Derived from:
+                            {% for source in ea.record.value.source %}
+                            <span>{{ source.id }}: {{ source.value.representation if source.value else 'N/A' }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        {% if ea.error %}
+                        <div class="assessment-error">{{ ea.error }}</div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Not Applicable -->
+            {% set na_recs = [] %}
+            {% for r in recommendations if r.applies == false %}
+                {% set _ = na_recs.append(r) %}
+            {% endfor %}
+
+            {% if na_recs | length > 0 %}
+            <div class="rec-section">
+                <div class="rec-section-header na">
+                    <div class="rec-section-icon" style="color: var(--muted);">-</div>
+                    <h2>Not Applicable to Patient</h2>
+                    <span class="rec-section-badge">{{ na_recs | length }}</span>
+                </div>
+                {% for r in recommendations if r.applies == false %}
+                <div class="rec-item" style="opacity: 0.65;">
+                    <div class="rec-item-header">
+                        <div class="rec-indicator na"></div>
+                        <div class="rec-title">{{ r.recommendation.title }}</div>
+                        <span class="rec-status-tag na">N/A</span>
+                    </div>
+
+                    {% if r.recommendation.description %}
+                    <p class="rec-description">{{ r.recommendation.description }}</p>
+                    {% endif %}
+
+                    {% if r.narrative %}
+                    <div class="rec-narrative" style="border-left-color: var(--muted);">{{ r.narrative }}</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Citations -->
+            {% set all_citations = [] %}
+            {% for r in recommendations if r.recommendation.citations %}
+                {% for cite in r.recommendation.citations %}
+                    {% if cite not in all_citations %}
+                        {% set _ = all_citations.append(cite) %}
+                    {% endif %}
+                {% endfor %}
+            {% endfor %}
+
+            {% if all_citations | length > 0 %}
+            <div class="rec-section">
+                <div class="rec-section-header">
+                    <div class="rec-section-icon">&#128218;</div>
+                    <h2>References</h2>
+                    <span class="rec-section-badge">{{ all_citations | length }}</span>
+                </div>
+                <div class="citations-list">
+                    {% for cite in all_citations %}
+                    <div class="citation">{{ loop.index }}. {{ cite }}</div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>This report is generated based on clinical practice guidelines and available patient data.</p>
+        <p style="margin-top: 4px;">Clinical judgment should always be exercised in conjunction with this automated assessment.</p>
+        <p style="margin-top: 12px; opacity: 0.7;">Powered by ConcordCore</p>
+    </footer>
+</body>
+</html>

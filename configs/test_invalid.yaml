@@ -1,0 +1,63 @@
+# Test configuration with intentional errors for validation testing
+# This file is loadable but contains validation errors that the validator should detect
+
+institution_config:
+  institution_id: test_invalid
+  institution_name: "Test Invalid Config"
+
+  threshold_overrides:
+    # Duplicate override - ERROR
+    - target_id: MED_B
+      parameter: risk_threshold
+      override_value: 7.5
+      reason: "First override"
+
+    - target_id: MED_B
+      parameter: risk_threshold
+      override_value: 8.0
+      reason: "Duplicate override - should cause error"
+
+    # Value outside safe range - WARNING
+    - target_id: highLDL
+      parameter: ldl_threshold
+      override_value: 500
+      reason: "Unreasonably high value"
+
+  expression_overrides:
+    # Invalid expression syntax - ERROR
+    - target_id: risk_factors
+      override_expression: "$has_diabetes == True and and $htn"
+      reason: "Bad syntax with double 'and'"
+
+  recommendation_filters:
+    # Conflicting filters - ERROR
+    - recommendation_id: MED_A
+      action: include
+      reason: "Include it"
+
+    - recommendation_id: MED_A
+      action: exclude
+      reason: "Also exclude it - conflict!"
+
+    # Invalid action - ERROR
+    - recommendation_id: MED_C
+      action: maybe
+      reason: "Invalid action value"
+
+  local_rules:
+    # Duplicate rule ID - ERROR
+    - id: local_rule_1
+      title: "First Rule"
+      expression: "$Age > 65"
+      type: assessment
+
+    - id: local_rule_1
+      title: "Duplicate Rule"
+      expression: "$Age > 70"
+      type: assessment
+
+    # Invalid type - ERROR
+    - id: local_rule_2
+      title: "Bad Type"
+      expression: "$Age > 50"
+      type: invalid_type
