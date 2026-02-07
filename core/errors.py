@@ -61,12 +61,24 @@ class VarError(ConcordError):
 
     Attributes:
         variable_id: The ID of the variable that caused the error.
+        var_title: Human-readable variable title.
+        actual_value: The value that caused the error (if applicable).
+        constraint: The constraint that was violated (if applicable).
+        user_friendly_message: Message suitable for display to end users.
     """
 
-    def __init__(self, message: str, variable_id: str):
+    def __init__(self, message: str, variable_id: str,
+                 var_title: str | None = None,
+                 actual_value=None,
+                 constraint: str | None = None,
+                 user_friendly_message: str | None = None):
         message = message + f' variable_id={variable_id}'
         super().__init__(message)
         self.variable_id = variable_id
+        self.var_title = var_title
+        self.actual_value = actual_value
+        self.constraint = constraint
+        self.user_friendly_message = user_friendly_message or message
         log.error(f'{self.__class__.__name__}: {message}')
 
 

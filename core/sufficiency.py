@@ -7,20 +7,82 @@ is sufficient to execute a CPG.
 
 from functools import cached_property
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Protocol
 
 from .healthcontext import HealthContext
 from .record_index import RecordIndex
+from primitives.varstring import VarString
 from variables.record import Record
 from variables.var import Var
 from .evaluation import EvaluationContext, EvaluationResult, SufficiencyResultStatus
 
 log = logging.getLogger(__name__)
 
+
+@dataclass(frozen=True)
+class DependencyGraph:
+    """Tracks variable dependencies derived from panel validators.
+
+    Scans panel validator expressions for $VarID references and builds
+    a dependency graph so missing dependencies can be detected early.
+
+    Attributes:
+        dependencies: Dict mapping var_id to set of var_ids it depends on
+        dependents: Dict mapping var_id to set of var_ids that depend on it
+    """
+    dependencies: dict[str, set[str]] = field(default_factory=dict)
+    dependents: dict[str, set[str]] = field(default_factory=dict)
+
+    @classmethod
+    def from_variables(cls, variables: list[Var]) -> 'DependencyGraph':
+        """Build a dependency graph from variable definitions.
+
+        Scans panel validators for $VarID references to identify
+        which variables depend on which others.
+
+        Args:
+            variables: List of Var definitions to analyze
+
+        Returns:
+            A DependencyGraph with computed dependency relationships
+        """
+        deps: dict[str, set[str]] = {}
+        rev: dict[str, set[str]] = {}
+
+        for var in variables:
+            if var.validator and 'panel' in var.validator:
+                panel_expr = var.validator['panel']
+                var_string = VarString(panel_expr)
+                referenced_ids = set(var_string.variable_identifiers)
+                # Remove 'value' since it refers to self, not another variable
+                referenced_ids.discard('value')
+                if referenced_ids:
+                    deps[var.id] = referenced_ids
+                    for ref_id in referenced_ids:
+                        rev.setdefault(ref_id, set()).add(var.id)
+
+        return cls(dependencies=deps, dependents=rev)
+
+    def get_missing_dependencies(self, var_id: str,
+                                 available_ids: set[str]) -> set[str]:
+        """Find dependencies of var_id that are not in available_ids.
+
+        Args:
+            var_id: The variable to check
+            available_ids: Set of variable IDs that have data
+
+        Returns:
+            Set of missing dependency var_ids
+        """
+        needed = self.dependencies.get(var_id, set())
+        return needed - available_ids
+
 @dataclass(frozen=True)
 class SufficiencyResult(EvaluationResult):
-  
+
+    dependency_graph: 'DependencyGraph | None' = None
+
     def __repr__(self) -> str:
             return f"is_executable: {self.is_executable}\n{super().__repr__()}"
 
@@ -29,11 +91,11 @@ class SufficiencyResult(EvaluationResult):
         for ev in self.context.evaluation_list:
             if ev.sufficiency_status.value  == SufficiencyResultStatus.Insufficient.value:
                 return SufficiencyResultStatus.Insufficient
-        
+
         return SufficiencyResultStatus.Sufficient
 
     @property
-    def is_executable(self) -> bool: 
+    def is_executable(self) -> bool:
         return self.result == SufficiencyResultStatus.Sufficient or self.result == SufficiencyResultStatus.SufficientWithUserAttestation
 
  
@@ -90,19 +152,19 @@ class SufficiencyEvaluator(SufficiencyEvaluatorProtocol):
                 user_context: HealthContext,
                 context: EvaluationContext = None,
                 strict = True) -> SufficiencyResult:
-        """Evalutes a given list of variables for sufficiency to execute a CPG and categorizes 
+        """Evalutes a given list of variables for sufficiency to execute a CPG and categorizes
         each variable.
         Note: Always call cpg.is_valid() else where before evaluating for sufficiency!
 
         Args:
-            user_context: HealthContext 
+            user_context: HealthContext
             context (EvaluationContext, optional): Records evaluation context. Defaults to None.
             strict: If True- plausibility and panel evaluation raises evaluation error
 
         Returns:
             SufficiencyResult: Sufficiency
         """
-        
+
         eval_ctx = context or EvaluationContext()
 
         # Build indexes once for O(1) lookups
@@ -128,21 +190,30 @@ class SufficiencyEvaluator(SufficiencyEvaluatorProtocol):
 
             records.append(record)
 
+        # Build dependency graph from panel validators
+        dep_graph = DependencyGraph.from_variables(self.cpg_variables)
+        available_ids = {r.id for r in records if r.has_value}
 
-        # --- PERFORM EVALUATION CHECKS --- 
+        # --- PERFORM EVALUATION CHECKS ---
         for record in records:
+            # Check for missing dependencies before validation
+            missing_deps = dep_graph.get_missing_dependencies(
+                record.id, available_ids
+            )
+            if missing_deps:
+                log.debug(f"Variable {record.id} has missing dependencies: {missing_deps}")
 
             try:
                 if record.validate(records=records, strict=strict):
-                    eval_ctx.successful_evaluation(record)
+                    eval_ctx.successful_evaluation(record, dependency_vars=list(missing_deps) if missing_deps else None)
             except Exception as e:
                 log.debug(f"Validation failed for {record.id}: {e}")
-                eval_ctx.failed_evaluation(record, e)   
-                
+                eval_ctx.failed_evaluation(record, e)
+
 
             record.set_narrative(persona=user_context.persona)
-            
-        return SufficiencyResult(eval_ctx)
+
+        return SufficiencyResult(context=eval_ctx, dependency_graph=dep_graph)
 
 
 

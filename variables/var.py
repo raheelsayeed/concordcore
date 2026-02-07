@@ -309,12 +309,24 @@ class VarPanelValidationError(VarError):
     def __init__(self, var: Var, value):
         panel = var.validator.get('panel')
         message = f'Value must be="{panel}" got value={value}'
-        super(VarPanelValidationError, self).__init__(message, var.id)
+        super(VarPanelValidationError, self).__init__(
+            message, var.id,
+            var_title=var.title,
+            actual_value=value,
+            constraint=str(panel),
+            user_friendly_message=f'{var.title or var.id}: value {value} does not satisfy panel constraint "{panel}"'
+        )
 
 class VarImplausibleError(VarError):
 
     def __init__(self, var: Var, value):
         plausible_expression = var.validator.get('plausible')
         message = f'Value must be="{plausible_expression}" got value={value}'
-        super(VarImplausibleError, self).__init__(message, var.id)
+        super(VarImplausibleError, self).__init__(
+            message, var.id,
+            var_title=var.title,
+            actual_value=value,
+            constraint=str(plausible_expression),
+            user_friendly_message=f'{var.title or var.id}: value {value} is outside the plausible range ({plausible_expression})'
+        )
 
