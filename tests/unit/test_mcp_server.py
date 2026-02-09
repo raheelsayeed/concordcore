@@ -1,998 +1,252 @@
-#!/usr/bin/env python3
-"""Unit tests for MCP server components.
-
-Tests cover:
-- State management (ConcordState, EvaluationSession)
-- Confidence scoring
-- Priority ranking
-- Explanation generator
-- Instruction handlers
-"""
+"""Tests for mcp_server — MCP Apps architecture."""
 
 import asyncio
+import inspect
 import json
-import pytest
-from datetime import datetime, timedelta
-from unittest.mock import MagicMock, patch
-
 import sys
 from pathlib import Path
+
+import pytest
+
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from mcp_server.state import ConcordState, EvaluationSession
-from mcp_server.confidence import ConfidenceCalculator, ConfidenceScore
-from mcp_server.priority import PriorityRanker, PriorityLevel, PrioritizedRecommendation
-from mcp_server.explanation import ExplanationGenerator, RecommendationExplanation
-from mcp_server.instructions_handler import (
-    get_instruction_tools,
-    handle_get_llm_instructions,
-    handle_build_optimized_prompt,
-)
 
-from core.healthcontext import HealthContext
-from core.concord_user import ConcordUser
-from core.recommendation import ClassOfRecommendation, LevelOfEvidence, USPSTFGrading
-from variables.var import Var
-from variables.value import Value
-from variables.record import Record
-from primitives.types import Persona
+class TestAttestationAppHTML:
+    @pytest.fixture(autouse=True)
+    def _load_html(self):
+        from mcp_server.html_renderer import get_attestation_app_html
+        self.html = get_attestation_app_html()
 
+    def test_valid_html_structure(self):
+        assert "<!DOCTYPE html>" in self.html
+        assert "<html" in self.html
+        assert "</html>" in self.html
 
-# =============================================================================
-# FIXTURES
-# =============================================================================
+    def test_inline_mcp_apps_bridge(self):
+        assert "class App" in self.html
+        assert "ui/initialize" in self.html
+        assert "postMessage" in self.html
 
-@pytest.fixture
-def cpgs_dir(tmp_path):
-    """Create a temporary CPGs directory with test CPG files."""
-    cpgs = tmp_path / "cpgs"
-    cpgs.mkdir()
+    def test_app_connect(self):
+        assert "app.connect()" in self.html
 
-    # Create a minimal test CPG - matches actual CPG YAML structure
-    test_cpg = cpgs / "test_cpg.yaml"
-    test_cpg.write_text("""
-CPG:
-  identifier: test_cpg
-  title: Test CPG
-  publisher: Test Publisher
-  revision: "1.0"
+    def test_ontoolresult_handler(self):
+        assert "app.ontoolresult" in self.html
 
-variables:
-  - id: Age
-    title: Age
-    required: true
-    type: integer
-  - id: LDL
-    title: LDL Cholesterol
-    required: true
-    type: decimal
+    def test_call_server_tool(self):
+        assert "app.callServerTool" in self.html
 
-eligibility:
-  - id: age_eligible
-    expression: "$Age >= 18"
+    def test_submit_attestation_target(self):
+        assert "submit_attestation" in self.html
 
-assessments:
-  - id: high_ldl
-    title: High LDL
-    expression: "$LDL > 130"
+    def test_send_message(self):
+        assert "app.sendMessage" in self.html
 
-recommendations:
-  - id: rec_statin
-    title: Consider Statin Therapy
-    expression: "$high_ldl == True"
-""")
-    return cpgs
+    def test_loading_state(self):
+        assert "loading" in self.html.lower()
 
+    def test_submit_button(self):
+        assert "Submit" in self.html
 
-@pytest.fixture
-def state(cpgs_dir):
-    """Create a ConcordState with test CPGs directory."""
-    return ConcordState(cpgs_dir=cpgs_dir)
+    def test_form_container(self):
+        assert "form-container" in self.html
 
+    def test_field_renderers(self):
+        assert "renderToggle" in self.html
+        assert "renderSelect" in self.html
+        assert "renderNumber" in self.html
 
-@pytest.fixture
-def sample_health_context():
-    """Create a sample health context."""
-    age_var = Var(id="Age", title="Age", required=True)
-    ldl_var = Var(id="LDL", title="LDL Cholesterol", required=True)
+    def test_xss_escape(self):
+        assert "function esc" in self.html
 
-    age_record = Record(var=age_var, initial_values=[Value(value=55)])
-    ldl_record = Record(var=ldl_var, initial_values=[Value(value=145)])
+    def test_min_height(self):
+        assert "min-height" in self.html
 
-    return HealthContext(records=[age_record, ldl_record], persona=Persona.patient)
+    def test_section_grouping(self):
+        assert "CATEGORY_LABELS" in self.html
+        assert "Medical Conditions" in self.html
 
+    def test_adaptive_grid_layout(self):
+        assert "fields-grid" in self.html
+        assert "fitToViewport" in self.html
+        assert "gridTemplateColumns" in self.html
 
-@pytest.fixture
-def mock_concord():
-    """Create a mock Concord instance."""
-    concord = MagicMock()
+    def test_compact_density_class(self):
+        assert ".compact" in self.html
+        assert 'classList.add("compact")' in self.html
 
-    # Mock CPG
-    concord.cpg.title = "Test CPG"
-    concord.cpg.identifier = "test_cpg"
+    def test_sends_size_changed(self):
+        assert "sendSizeChanged" in self.html
 
-    # Mock sufficiency result
-    mock_eval_record = MagicMock()
-    mock_eval_record.record.var.required = True
-    mock_eval_record.record.has_value = True
-    mock_eval_record.record.value.date = datetime.now()
-    mock_eval_record.error = None
+    def test_theme_css_variables(self):
+        for token in (
+            "var(--color-background-primary",
+            "var(--color-text-primary",
+            "var(--color-background-secondary",
+            "var(--color-border-primary",
+            "var(--color-text-secondary",
+            "var(--color-text-tertiary",
+            "var(--color-background-info",
+            "var(--color-text-success",
+            "var(--color-text-danger",
+        ):
+            assert token in self.html, f"Missing theme token: {token}"
 
-    concord.sufficiency_result.context.evaluation_list = [mock_eval_record]
-    concord.sufficiency_result.attestation_variables = []
+    def test_theme_font_variable(self):
+        assert "var(--font-sans" in self.html
 
-    return concord
+    def test_theme_border_radius(self):
+        assert "var(--border-radius-lg" in self.html
+        assert "var(--border-radius-md" in self.html
+
+    def test_bridge_applies_host_theme(self):
+        assert "_applyTheme" in self.html
+        assert "hostContext" in self.html
+        assert "data-theme" in self.html
+        assert "colorScheme" in self.html
+
+    def test_theme_change_handler(self):
+        assert "onhostcontextchanged" in self.html
 
 
-@pytest.fixture
-def mock_evaluated_recommendation():
-    """Create a mock evaluated recommendation."""
-    rec = MagicMock()
-    rec.applies = True
-    rec.narrative = "Consider statin therapy based on LDL levels."
-    rec.based_on = []
+class TestServerArchitecture:
+    def test_collect_attestation_has_meta_ui(self):
+        from mcp_server.server import mcp
+        tools = asyncio.run(mcp.list_tools())
+        ca = next(t for t in tools if t.name == "collect_attestation")
+        d = ca.model_dump(by_alias=True, exclude_none=True)
+        assert "_meta" in d
+        assert d["_meta"]["ui"]["resourceUri"].startswith("ui://")
 
-    rec.recommendation.id = "rec_statin"
-    rec.recommendation.title = "Consider Statin Therapy"
-    rec.recommendation.type = None
-    rec.recommendation.class_of_recommendation = ClassOfRecommendation.I
-    rec.recommendation.level_of_evidence = LevelOfEvidence.A
-    rec.recommendation.uspstf_grade = None
-    rec.recommendation.citations = ["Citation 1", "Citation 2"]
+    def test_resource_at_ui_uri(self):
+        from mcp_server.server import mcp, ATTESTATION_UI_URI
+        resources = asyncio.run(mcp.list_resources())
+        uris = [str(r.uri) for r in resources]
+        assert ATTESTATION_UI_URI in uris
 
-    return rec
+    def test_resource_mime_type(self):
+        from mcp_server.server import mcp, MCP_APP_MIME
+        resources = asyncio.run(mcp.list_resources())
+        r = next(r for r in resources if "attestation" in str(r.uri))
+        assert r.mimeType == MCP_APP_MIME
 
+    def test_resource_serves_html(self):
+        from mcp_server.server import mcp, ATTESTATION_UI_URI
+        content = asyncio.run(mcp.read_resource(ATTESTATION_UI_URI))
+        html = content if isinstance(content, str) else str(content)
+        assert "<!DOCTYPE html>" in html
+        assert "app.connect()" in html
 
-# =============================================================================
-# STATE MANAGEMENT TESTS
-# =============================================================================
-
-class TestEvaluationSession:
-    """Tests for EvaluationSession dataclass."""
-
-    def test_create_session(self):
-        """Test creating an evaluation session."""
-        session = EvaluationSession(session_id="test-123")
-        assert session.session_id == "test-123"
-        assert session.health_context is None
-        assert session.cpg_evaluations == {}
-        assert session.attestations == {}
-
-    def test_session_created_at(self):
-        """Test that session has created_at timestamp."""
-        before = datetime.now()
-        session = EvaluationSession(session_id="test")
-        after = datetime.now()
-        assert before <= session.created_at <= after
-
-    def test_has_health_context(self):
-        """Test has_health_context property."""
-        session = EvaluationSession(session_id="test")
-        assert session.has_health_context is False
-
-        session.health_context = MagicMock()
-        assert session.has_health_context is True
-
-    def test_active_concord_empty(self):
-        """Test active_concord when no evaluations."""
-        session = EvaluationSession(session_id="test")
-        assert session.active_concord is None
-
-    def test_active_concord_returns_last(self):
-        """Test active_concord returns most recent."""
-        session = EvaluationSession(session_id="test")
-        mock1 = MagicMock()
-        mock2 = MagicMock()
-
-        session.cpg_evaluations["cpg1"] = mock1
-        session.cpg_evaluations["cpg2"] = mock2
-
-        assert session.active_concord == mock2
-
-    def test_store_evaluation(self):
-        """Test storing evaluation."""
-        session = EvaluationSession(session_id="test")
-        mock = MagicMock()
-
-        session.store_evaluation("cpg1", mock)
-        assert session.get_evaluation("cpg1") == mock
-
-    def test_get_evaluation_not_found(self):
-        """Test getting non-existent evaluation."""
-        session = EvaluationSession(session_id="test")
-        assert session.get_evaluation("nonexistent") is None
+    def test_seven_tools_registered(self):
+        from mcp_server.server import mcp
+        names = [t.name for t in asyncio.run(mcp.list_tools())]
+        assert len(names) == 7
+        for name in ("acknowledge_guidelines", "list_cpgs", "get_cpg_info",
+                      "create_health_context", "evaluate_patient",
+                      "collect_attestation", "submit_attestation"):
+            assert name in names
 
 
-class TestConcordState:
-    """Tests for ConcordState class."""
-
-    def test_create_state(self, cpgs_dir):
-        """Test creating state manager."""
-        state = ConcordState(cpgs_dir=cpgs_dir)
-        assert state.cpgs_dir == cpgs_dir
-        assert state.loaded_cpgs == {}
-        assert state.sessions == {}
-
-    def test_get_session_creates_new(self, state):
-        """Test get_session creates new session."""
-        session = state.get_session("new-session")
-        assert session is not None
-        assert session.session_id == "new-session"
-        assert "new-session" in state.sessions
-
-    def test_get_session_returns_existing(self, state):
-        """Test get_session returns existing session."""
-        session1 = state.get_session("test")
-        session2 = state.get_session("test")
-        assert session1 is session2
-
-    def test_get_session_no_create(self, state):
-        """Test get_session with create=False."""
-        result = state.get_session("nonexistent", create=False)
-        assert result is None
-        assert "nonexistent" not in state.sessions
-
-    def test_delete_session(self, state):
-        """Test deleting a session."""
-        state.get_session("to-delete")
-        assert state.delete_session("to-delete") is True
-        assert "to-delete" not in state.sessions
-
-    def test_delete_session_not_found(self, state):
-        """Test deleting non-existent session."""
-        assert state.delete_session("nonexistent") is False
-
-    def test_get_available_cpgs(self, state, cpgs_dir):
-        """Test listing available CPGs."""
-        cpgs = state.get_available_cpgs()
-        assert len(cpgs) == 1
-        assert cpgs[0]["identifier"] == "test_cpg"
-        assert cpgs[0]["filename"] == "test_cpg.yaml"
-
-    def test_load_cpg(self, state):
-        """Test loading a CPG."""
-        cpg = state.load_cpg("test_cpg")
-        assert cpg.identifier == "test_cpg"
-        assert cpg.title == "Test CPG"
-
-    def test_load_cpg_cached(self, state):
-        """Test CPG caching."""
-        cpg1 = state.load_cpg("test_cpg")
-        cpg2 = state.load_cpg("test_cpg")
-        assert cpg1 is cpg2
-
-    def test_load_cpg_not_found(self, state):
-        """Test loading non-existent CPG."""
-        with pytest.raises(FileNotFoundError):
-            state.load_cpg("nonexistent")
-
-    def test_reload_cpg(self, state):
-        """Test reloading a CPG."""
-        cpg1 = state.load_cpg("test_cpg")
-        cpg2 = state.reload_cpg("test_cpg")
-        assert cpg1 is not cpg2
-
-    def test_cleanup_stale_sessions(self, state):
-        """Test cleaning up stale sessions."""
-        # Create a stale session
-        session = state.get_session("stale")
-        session.created_at = datetime.now() - timedelta(hours=25)
-
-        # Create a fresh session
-        state.get_session("fresh")
-
-        cleaned = state.cleanup_stale_sessions(max_age_hours=24)
-        assert cleaned == 1
-        assert "stale" not in state.sessions
-        assert "fresh" in state.sessions
-
-    def test_session_count(self, state):
-        """Test session count."""
-        assert state.session_count() == 0
-        state.get_session("s1")
-        state.get_session("s2")
-        assert state.session_count() == 2
-
-    def test_cpg_count(self, state):
-        """Test CPG count."""
-        assert state.cpg_count() == 0
-        state.load_cpg("test_cpg")
-        assert state.cpg_count() == 1
+class TestTransportConfig:
+    def test_host_and_port_writable(self):
+        from mcp_server.server import mcp
+        orig = (mcp.settings.host, mcp.settings.port)
+        try:
+            mcp.settings.host = "127.0.0.1"
+            mcp.settings.port = 9999
+            assert mcp.settings.host == "127.0.0.1"
+            assert mcp.settings.port == 9999
+        finally:
+            mcp.settings.host, mcp.settings.port = orig
 
 
-# =============================================================================
-# CONFIDENCE SCORING TESTS
-# =============================================================================
+class TestToolBehavior:
+    def test_list_cpgs(self):
+        from mcp_server.server import list_cpgs
+        result = json.loads(list_cpgs())
+        assert "available_cpgs" in result
+        assert isinstance(result["total_count"], int)
 
-class TestConfidenceScore:
-    """Tests for ConfidenceScore dataclass."""
+    def test_acknowledge_guidelines(self):
+        from mcp_server.server import acknowledge_guidelines
+        result = json.loads(acknowledge_guidelines("test-ack-2"))
+        assert result["status"] == "acknowledged"
+        assert "guidelines" in result
 
-    def test_create_score(self):
-        """Test creating a confidence score."""
-        score = ConfidenceScore(
-            overall=0.85,
-            completeness=0.9,
-            freshness=0.8,
-            validation=0.9,
-            attestation_burden=0.75,
-            total_required=10,
-            total_with_data=9,
-            oldest_data_days=30,
-            validation_passed=9,
-            validation_total=10,
-            attestations_needed=2
+    def test_get_cpg_info(self):
+        from mcp_server.server import list_cpgs, get_cpg_info
+        cpgs = json.loads(list_cpgs())
+        if cpgs["total_count"] > 0:
+            result = json.loads(get_cpg_info(cpgs["available_cpgs"][0]["identifier"]))
+            assert "identifier" in result
+            assert "variables" in result
+
+    def test_guidelines_interactive_form_language(self):
+        from mcp_server.guidelines import MANDATORY_GUIDELINES
+        assert "renders an INTERACTIVE FORM" in MANDATORY_GUIDELINES
+        assert "DO NOT create your own UI" in MANDATORY_GUIDELINES
+        assert "DO NOT list, describe, or enumerate the form fields" in MANDATORY_GUIDELINES
+        assert "ask the user each question conversationally" not in MANDATORY_GUIDELINES
+
+    def test_collect_attestation_docstring(self):
+        from mcp_server.server import collect_attestation
+        doc = collect_attestation.__doc__
+        assert "interactive" in doc.lower()
+        assert "DO NOT ask the user questions yourself" in doc
+        assert "DO NOT list or describe the form fields" in doc
+
+    def test_imports_from_own_package(self):
+        import mcp_server.server as mod
+        source = inspect.getsource(mod)
+        assert "from .state import" in source
+        assert "from .guidelines import" in source
+        assert "from .form_builder import" in source
+        assert "sys.path.insert" not in source
+
+    def test_guidelines_required_before_health_context(self):
+        from mcp_server.server import create_health_context
+        result = json.loads(create_health_context(
+            session_id="blocked-session-2",
+            health_data=[{"variable_id": "Age", "value": 55}],
+        ))
+        assert result["error"] == "GUIDELINES_NOT_ACKNOWLEDGED"
+
+    def test_collect_attestation_returns_str(self):
+        from mcp_server.server import (
+            acknowledge_guidelines, create_health_context,
+            evaluate_patient, collect_attestation, list_cpgs,
         )
-        assert score.overall == 0.85
-        assert score.completeness == 0.9
+        sid = "ca-test-str"
+        acknowledge_guidelines(sid)
+        cpgs = json.loads(list_cpgs())
+        if cpgs["total_count"] == 0:
+            pytest.skip("No CPGs available")
+        cpg_id = cpgs["available_cpgs"][0]["identifier"]
+        create_health_context(session_id=sid, health_data=[{"variable_id": "Age", "value": 55}])
+        evaluate_patient(session_id=sid, cpg_id=cpg_id)
 
-    def test_to_dict(self):
-        """Test converting score to dict."""
-        score = ConfidenceScore(
-            overall=0.85,
-            completeness=0.9,
-            freshness=0.8,
-            validation=0.9,
-            attestation_burden=0.75,
-            total_required=10,
-            total_with_data=9,
-            oldest_data_days=30,
-            validation_passed=9,
-            validation_total=10,
-            attestations_needed=2
+        result = collect_attestation(session_id=sid, cpg_id=cpg_id)
+        assert isinstance(result, str)
+        data = json.loads(result)
+        assert "fields" in data and len(data["fields"]) > 0
+        assert "session_id" in data and "cpg_id" in data
+
+    def test_collect_attestation_field_keys(self):
+        from mcp_server.server import (
+            acknowledge_guidelines, create_health_context,
+            evaluate_patient, collect_attestation, list_cpgs,
         )
-        result = score.to_dict()
-        assert "overall_confidence" in result
-        assert "confidence_level" in result
-        assert "components" in result
-        assert "details" in result
-
-    def test_confidence_level_high(self):
-        """Test HIGH confidence level."""
-        score = ConfidenceScore(
-            overall=0.92,
-            completeness=1.0, freshness=1.0, validation=1.0, attestation_burden=1.0,
-            total_required=5, total_with_data=5, oldest_data_days=0,
-            validation_passed=5, validation_total=5, attestations_needed=0
-        )
-        assert score._confidence_level() == "HIGH"
-
-    def test_confidence_level_moderate(self):
-        """Test MODERATE confidence level."""
-        score = ConfidenceScore(
-            overall=0.75,
-            completeness=0.8, freshness=0.7, validation=0.8, attestation_burden=0.7,
-            total_required=5, total_with_data=4, oldest_data_days=60,
-            validation_passed=4, validation_total=5, attestations_needed=1
-        )
-        assert score._confidence_level() == "MODERATE"
-
-    def test_confidence_level_low(self):
-        """Test LOW confidence level."""
-        score = ConfidenceScore(
-            overall=0.55,
-            completeness=0.6, freshness=0.5, validation=0.6, attestation_burden=0.5,
-            total_required=5, total_with_data=3, oldest_data_days=200,
-            validation_passed=3, validation_total=5, attestations_needed=2
-        )
-        assert score._confidence_level() == "LOW"
-
-    def test_confidence_level_very_low(self):
-        """Test VERY_LOW confidence level."""
-        score = ConfidenceScore(
-            overall=0.3,
-            completeness=0.4, freshness=0.2, validation=0.3, attestation_burden=0.3,
-            total_required=5, total_with_data=2, oldest_data_days=500,
-            validation_passed=1, validation_total=5, attestations_needed=3
-        )
-        assert score._confidence_level() == "VERY_LOW"
-
-
-class TestConfidenceCalculator:
-    """Tests for ConfidenceCalculator."""
-
-    def test_calculator_creation(self):
-        """Test creating calculator."""
-        calc = ConfidenceCalculator()
-        assert calc.WEIGHT_COMPLETENESS == 0.35
-        assert calc.WEIGHT_FRESHNESS == 0.25
-
-    def test_calculate_with_mock(self, mock_concord):
-        """Test calculating confidence with mock."""
-        calc = ConfidenceCalculator()
-        score = calc.calculate(mock_concord)
-
-        assert isinstance(score, ConfidenceScore)
-        assert 0.0 <= score.overall <= 1.0
-        assert score.total_required >= 0
-
-    def test_calculate_no_sufficiency(self):
-        """Test calculate with no sufficiency result."""
-        concord = MagicMock()
-        concord.sufficiency_result = None
-
-        calc = ConfidenceCalculator()
-        score = calc.calculate(concord)
-
-        assert score.overall == 0.0
-        assert score.total_required == 0
-
-    def test_age_to_freshness_optimal(self):
-        """Test freshness for optimal age data."""
-        calc = ConfidenceCalculator()
-        assert calc._age_to_freshness(10) == 1.0
-        assert calc._age_to_freshness(30) == 1.0
-
-    def test_age_to_freshness_good(self):
-        """Test freshness for good age data."""
-        calc = ConfidenceCalculator()
-        assert calc._age_to_freshness(60) == 0.8
-        assert calc._age_to_freshness(90) == 0.8
-
-    def test_age_to_freshness_acceptable(self):
-        """Test freshness for acceptable age data."""
-        calc = ConfidenceCalculator()
-        assert calc._age_to_freshness(180) == 0.5
-        assert calc._age_to_freshness(365) == 0.5
-
-    def test_age_to_freshness_stale(self):
-        """Test freshness for stale data."""
-        calc = ConfidenceCalculator()
-        assert calc._age_to_freshness(800) == 0.2
-
-
-# =============================================================================
-# PRIORITY RANKING TESTS
-# =============================================================================
-
-class TestPriorityLevel:
-    """Tests for PriorityLevel enum."""
-
-    def test_priority_ordering(self):
-        """Test priority levels are correctly ordered."""
-        assert PriorityLevel.CRITICAL < PriorityLevel.HIGH
-        assert PriorityLevel.HIGH < PriorityLevel.MODERATE
-        assert PriorityLevel.MODERATE < PriorityLevel.LOW
-        assert PriorityLevel.LOW < PriorityLevel.INFORMATIONAL
-
-    def test_to_dict(self):
-        """Test to_dict conversion."""
-        result = PriorityLevel.CRITICAL.to_dict()
-        assert result["level"] == "CRITICAL"
-        assert result["value"] == 1
-        assert "description" in result
-
-
-class TestPrioritizedRecommendation:
-    """Tests for PrioritizedRecommendation dataclass."""
-
-    def test_to_dict(self, mock_evaluated_recommendation):
-        """Test to_dict conversion."""
-        pr = PrioritizedRecommendation(
-            recommendation=mock_evaluated_recommendation,
-            priority_level=PriorityLevel.HIGH,
-            priority_score=85.5,
-            rationale="Strong recommendation"
-        )
-        result = pr.to_dict()
-
-        assert result["id"] == "rec_statin"
-        assert result["priority_level"] == "HIGH"
-        assert result["priority_score"] == 85.5
-        assert "evidence" in result
-
-
-class TestPriorityRanker:
-    """Tests for PriorityRanker."""
-
-    def test_ranker_creation(self):
-        """Test creating ranker."""
-        ranker = PriorityRanker()
-        assert ranker.WEIGHT_COR == 0.45
-        assert ranker.WEIGHT_LOE == 0.35
-
-    def test_rank_empty_list(self):
-        """Test ranking empty list."""
-        ranker = PriorityRanker()
-        result = ranker.rank([])
-        assert result == []
-
-    def test_rank_single_recommendation(self, mock_evaluated_recommendation):
-        """Test ranking single recommendation."""
-        ranker = PriorityRanker()
-        result = ranker.rank([mock_evaluated_recommendation])
-
-        assert len(result) == 1
-        assert result[0].recommendation == mock_evaluated_recommendation
-        assert result[0].priority_score > 0
-
-    def test_rank_excludes_non_applicable(self, mock_evaluated_recommendation):
-        """Test non-applicable excluded by default."""
-        mock_evaluated_recommendation.applies = False
-
-        ranker = PriorityRanker()
-        result = ranker.rank([mock_evaluated_recommendation])
-
-        assert len(result) == 0
-
-    def test_rank_includes_non_applicable_when_requested(self, mock_evaluated_recommendation):
-        """Test non-applicable included when requested."""
-        mock_evaluated_recommendation.applies = False
-
-        ranker = PriorityRanker()
-        result = ranker.rank([mock_evaluated_recommendation], include_non_applicable=True)
-
-        assert len(result) == 1
-
-    def test_calculate_score_class_I(self, mock_evaluated_recommendation):
-        """Test score calculation for Class I recommendation."""
-        ranker = PriorityRanker()
-        score = ranker._calculate_score(mock_evaluated_recommendation)
-
-        # Class I (100) * 0.45 + LOE A (100) * 0.35 + default (50) * 0.20 = 90
-        assert score >= 80
-
-    def test_determine_level_critical(self, mock_evaluated_recommendation):
-        """Test CRITICAL level determination."""
-        ranker = PriorityRanker()
-        level = ranker._determine_level(85.0, mock_evaluated_recommendation)
-        assert level == PriorityLevel.CRITICAL
-
-    def test_determine_level_high(self, mock_evaluated_recommendation):
-        """Test HIGH level determination."""
-        mock_evaluated_recommendation.recommendation.class_of_recommendation = None
-
-        ranker = PriorityRanker()
-        level = ranker._determine_level(75.0, mock_evaluated_recommendation)
-        assert level == PriorityLevel.HIGH
-
-    def test_get_summary(self, mock_evaluated_recommendation):
-        """Test get_summary."""
-        ranker = PriorityRanker()
-        prioritized = ranker.rank([mock_evaluated_recommendation])
-        summary = ranker.get_summary(prioritized)
-
-        assert summary["total"] == 1
-        assert "by_level" in summary
-        assert "highest_priority" in summary
-
-
-# =============================================================================
-# EXPLANATION GENERATOR TESTS
-# =============================================================================
-
-class TestRecommendationExplanation:
-    """Tests for RecommendationExplanation dataclass."""
-
-    def test_to_dict(self):
-        """Test to_dict conversion."""
-        explanation = RecommendationExplanation(
-            recommendation_id="rec_test",
-            title="Test Recommendation",
-            applies=True,
-            assessment_chain=[{"id": "assessment1", "value": True}],
-            citations=["Citation 1"],
-            class_of_recommendation="I",
-            level_of_evidence="A",
-            uspstf_grade=None,
-            patient_summary="Patient summary",
-            provider_summary="Provider summary",
-            source_data=[{"variable_id": "LDL", "value": 145}]
-        )
-        result = explanation.to_dict()
-
-        assert result["recommendation_id"] == "rec_test"
-        assert result["applies"] is True
-        assert len(result["assessment_chain"]) == 1
-        assert "evidence" in result
-        assert "summaries" in result
-
-
-class TestExplanationGenerator:
-    """Tests for ExplanationGenerator."""
-
-    def test_generator_creation(self):
-        """Test creating generator."""
-        gen = ExplanationGenerator()
-        assert gen is not None
-
-    def test_explain_not_found(self):
-        """Test explain with non-existent recommendation."""
-        concord = MagicMock()
-        concord.evaluated_recommendation.return_value = None
-
-        gen = ExplanationGenerator()
-        with pytest.raises(ValueError, match="not found"):
-            gen.explain(concord, "nonexistent")
-
-    def test_explain_found(self, mock_evaluated_recommendation):
-        """Test explain with valid recommendation."""
-        concord = MagicMock()
-        concord.evaluated_recommendation.return_value = mock_evaluated_recommendation
-
-        gen = ExplanationGenerator()
-        result = gen.explain(concord, "rec_statin")
-
-        assert isinstance(result, RecommendationExplanation)
-        assert result.recommendation_id == "rec_statin"
-        assert result.applies is True
-
-    def test_patient_summary_applicable(self, mock_evaluated_recommendation):
-        """Test patient summary for applicable recommendation."""
-        gen = ExplanationGenerator()
-        summary = gen._generate_patient_summary(
-            mock_evaluated_recommendation,
-            [{"id": "high_ldl", "title": "High LDL", "value": True}],
-            [{"variable_id": "LDL", "value": 145}]
-        )
-
-        assert "based on your health information" in summary.lower()
-
-    def test_patient_summary_not_applicable(self, mock_evaluated_recommendation):
-        """Test patient summary for non-applicable recommendation."""
-        mock_evaluated_recommendation.applies = False
-
-        gen = ExplanationGenerator()
-        summary = gen._generate_patient_summary(
-            mock_evaluated_recommendation, [], []
-        )
-
-        assert "does not apply" in summary.lower()
-
-    def test_provider_summary(self, mock_evaluated_recommendation):
-        """Test provider summary generation."""
-        gen = ExplanationGenerator()
-        summary = gen._generate_provider_summary(
-            mock_evaluated_recommendation,
-            [{"id": "high_ldl", "expression": "$LDL > 130", "value": True}],
-            [{"variable_id": "LDL", "value": 145, "date": "2024-01-01"}]
-        )
-
-        assert "RECOMMENDATION:" in summary
-        assert "COR:" in summary
-        assert "ASSESSMENT LOGIC:" in summary
-
-
-# =============================================================================
-# INSTRUCTION HANDLER TESTS
-# =============================================================================
-
-class TestInstructionTools:
-    """Tests for instruction MCP tools."""
-
-    def test_get_instruction_tools(self):
-        """Test getting instruction tools."""
-        tools = get_instruction_tools()
-
-        assert len(tools) == 2
-        tool_names = [t.name for t in tools]
-        assert "get_llm_instructions" in tool_names
-        assert "build_optimized_prompt" in tool_names
-
-    def test_tool_schemas(self):
-        """Test tool schemas are valid."""
-        tools = get_instruction_tools()
-
-        for tool in tools:
-            assert tool.inputSchema is not None
-            assert "type" in tool.inputSchema
-            assert "properties" in tool.inputSchema
-
-
-class TestInstructionHandlers:
-    """Tests for instruction handler functions."""
-
-    def test_get_llm_instructions_claude(self):
-        """Test getting Claude instructions."""
-        result = asyncio.run(handle_get_llm_instructions({
-            "provider": "claude",
-            "context": "extraction"
-        }))
-
-        assert len(result) == 1
-        data = json.loads(result[0].text)
-
-        assert data["provider"] == "claude"
-        assert data["context"] == "extraction"
-        assert "instructions" in data
-        assert data["instructions"]["formatting_style"] == "xml_tags"
-
-    def test_get_llm_instructions_openai(self):
-        """Test getting OpenAI instructions."""
-        result = asyncio.run(handle_get_llm_instructions({
-            "provider": "openai",
-            "context": "conversation"
-        }))
-
-        data = json.loads(result[0].text)
-        assert data["provider"] == "openai"
-        assert data["instructions"]["formatting_style"] == "markdown"
-
-    def test_get_llm_instructions_invalid_context(self):
-        """Test with invalid context."""
-        result = asyncio.run(handle_get_llm_instructions({
-            "provider": "claude",
-            "context": "invalid_context"
-        }))
-
-        data = json.loads(result[0].text)
-        assert "error" in data
-
-    def test_build_optimized_prompt(self):
-        """Test building optimized prompt."""
-        result = asyncio.run(handle_build_optimized_prompt({
-            "provider": "claude",
-            "context": "extraction",
-            "user_content": "Extract LDL from: LDL-C 145 mg/dL"
-        }))
-
-        data = json.loads(result[0].text)
-
-        assert data["provider"] == "claude"
-        assert "prompt" in data
-        assert "system" in data["prompt"]
-        assert "user" in data["prompt"]
-        assert "145" in data["prompt"]["user"]
-
-    def test_build_optimized_prompt_no_content(self):
-        """Test with missing user_content."""
-        result = asyncio.run(handle_build_optimized_prompt({
-            "provider": "claude",
-            "context": "extraction",
-            "user_content": ""
-        }))
-
-        data = json.loads(result[0].text)
-        assert "error" in data
-
-    def test_build_optimized_prompt_with_additional_context(self):
-        """Test with additional context."""
-        result = asyncio.run(handle_build_optimized_prompt({
-            "provider": "claude",
-            "context": "conversation",
-            "user_content": "Why do I need a statin?",
-            "additional_context": "Patient has LDL 180 mg/dL"
-        }))
-
-        data = json.loads(result[0].text)
-        assert "LDL 180" in data["prompt"]["system"]
-
-
-# =============================================================================
-# MCP ATTESTATION WITH CONCORDUSER TESTS
-# =============================================================================
-
-class TestMCPAttestationWithConcordUser:
-    """Tests verifying the attestation flow uses ConcordUser and produces
-    new (not mutated) frozen HealthContext objects."""
-
-    def test_get_or_create_user_creates_concord_user(self):
-        """Test that get_or_create_user creates a ConcordUser instance."""
-        session = EvaluationSession(session_id="attest-test-1")
-        assert session.user is None
-
-        user = session.get_or_create_user(Persona.patient)
-
-        assert user is not None
-        assert isinstance(user, ConcordUser)
-        assert user.user_id == "attest-test-1"
-        assert user.persona == Persona.patient
-
-    def test_get_or_create_user_returns_same_instance(self):
-        """Test that get_or_create_user returns the same ConcordUser on subsequent calls."""
-        session = EvaluationSession(session_id="attest-test-2")
-
-        user1 = session.get_or_create_user(Persona.patient)
-        user2 = session.get_or_create_user(Persona.provider)
-
-        # Same instance - persona only used on creation
-        assert user1 is user2
-        assert user1.persona == Persona.patient
-
-    def test_submit_attestation_replaces_health_context(self, sample_health_context):
-        """Test that submitting attestations produces a new HealthContext object,
-        not a mutation of the original frozen HealthContext."""
-        session = EvaluationSession(session_id="attest-replace-test")
-        session.health_context = sample_health_context
-        original_context = session.health_context
-
-        # Simulate the attestation flow from handle_submit_attestation
-        user = session.get_or_create_user()
-        user.attest("Smoker", 0)
-        session.attestations["Smoker"] = 0
-        session.health_context = user.update_health_context(session.health_context)
-
-        # The health context must be a different object (replaced, not mutated)
-        assert session.health_context is not original_context
-        # The new context should have the attested data
-        new_ids = {r.id for r in session.health_context.records}
-        assert "Smoker" in new_ids
-        # Original records should still be present
-        original_ids = {r.id for r in original_context.records}
-        assert original_ids.issubset(new_ids)
-
-    def test_submit_attestation_preserves_original_records(self, sample_health_context):
-        """Test that the original HealthContext records are untouched after attestation."""
-        session = EvaluationSession(session_id="attest-preserve-test")
-        session.health_context = sample_health_context
-        original_record_count = len(sample_health_context.records)
-
-        user = session.get_or_create_user()
-        user.attest("DM", 1)
-        session.health_context = user.update_health_context(session.health_context)
-
-        # Original context is unchanged (frozen)
-        assert len(sample_health_context.records) == original_record_count
-        # New context has one more record
-        assert len(session.health_context.records) == original_record_count + 1
-
-    def test_submit_attestation_user_has_attested_data(self):
-        """Test that after attestation, the ConcordUser has the attested data."""
-        session = EvaluationSession(session_id="attest-data-test")
-
-        # Build initial context via ConcordUser (like handle_create_health_context does)
-        user = session.get_or_create_user(Persona.patient)
-        user.add_input("Age", 55)
-        user.add_input("LDL", 145)
-        session.health_context = user.build_health_context()
-
-        # Now attest new data (like handle_submit_attestation does)
-        user.attest("DM", True)
-        session.health_context = user.update_health_context(session.health_context)
-
-        # User should have all data
-        assert user.has_data_for("Age")
-        assert user.has_data_for("LDL")
-        assert user.has_data_for("DM")
-
-        # The attestation log should include the DM attestation
-        attestation_entries = [
-            e for e in user.attestation_log if e.get("is_attestation")
-        ]
-        assert len(attestation_entries) >= 1
-        attested_var_ids = [e["var_id"] for e in attestation_entries]
-        assert "DM" in attested_var_ids
-
-    def test_submit_attestation_handler_flow(self, sample_health_context):
-        """Test the full handle_submit_attestation flow end-to-end using the
-        same logic as the server handler."""
-        session = EvaluationSession(session_id="attest-handler-test")
-        session.health_context = sample_health_context
-        original_context_id = id(session.health_context)
-
-        # Replicate handle_submit_attestation logic
-        attestations = [
-            {"variable_id": "DM", "value": 1},
-            {"variable_id": "Smoker", "value": 0},
-        ]
-
-        user = session.get_or_create_user()
-
-        for att in attestations:
-            var_id = att["variable_id"]
-            raw_value = att["value"]
-            user.attest(var_id, raw_value)
-            session.attestations[var_id] = raw_value
-
-        # Rebuild HealthContext (frozen-safe)
-        session.health_context = user.update_health_context(session.health_context)
-
-        # Verify context was replaced
-        assert id(session.health_context) != original_context_id
-        # Verify new context has the attested variables
-        ctx_var_ids = {r.id for r in session.health_context.records}
-        assert "DM" in ctx_var_ids
-        assert "Smoker" in ctx_var_ids
-        # Verify original variables are preserved
-        assert "Age" in ctx_var_ids
-        assert "LDL" in ctx_var_ids
-
-    def test_submit_attestation_does_not_duplicate_existing_vars(self, sample_health_context):
-        """Test that attesting a variable already in the health context does not
-        create a duplicate record (update_health_context skips existing IDs)."""
-        session = EvaluationSession(session_id="attest-nodup-test")
-        session.health_context = sample_health_context
-        original_record_count = len(sample_health_context.records)
-
-        user = session.get_or_create_user()
-        # Attest a variable that already exists in the health context
-        user.attest("Age", 60)
-        session.health_context = user.update_health_context(session.health_context)
-
-        # update_health_context only adds records for variables NOT already present
-        # So the count should remain the same (Age already exists)
-        assert len(session.health_context.records) == original_record_count
-
-    def test_multiple_attestation_rounds(self, sample_health_context):
-        """Test multiple rounds of attestation accumulate correctly."""
-        session = EvaluationSession(session_id="attest-multi-test")
-        session.health_context = sample_health_context
-
-        user = session.get_or_create_user()
-
-        # Round 1: attest DM
-        user.attest("DM", 1)
-        session.health_context = user.update_health_context(session.health_context)
-        ctx_after_round1 = session.health_context
-        ids_after_round1 = {r.id for r in ctx_after_round1.records}
-        assert "DM" in ids_after_round1
-
-        # Round 2: attest Smoker
-        user.attest("Smoker", 0)
-        session.health_context = user.update_health_context(session.health_context)
-
-        # Context was replaced again
-        assert session.health_context is not ctx_after_round1
-        ids_after_round2 = {r.id for r in session.health_context.records}
-        assert "DM" in ids_after_round2
-        assert "Smoker" in ids_after_round2
-        assert "Age" in ids_after_round2
-        assert "LDL" in ids_after_round2
-
-    def test_health_context_persona_preserved_after_attestation(self, sample_health_context):
-        """Test that the persona is preserved when health context is replaced."""
-        session = EvaluationSession(session_id="attest-persona-test")
-        session.health_context = sample_health_context
-        original_persona = sample_health_context.persona
-
-        user = session.get_or_create_user()
-        user.attest("DM", True)
-        session.health_context = user.update_health_context(session.health_context)
-
-        assert session.health_context.persona == original_persona
-
-
-# =============================================================================
-# INTEGRATION TESTS
-# =============================================================================
-
-class TestMCPServerIntegration:
-    """Integration tests for MCP server components."""
-
-    def test_full_workflow(self, state, sample_health_context):
-        """Test full evaluation workflow through state management."""
-        # Create session
-        session = state.get_session("integration-test")
-        session.health_context = sample_health_context
-
-        # Load CPG
-        cpg = state.load_cpg("test_cpg")
-        assert cpg is not None
-
-        # Verify session state
-        assert session.has_health_context
-        assert state.session_count() == 1
-        assert state.cpg_count() == 1
-
-    def test_confidence_and_priority_integration(self, mock_concord, mock_evaluated_recommendation):
-        """Test confidence and priority work together."""
-        # Calculate confidence
-        calc = ConfidenceCalculator()
-        score = calc.calculate(mock_concord)
-
-        # Rank recommendations
-        ranker = PriorityRanker()
-        prioritized = ranker.rank([mock_evaluated_recommendation])
-
-        # Both should work
-        assert score.overall >= 0
-        assert len(prioritized) == 1
-
-    def test_explanation_with_ranker(self, mock_evaluated_recommendation):
-        """Test explanation works with prioritized recommendations."""
-        concord = MagicMock()
-        concord.evaluated_recommendation.return_value = mock_evaluated_recommendation
-
-        # Rank first
-        ranker = PriorityRanker()
-        prioritized = ranker.rank([mock_evaluated_recommendation])
-
-        # Then explain
-        gen = ExplanationGenerator()
-        explanation = gen.explain(concord, prioritized[0].recommendation.recommendation.id)
-
-        assert explanation is not None
-        assert explanation.applies is True
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
+        sid = "ca-test-keys"
+        acknowledge_guidelines(sid)
+        cpgs = json.loads(list_cpgs())
+        if cpgs["total_count"] == 0:
+            pytest.skip("No CPGs available")
+        cpg_id = cpgs["available_cpgs"][0]["identifier"]
+        create_health_context(session_id=sid, health_data=[{"variable_id": "Age", "value": 55}])
+        evaluate_patient(session_id=sid, cpg_id=cpg_id)
+        data = json.loads(collect_attestation(session_id=sid, cpg_id=cpg_id))
+
+        for field in data["fields"]:
+            assert "variable_id" in field
+            assert "label" in field
+            assert "input_type" in field
