@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 import logging
-from primitives.types import ValueType            
+from concordcore.primitives.types import ValueType            
 from datetime import datetime
 
-from core.evaluation import EvaluatedRecord
-from core.concord import Concord
-from variables.value import Value
+from concordcore.core.evaluation import EvaluatedRecord
+from concordcore.core.concord import Concord
+from concordcore.variables.value import Value
 from .inputprotocol import InputProtocol
 
 log = logging.getLogger(__name__)

@@ -3,14 +3,14 @@
 import pytest
 from datetime import datetime
 
-from core.concord_user import ConcordUser
-from core.healthcontext import HealthContext
-from pghd.input_source import InputSource
-from pghd.validator import PGHDValidationError
-from primitives.types import Persona, ValueType
-from variables.var import Var
-from variables.value import Value
-from variables.record import Record
+from concordcore.core.concord_user import ConcordUser
+from concordcore.core.healthcontext import HealthContext
+from concordcore.pghd.input_source import InputSource
+from concordcore.pghd.validator import PGHDValidationError
+from concordcore.primitives.types import Persona, ValueType
+from concordcore.variables.var import Var
+from concordcore.variables.value import Value
+from concordcore.variables.record import Record
 
 
 class TestConcordUserCreation:
@@ -221,7 +221,7 @@ class TestConcordUserFullFlow:
 
     def test_full_flow_with_cpg(self, minimal_cpg, sample_healthcontext):
         """Test: ConcordUser builds a HealthContext that Concord can evaluate."""
-        from core.concord import Concord
+        from concordcore.core.concord import Concord
 
         user = ConcordUser(user_id='flow-test')
         # Add the same data that sample_healthcontext has

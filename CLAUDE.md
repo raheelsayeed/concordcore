@@ -6,23 +6,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ConcordCore is a Python framework for evaluating Clinical Practice Guidelines (CPGs) against patient health data. It processes YAML-defined CPGs through a 5-phase evaluation pipeline: CPG Loading → Eligibility Check → Sufficiency Check → Assessment → Recommendations.
 
+The framework is pip-installable as `concordcore`. Library code lives under `src/concordcore/`.
+
 ## Commands
 
 ```bash
 # Setup
-python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt
-
-# Run with a CPG
-./main.py -f cpgs/cholesterol/cholesterol.yaml -t document -p patient
-
-# CLI arguments
-#   -f <path/to/cpg.yaml>    CPG definition file
-#   -t <template_name>       Template for rendering (e.g., 'document')
-#   -p <persona>             'patient' or 'provider'
-#   --inspect                Show detailed output
-
-# Run legacy tests
-./tests.py
+python3 -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]"
 
 # Run pytest suite
 pytest tests/                           # All tests
@@ -35,12 +25,28 @@ pytest -v                               # Verbose output
 
 ## Architecture
 
+### Package Structure
+
+All library code lives under `src/concordcore/`:
+
+```
+src/concordcore/
+├── core/          # Evaluation pipeline + registry
+├── variables/     # Var, Value, Record data model
+├── primitives/    # Types, codes, units, validation
+├── ontology/      # Code system definitions
+├── pghd/          # Patient-generated health data
+├── formats/       # FHIR adapter, protocol
+├── fhir_parsers/  # FHIR R4 resource parsing
+└── cpgs/          # CPG YAML definitions + Python modules
+```
+
 ### CPG Registry
 
-`CPGRegistry` (`core/cpg_registry.py`) is the single source of truth for discovering and loading CPGs:
+`CPGRegistry` (`src/concordcore/core/cpg_registry.py`) is the single source of truth for discovering and loading CPGs:
 
 ```python
-from core.cpg_registry import get_registry
+from concordcore.core.cpg_registry import get_registry
 
 registry = get_registry()                  # Module-level singleton
 cpg = registry.get('2019AccPrimaryPreventionASCVD')  # Load by identifier
@@ -53,10 +59,11 @@ All consumers (`app_multicpg`, `mcp_server`, `app/server`, `core/benchmarks`) de
 
 ### Core Evaluation Flow
 
-The `Concord` orchestrator class (`core/concord.py`) manages the evaluation pipeline:
+The `Concord` orchestrator class (`src/concordcore/core/concord.py`) manages the evaluation pipeline:
 
 ```python
-from core.cpg_registry import get_registry
+from concordcore.core.cpg_registry import get_registry
+from concordcore.core.concord import Concord
 
 cpg = get_registry().get('2019AccPrimaryPreventionASCVD')
 concord = Concord(cpg, healthcontext)
@@ -73,9 +80,7 @@ Each phase must complete successfully before the next can proceed. `NeedAttestat
 - **`core/`**: Evaluation pipeline (`concord.py`, `eligibility.py`, `sufficiency.py`, `assessment.py`, `recommendation.py`) + `cpg_registry.py` for auto-discovery
 - **`variables/`**: Data model - `Var` (variable definition), `Value` (data value), `Record` (var + values)
 - **`primitives/`**: Types, codes (LOINC, SNOMED, RxNorm, CPT), units, validation
-- **`renderer/`**: Jinja2 templates for generating patient/provider output
-- **`fhir/`**: FHIR R4 resource parsing (Observation, Condition, MedicationRequest, Procedure)
-- **`inputsession/`**: CLI for collecting patient-reported data (attestations)
+- **`fhir_parsers/`**: FHIR R4 resource parsing (Observation, Condition, MedicationRequest, Procedure)
 - **`cpgs/`**: CPG YAML definitions and accompanying Python function modules
 
 ### Expression System
@@ -136,14 +141,12 @@ Sufficient, SufficientWithUserAttestation, Insufficient, Optional
 
 ## Sample Data
 
-- `misc.sample_healthcontext()` - generates test patient data
-- `misc.sample_fhir_values()` - generates FHIR-sourced test values
 - `samples/fhir_r4/ndjson/` - FHIR R4 test resources
 - `tests/conftest.py` - pytest fixtures for Values, Vars, Records, HealthContexts, and CPGs
 
 ## Available CPGs
 
-CPGs are auto-discovered by `CPGRegistry` from `cpgs/**/*.yaml`. Use `get_registry().identifiers()` to list all available identifiers. Key CPGs:
+CPGs are auto-discovered by `CPGRegistry` from `src/concordcore/cpgs/**/*.yaml`. Use `get_registry().identifiers()` to list all available identifiers. Key CPGs:
 
 | Identifier | Description |
 |---|---|

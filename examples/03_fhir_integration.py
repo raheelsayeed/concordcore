@@ -17,11 +17,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from core.cpg_registry import get_registry
-from core.concord import Concord
-from core.healthcontext import HealthContext
-from fhir_parsers.fhirvalue import FHIRValue
-from primitives.types import Persona
+from concordcore.core.cpg_registry import get_registry
+from concordcore.core.concord import Concord
+from concordcore.core.healthcontext import HealthContext
+from concordcore.fhir_parsers.fhirvalue import FHIRValue
+from concordcore.primitives.types import Persona
 
 
 def load_ndjson(filepath: Path) -> list[dict]:

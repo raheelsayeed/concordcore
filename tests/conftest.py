@@ -10,14 +10,11 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 # Add project root to path
-import sys
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from variables.value import Value
-from variables.var import Var, Narrative
-from variables.record import Record
-from primitives.code import Code
-from primitives.types import Persona, ValueType
+from concordcore.variables.value import Value
+from concordcore.variables.var import Var, Narrative
+from concordcore.variables.record import Record
+from concordcore.primitives.code import Code
+from concordcore.primitives.types import Persona, ValueType
 
 
 # ============================================================================
@@ -196,8 +193,8 @@ def sample_rxnorm_code():
 @pytest.fixture
 def minimal_healthcontext():
     """A minimal HealthContext with basic patient data."""
-    from core.healthcontext import HealthContext
-    from variables.age import Age
+    from concordcore.core.healthcontext import HealthContext
+    from concordcore.variables.age import Age
 
     age = Age(55)
     gender = Record(
@@ -211,8 +208,8 @@ def minimal_healthcontext():
 @pytest.fixture
 def sample_healthcontext():
     """A comprehensive HealthContext for testing."""
-    from core.healthcontext import HealthContext
-    from variables.age import Age
+    from concordcore.core.healthcontext import HealthContext
+    from concordcore.variables.age import Age
 
     age = Age(50)
     gender = Record(
@@ -245,7 +242,7 @@ def sample_healthcontext():
 @pytest.fixture
 def provider_healthcontext(sample_healthcontext):
     """A HealthContext with provider persona."""
-    from core.healthcontext import HealthContext
+    from concordcore.core.healthcontext import HealthContext
     return HealthContext(
         records=sample_healthcontext.records,
         persona=Persona.provider
@@ -292,14 +289,14 @@ def minimal_cpg_dict():
 @pytest.fixture
 def minimal_cpg(minimal_cpg_dict):
     """A minimal CPG instance."""
-    from core.cpg import CPG
+    from concordcore.core.cpg import CPG
     return CPG.from_document(minimal_cpg_dict)
 
 
 @pytest.fixture
 def cholesterol_cpg():
     """Load the cholesterol CPG from file."""
-    from core.cpg_registry import get_registry
+    from concordcore.core.cpg_registry import get_registry
     try:
         return get_registry().get('2019AccPrimaryPreventionASCVD')
     except KeyError:
@@ -313,7 +310,7 @@ def cholesterol_cpg():
 @pytest.fixture
 def sample_assessment_var():
     """A sample AssessmentVar for testing."""
-    from core.assessment import AssessmentVar
+    from concordcore.core.assessment import AssessmentVar
     return AssessmentVar(
         id='test_assessment',
         title='Test Assessment',
@@ -324,7 +321,7 @@ def sample_assessment_var():
 @pytest.fixture
 def sample_assessment_var_with_narrative():
     """An AssessmentVar with narratives."""
-    from core.assessment import AssessmentVar
+    from concordcore.core.assessment import AssessmentVar
     return AssessmentVar(
         id='ldl_high',
         title='High LDL Assessment',
@@ -351,7 +348,7 @@ def sample_assessment_var_with_narrative():
 @pytest.fixture
 def sample_eligibility_var():
     """A sample EligibilityVar for testing."""
-    from core.eligibility import EligibilityVar
+    from concordcore.core.eligibility import EligibilityVar
     return EligibilityVar(
         id='age_eligibility',
         title='Age Eligibility',

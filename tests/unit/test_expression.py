@@ -3,15 +3,11 @@
 
 import pytest
 
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
-from core.expression import Expression
-from variables.record import Record
-from variables.var import Var
-from variables.value import Value
-from primitives.errors import ExpressionVariableNotFound, ExpressionEvaluationError
+from concordcore.core.expression import Expression
+from concordcore.variables.record import Record
+from concordcore.variables.var import Var
+from concordcore.variables.value import Value
+from concordcore.primitives.errors import ExpressionVariableNotFound, ExpressionEvaluationError
 
 
 class TestExpressionCreation:
@@ -136,7 +132,7 @@ class TestExpressionRecommendationEvaluation:
     @pytest.fixture
     def assessment_record(self):
         """Create a mock assessment record."""
-        from core.assessment import AssessmentRecord, AssessmentVar
+        from concordcore.core.assessment import AssessmentRecord, AssessmentVar
         var = AssessmentVar(id='high_ldl', title='High LDL', expression='$LDL > 100')
         record = AssessmentRecord(var=var)
         # Manually set value for testing
@@ -145,7 +141,7 @@ class TestExpressionRecommendationEvaluation:
 
     def test_evaluate_recommendation_expression(self, assessment_record):
         """Test evaluating a recommendation expression."""
-        from core.evaluation import EvaluatedRecord, EvaluationResultStatus
+        from concordcore.core.evaluation import EvaluatedRecord, EvaluationResultStatus
         eval_record = EvaluatedRecord(
             record=assessment_record,
             evaluation_result=EvaluationResultStatus.Successful

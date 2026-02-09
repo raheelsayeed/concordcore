@@ -6,8 +6,8 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-from variables.var import Var, VarCategory
-from primitives.types import ValueType
+from concordcore.variables.var import Var, VarCategory
+from concordcore.primitives.types import ValueType
 
 
 @dataclass

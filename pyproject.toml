@@ -3,8 +3,8 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "concord"
-version = "0.1.0"
+name = "concordcore"
+version = "1.0.0"
 description = "A Python framework for evaluating Clinical Practice Guidelines (CPGs) against patient health data"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -71,10 +71,10 @@ docs = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/concordhealth/concord"
-Documentation = "https://github.com/concordhealth/concord#readme"
-Repository = "https://github.com/concordhealth/concord"
-Issues = "https://github.com/concordhealth/concord/issues"
+Homepage = "https://github.com/concordhealth/concordcore"
+Documentation = "https://github.com/concordhealth/concordcore#readme"
+Repository = "https://github.com/concordhealth/concordcore"
+Issues = "https://github.com/concordhealth/concordcore/issues"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -97,7 +97,7 @@ filterwarnings = [
 ]
 
 [tool.coverage.run]
-source = ["core", "variables", "primitives", "fhir"]
+source = ["concordcore"]
 branch = true
 omit = [
     "*/tests/*",
@@ -145,7 +145,7 @@ ignore = [
 ]
 
 [tool.ruff.isort]
-known-first-party = ["core", "variables", "primitives", "fhir", "renderer", "ontology"]
+known-first-party = ["concordcore"]
 
 [tool.black]
 line-length = 120
@@ -167,4 +167,4 @@ exclude = '''
 '''
 
 [tool.hatch.build.targets.wheel]
-packages = ["core", "variables", "primitives", "fhir", "renderer", "ontology", "inputsession"]
+packages = ["src/concordcore"]

@@ -29,9 +29,9 @@ import sys
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from core.cpg import CPG
-from core.healthcontext import HealthContext
-from primitives.types import Persona
+from concordcore.core.cpg import CPG
+from concordcore.core.healthcontext import HealthContext
+from concordcore.primitives.types import Persona
 from ai import HealthCopilot, PromptBuilder
 from ai.prompts import PromptStyle, format_template
 import misc

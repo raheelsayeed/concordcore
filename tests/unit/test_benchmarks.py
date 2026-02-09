@@ -2,7 +2,7 @@
 """Tests for benchmarking suite."""
 
 import pytest
-from core.benchmarks import (
+from concordcore.core.benchmarks import (
     BenchmarkRunner,
     BenchmarkReport,
     BenchmarkResult,
@@ -197,19 +197,19 @@ class TestBenchmarkRunner:
 
     def test_runner_initialization(self):
         """Test runner initialization."""
-        runner = BenchmarkRunner(cpg_dir="cpgs")
+        runner = BenchmarkRunner()
         assert runner is not None
 
     def test_get_available_cpgs(self):
         """Test getting available CPGs."""
-        runner = BenchmarkRunner(cpg_dir="cpgs")
+        runner = BenchmarkRunner()
         cpgs = runner._get_available_cpgs()
         assert isinstance(cpgs, list)
         assert len(cpgs) > 0
 
     def test_benchmark_single_cpg(self):
         """Test benchmarking a single CPG."""
-        runner = BenchmarkRunner(cpg_dir="cpgs")
+        runner = BenchmarkRunner()
 
         # Try to find a CPG that can be loaded
         result = None
@@ -227,11 +227,11 @@ class TestBenchmarkRunner:
 
     def test_calculate_cost_comparison(self):
         """Test cost comparison calculation."""
-        runner = BenchmarkRunner(cpg_dir="cpgs")
+        runner = BenchmarkRunner()
 
         # Mock the benchmark to avoid CPG loading issues
         # Just test the cost estimation logic
-        from core.benchmarks import estimate_llm_cost
+        from concordcore.core.benchmarks import estimate_llm_cost
 
         cost, time = estimate_llm_cost("claude_sonnet", 10)
         assert cost > 0

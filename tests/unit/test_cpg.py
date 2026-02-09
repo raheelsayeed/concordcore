@@ -2,13 +2,8 @@
 """Unit tests for the CPG module."""
 
 import pytest
-from pathlib import Path
-
-import sys
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
-from core.cpg import CPG
-from core.security import SecurityError
+from concordcore.core.cpg import CPG
+from concordcore.core.security import SecurityError
 
 
 class TestCPGCreation:

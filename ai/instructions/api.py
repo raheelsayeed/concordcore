@@ -23,8 +23,8 @@ from .loader import (
 )
 
 if TYPE_CHECKING:
-    from core.cpg import CPG
-    from core.institution_config import InstitutionConfig
+    from concordcore.core.cpg import CPG
+    from concordcore.core.institution_config import InstitutionConfig
 
 
 class InstructionManager:

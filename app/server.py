@@ -27,15 +27,15 @@ from fastapi.responses import HTMLResponse, FileResponse
 from pydantic import BaseModel
 import uvicorn
 
-from core.cpg import CPG
-from core.cpg_registry import get_registry
-from core.concord import Concord
-from core.healthcontext import HealthContext
-from core.batch_processor import MultiCPGEvaluator, BatchProcessor, ProcessingMode
-from core.reproducibility import compute_output_hash
-from core.benchmarks import BenchmarkRunner, estimate_llm_cost
-from primitives.types import Persona
-from variables.value import Value
+from concordcore.core.cpg import CPG
+from concordcore.core.cpg_registry import get_registry
+from concordcore.core.concord import Concord
+from concordcore.core.healthcontext import HealthContext
+from concordcore.core.batch_processor import MultiCPGEvaluator, BatchProcessor, ProcessingMode
+from concordcore.core.reproducibility import compute_output_hash
+from concordcore.core.benchmarks import BenchmarkRunner, estimate_llm_cost
+from concordcore.primitives.types import Persona
+from concordcore.variables.value import Value
 from misc import sample_healthcontext
 
 app = FastAPI(

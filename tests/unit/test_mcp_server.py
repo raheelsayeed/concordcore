@@ -4,11 +4,8 @@ import asyncio
 import inspect
 import json
 import sys
-from pathlib import Path
-
 import pytest
 
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 
 class TestAttestationAppHTML:
@@ -137,13 +134,14 @@ class TestServerArchitecture:
         assert "<!DOCTYPE html>" in html
         assert "app.connect()" in html
 
-    def test_seven_tools_registered(self):
+    def test_eight_tools_registered(self):
         from mcp_server.server import mcp
         names = [t.name for t in asyncio.run(mcp.list_tools())]
-        assert len(names) == 7
+        assert len(names) == 8
         for name in ("acknowledge_guidelines", "list_cpgs", "get_cpg_info",
-                      "create_health_context", "evaluate_patient",
-                      "collect_attestation", "submit_attestation"):
+                      "screen_patient", "create_health_context",
+                      "evaluate_patient", "collect_attestation",
+                      "submit_attestation"):
             assert name in names
 
 

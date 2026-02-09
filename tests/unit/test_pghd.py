@@ -3,14 +3,14 @@
 import pytest
 from datetime import datetime, date
 
-from pghd.input_source import InputSource, InputMetadata
-from pghd.normalizer import PGHDNormalizer
-from pghd.validator import PGHDValidator, PGHDValidationError
-from pghd.converter import PGHDConverter
-from variables.var import Var
-from variables.value import Value
-from variables.record import Record
-from primitives.types import ValueType
+from concordcore.pghd.input_source import InputSource, InputMetadata
+from concordcore.pghd.normalizer import PGHDNormalizer
+from concordcore.pghd.validator import PGHDValidator, PGHDValidationError
+from concordcore.pghd.converter import PGHDConverter
+from concordcore.variables.var import Var
+from concordcore.variables.value import Value
+from concordcore.variables.record import Record
+from concordcore.primitives.types import ValueType
 
 
 # ============================================================================

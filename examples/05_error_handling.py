@@ -17,18 +17,18 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from core.cpg import CPG
-from core.cpg_registry import get_registry
-from core.concord import Concord, NeedAttestationError
-from core.healthcontext import HealthContext
-from core.security import SecurityError
-from variables.record import Record
-from variables.var import Var
-from variables.value import Value
-from variables.age import Age
-from primitives.code import Code
-from primitives.types import Persona
-from primitives.errors import (
+from concordcore.core.cpg import CPG
+from concordcore.core.cpg_registry import get_registry
+from concordcore.core.concord import Concord, NeedAttestationError
+from concordcore.core.healthcontext import HealthContext
+from concordcore.core.security import SecurityError
+from concordcore.variables.record import Record
+from concordcore.variables.var import Var
+from concordcore.variables.value import Value
+from concordcore.variables.age import Age
+from concordcore.primitives.code import Code
+from concordcore.primitives.types import Persona
+from concordcore.primitives.errors import (
     ExpressionVariableNotFound,
     ExpressionEvaluationError,
     VarError
@@ -208,7 +208,7 @@ def demonstrate_validation_errors():
 
     print("Creating a value with potential validation issues...")
 
-    from variables.var import VarImplausibleError
+    from concordcore.variables.var import VarImplausibleError
 
     # Example: Value outside plausible range
     ldl_var = Var(

@@ -25,7 +25,7 @@ def main():
         page_title="Concord — Clinical Guidelines",
         page_icon="",
         layout="wide",
-        initial_sidebar_state="collapsed",
+        initial_sidebar_state="expanded",
     )
 
     st.markdown(get_custom_css(), unsafe_allow_html=True)

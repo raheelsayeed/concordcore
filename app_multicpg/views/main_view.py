@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
-"""Main view - clinical dashboard for providers."""
+"""Main view — sidebar patient navigation + clinical guideline evaluation."""
 
 import re
 import streamlit as st
-from app_multicpg.services import MultiCPGService, CPGLoaderService, PriorityRanker
+from app_multicpg.services import MultiCPGService, PriorityRanker
 from app_multicpg.styles import COLORS
 from app_multicpg.data import get_patient_health_context, SAMPLE_PATIENTS
 
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-from primitives import Persona
+from concordcore.primitives import Persona
+from concordcore.core.cpg_registry import get_registry
 
 
 def _html(text: str) -> None:
@@ -22,177 +23,249 @@ def _html(text: str) -> None:
 def render_main_view():
     """Main render function."""
     _init_services()
+    _render_sidebar()
 
-    if "results" in st.session_state:
+    pid = st.session_state.get("active_patient")
+
+    # Clear results when patient changes
+    prev = st.session_state.get("_prev_patient")
+    if pid != prev:
+        st.session_state.pop("results", None)
+        st.session_state.pop("show_results", None)
+        st.session_state._prev_patient = pid
+
+    if st.session_state.get("show_results") and "results" in st.session_state:
         _page_results()
+    elif pid:
+        _page_screening(pid)
     else:
-        _page_setup()
+        _page_welcome()
 
 
 def _init_services():
-    if "loader" not in st.session_state:
-        st.session_state.loader = CPGLoaderService()
     if "evaluator" not in st.session_state:
         st.session_state.evaluator = MultiCPGService(detect_conflicts=True)
     if "ranker" not in st.session_state:
         st.session_state.ranker = PriorityRanker()
 
 
-# ─── Setup Page ────────────────────────────────────────────────────────
+# ─── Sidebar ─────────────────────────────────────────────────────────
 
 
-def _page_setup():
-    """Setup page: select patient and guidelines, then evaluate."""
-    c = COLORS
-    loader = st.session_state.loader
+def _render_sidebar():
+    """Sidebar: brand + patient selection + patient context."""
+    with st.sidebar:
+        _html('<div class="sidebar-brand">concord</div>')
+        _html('<p class="sidebar-section-label">Patients</p>')
 
-    _html(f"""
-        <div class="top-nav">
-            <div class="top-nav-brand">Concord</div>
-            <div class="top-nav-meta">Multi-guideline evaluation</div>
-        </div>
-    """)
+        current = st.session_state.get("active_patient")
 
-    _html("""
-        <div class="setup-header">
-            <h1 class="setup-title">New Evaluation</h1>
-            <p class="setup-subtitle">Select a patient and choose which clinical practice guidelines to evaluate against their health data.</p>
-        </div>
-    """)
-
-    # ── Patient Selection ──
-    _html('<p class="label">Patient</p>')
-
-    patients = list(SAMPLE_PATIENTS.items())
-    selected = st.session_state.get("_setup_patient", patients[0][0])
-
-    cols = st.columns(len(patients))
-    for i, (pid, p) in enumerate(patients):
-        with cols[i]:
-            is_sel = selected == pid
-            sel_class = "selected" if is_sel else ""
-
-            data = p["data"]
-            ldl = data.get("LDL")
-            if isinstance(ldl, list):
-                ldl = ldl[0] if ldl else "—"
-            bp = data.get("bloodpressure", ("—", "—"))
-
-            conditions = []
-            if data.get("htn"):
-                conditions.append("HTN")
-            if data.get("diabetesMellitus"):
-                conditions.append("DM")
-            if data.get("is_smoker"):
-                conditions.append("Smoker")
-
-            _html(f"""
-                <div class="patient-select-card {sel_class}">
-                    <p class="patient-card-name">{p['name']}</p>
-                    <p class="patient-card-meta">{p['age']}y {p['gender']}</p>
-                    <div class="patient-card-data">
-                        <div class="patient-card-datum">
-                            <span class="patient-card-datum-label">LDL</span>
-                            <span class="patient-card-datum-value">{ldl}</span>
-                        </div>
-                        <div class="patient-card-datum">
-                            <span class="patient-card-datum-label">BP</span>
-                            <span class="patient-card-datum-value">{bp[0]}/{bp[1]}</span>
-                        </div>
-                        <div class="patient-card-datum">
-                            <span class="patient-card-datum-label">Dx</span>
-                            <span class="patient-card-datum-value">{', '.join(conditions) if conditions else '—'}</span>
-                        </div>
-                    </div>
-                </div>
-            """)
+        for pid, p in SAMPLE_PATIENTS.items():
+            is_active = pid == current
             if st.button(
-                "Selected" if is_sel else "Select",
-                key=f"sel_{pid}",
-                type="primary" if is_sel else "secondary",
+                p["name"],
+                key=f"pat_{pid}",
+                use_container_width=True,
+                type="primary" if is_active else "secondary",
+            ):
+                if pid != current:
+                    st.session_state.active_patient = pid
+                    st.rerun()
+
+        # Patient context when a patient is selected
+        if current and current in SAMPLE_PATIENTS:
+            _render_sidebar_context(current)
+
+
+def _render_sidebar_context(patient_id: str):
+    """Render patient demographics + key metrics in sidebar."""
+    p = SAMPLE_PATIENTS[patient_id]
+    pdata = p["data"]
+
+    _html('<div class="sidebar-divider"></div>')
+
+    # Demographics
+    parts = [f'{p["age"]}y {p["gender"]}']
+    eth = pdata.get("Ethnicity")
+    if eth:
+        parts.append(eth)
+    _html(f'<p class="sidebar-demo">{" · ".join(parts)}</p>')
+
+    # Conditions
+    conditions = []
+    if pdata.get("htn"):
+        conditions.append("HTN")
+    if pdata.get("diabetesMellitus"):
+        conditions.append("DM")
+    if pdata.get("is_smoker"):
+        conditions.append("Smoker")
+    if pdata.get("former_smoker") and not pdata.get("is_smoker"):
+        conditions.append("Former smoker")
+    if pdata.get("FamilyHxPrematureASCVD"):
+        conditions.append("FHx ASCVD")
+    if conditions:
+        _html(f'<p class="sidebar-conditions">{" · ".join(conditions)}</p>')
+
+    # Medications
+    meds = []
+    if pdata.get("med_statins"):
+        meds.append("Statins")
+    if pdata.get("med_for_htn"):
+        meds.append("Antihypertensives")
+    if meds:
+        _html(f'<p class="sidebar-meds">Rx: {", ".join(meds)}</p>')
+
+    # Key metrics
+    _html('<div class="sidebar-divider"></div>')
+    _html('<p class="sidebar-section-label">Metrics</p>')
+
+    metrics = _build_metrics(pdata)
+    for label, value, cls in metrics:
+        _html(f'''
+            <div class="sidebar-metric-row">
+                <span class="sidebar-metric-label">{label}</span>
+                <span class="sidebar-metric-value {cls}">{value}</span>
+            </div>
+        ''')
+
+
+def _build_metrics(pdata: dict) -> list[tuple[str, str, str]]:
+    """Build key metric tuples (label, value, css_class)."""
+    metrics = []
+
+    ldl = pdata.get("LDL")
+    if ldl:
+        v = ldl[0] if isinstance(ldl, list) else ldl
+        metrics.append(("LDL", f"{v} mg/dL", "high" if v > 160 else ("normal" if v < 130 else "")))
+
+    hdl = pdata.get("HDL")
+    if hdl is not None:
+        metrics.append(("HDL", f"{hdl} mg/dL", "low" if hdl < 40 else "normal"))
+
+    bp = pdata.get("bloodpressure")
+    if bp and bp[0]:
+        cls = "high" if bp[0] >= 140 or bp[1] >= 90 else "normal"
+        metrics.append(("BP", f"{bp[0]}/{bp[1]}", cls))
+
+    hba1c = pdata.get("HbA_one_c")
+    if hba1c is not None:
+        cls = "high" if hba1c >= 6.5 else ("low" if hba1c >= 5.7 else "normal")
+        metrics.append(("A1c", f"{hba1c}%", cls))
+
+    bmi = pdata.get("BMI")
+    if bmi is not None:
+        cls = "high" if bmi >= 30 else ("low" if bmi >= 25 else "normal")
+        metrics.append(("BMI", str(bmi), cls))
+
+    egfr = pdata.get("eGFR")
+    if egfr is not None:
+        metrics.append(("eGFR", str(egfr), "low" if egfr < 60 else "normal"))
+
+    return metrics
+
+
+# ─── Welcome Page ─────────────────────────────────────────────────────
+
+
+def _page_welcome():
+    """Welcome state — no patient selected."""
+    _html('<div style="height: 25vh;"></div>')
+    _, center, _ = st.columns([1, 2, 1])
+    with center:
+        _html('''
+            <div style="text-align: center;">
+                <div class="brand">concord</div>
+                <p class="page-desc">Select a patient to begin clinical guideline evaluation.</p>
+            </div>
+        ''')
+
+
+# ─── Screening Page ──────────────────────────────────────────────────
+
+
+def _page_screening(patient_id: str):
+    """Show applicable CPGs for the selected patient."""
+    patient = SAMPLE_PATIENTS[patient_id]
+    screening = _get_screening(patient_id)
+
+    eligible = [s for s in screening if s["eligible"]]
+    ineligible = [s for s in screening if not s["eligible"]]
+
+    # Patient heading
+    _html(f'<h1 class="page-patient-name">{patient["name"]}</h1>')
+    _html(f'<p class="page-patient-desc">{patient["description"]}</p>')
+
+    # Applicable guidelines
+    _html(f'<p class="section-heading">Applicable Guidelines <span class="section-count">{len(eligible)}</span></p>')
+
+    if not eligible:
+        _html('<p class="empty-text">No guidelines are applicable to this patient.</p>')
+    else:
+        for cpg in eligible:
+            desc = cpg["description"]
+            if len(desc) > 150:
+                desc = desc[:150].rsplit(" ", 1)[0] + "..."
+            cat_html = f'<span class="cpg-card-category">{cpg["category"]}</span>' if cpg["category"] else ""
+            _html(f'''
+                <div class="cpg-card">
+                    <div class="cpg-card-header">
+                        <span class="cpg-card-name">{cpg["name"]}</span>
+                        {cat_html}
+                    </div>
+                    <p class="cpg-card-desc">{desc}</p>
+                </div>
+            ''')
+
+        # Evaluate button (centered)
+        _html('<div style="height: 1rem;"></div>')
+        _, btn_col, _ = st.columns([1, 2, 1])
+        with btn_col:
+            n = len(eligible)
+            if st.button(
+                f"Evaluate {n} guideline{'s' if n != 1 else ''}",
+                type="primary",
                 use_container_width=True,
             ):
-                st.session_state._setup_patient = pid
-                st.rerun()
+                _evaluate(patient_id, [c["id"] for c in eligible])
 
-    # ── Guideline Selection ──
-    _html('<div style="height: 1.5rem;"></div>')
-    _html('<p class="label">Guidelines</p>')
-
-    available = loader.get_available_cpgs()
-    cpg_map = {cpg["id"]: cpg["name"] for cpg in available}
-    defaults = [k for k in ["cholesterol", "statin"] if k in cpg_map]
-
-    chosen = st.multiselect(
-        "Select guidelines to evaluate",
-        list(cpg_map.keys()),
-        default=st.session_state.get("chosen_cpgs", defaults),
-        format_func=lambda x: cpg_map.get(x, x),
-        label_visibility="collapsed",
-        key="chosen_cpgs",
-    )
-
-    col_a, col_b, col_c, col_rest = st.columns([1, 1, 1, 5])
-    with col_a:
-        if st.button("All", key="qa", use_container_width=True, type="secondary"):
-            st.session_state.chosen_cpgs = list(cpg_map.keys())
-            st.rerun()
-    with col_b:
-        if st.button("CV", key="qcv", use_container_width=True, type="secondary"):
-            st.session_state.chosen_cpgs = [
-                cpg["id"]
-                for cpg in available
-                if cpg.get("category") == "Cardiovascular"
-            ]
-            st.rerun()
-    with col_c:
-        if st.button("None", key="qn", use_container_width=True, type="secondary"):
-            st.session_state.chosen_cpgs = []
-            st.rerun()
-
-    by_cat = loader.get_cpgs_by_category()
-    chosen_set = set(chosen)
-
-    for cat, cpgs_in_cat in by_cat.items():
-        with st.expander(f"{cat} ({len(cpgs_in_cat)})", expanded=False):
-            for cpg in cpgs_in_cat:
-                is_in = cpg["id"] in chosen_set
-                icon = "●" if is_in else "○"
-                color = COLORS["accent"] if is_in else COLORS["text_muted"]
-                _html(
-                    f'<span style="color:{color};margin-right:6px;">{icon}</span>'
-                    f'<span style="font-size:0.8125rem;font-weight:{"600" if is_in else "400"};color:{COLORS["text"] if is_in else COLORS["text_secondary"]};">'
-                    f'{cpg["name"]}</span>'
-                    f' <span style="font-size:0.6875rem;color:{COLORS["text_muted"]};">— {cpg.get("description", "")}</span>'
-                )
-
-    # ── Evaluate Footer ──
-    _html('<div style="height: 1rem;"></div>')
-
-    can_run = bool(selected and chosen)
-    if can_run:
-        summary_text = f"<strong>{SAMPLE_PATIENTS[selected]['name']}</strong> · {len(chosen)} guideline{'s' if len(chosen) != 1 else ''}"
-    else:
-        summary_text = "Select a patient and guidelines to begin"
-
-    eval_l, eval_r = st.columns([4, 1])
-    with eval_l:
-        _html(f'<div class="eval-footer"><span class="eval-footer-text">{summary_text}</span></div>')
-    with eval_r:
-        if st.button(
-            "Evaluate",
-            type="primary",
-            disabled=not can_run,
-            use_container_width=True,
-        ):
-            _evaluate(selected, chosen)
+    # Not applicable (collapsed)
+    if ineligible:
+        _html('<div style="height: 1.5rem;"></div>')
+        with st.expander(f"Not applicable ({len(ineligible)})"):
+            for cpg in ineligible:
+                _html(f'<div class="cpg-na-row">{cpg["name"]}</div>')
 
 
-# ─── Evaluate ──────────────────────────────────────────────────────────
+def _get_screening(patient_id: str) -> list[dict]:
+    """Get or compute eligibility screening for a patient (cached in session state)."""
+    cache_key = f"screening_{patient_id}"
+    if cache_key in st.session_state:
+        return st.session_state[cache_key]
+
+    ctx = get_patient_health_context(patient_id, Persona.provider)
+    if not ctx:
+        return []
+
+    results = [
+        {
+            "id": sr.cpg_identifier,
+            "name": sr.cpg_title,
+            "description": sr.description,
+            "category": sr.category,
+            "eligible": sr.is_eligible,
+        }
+        for sr in get_registry().screen(ctx)
+    ]
+
+    st.session_state[cache_key] = results
+    return results
+
+
+# ─── Evaluate ─────────────────────────────────────────────────────────
 
 
 def _evaluate(patient_id: str, cpg_ids: list[str]):
-    """Run evaluation pipeline."""
+    """Run full evaluation pipeline."""
     patient = SAMPLE_PATIENTS[patient_id]
     ctx = get_patient_health_context(patient_id, Persona.provider)
 
@@ -200,7 +273,7 @@ def _evaluate(patient_id: str, cpg_ids: list[str]):
         st.error("Failed to load patient data")
         return
 
-    with st.spinner("Evaluating guidelines..."):
+    with st.spinner("Evaluating..."):
         summary = st.session_state.evaluator.evaluate_multiple_cpgs(
             cpg_ids=cpg_ids,
             health_context=ctx,
@@ -216,321 +289,125 @@ def _evaluate(patient_id: str, cpg_ids: list[str]):
             "ranked": ranked,
             "patient": patient,
         }
+        st.session_state.show_results = True
     st.rerun()
 
 
-# ─── Results Page ──────────────────────────────────────────────────────
+# ─── Results Page ─────────────────────────────────────────────────────
 
 
 def _page_results():
-    """Results dashboard."""
-    c = COLORS
+    """Results page — recommendations + detail expanders."""
     data = st.session_state.results
     summary = data["summary"]
     ranked = data["ranked"]
     patient = data["patient"]
 
-    nav_l, nav_r = st.columns([1, 6])
-    with nav_l:
-        if st.button("\u2190 Back", type="secondary", use_container_width=True):
-            del st.session_state.results
-            st.rerun()
-    with nav_r:
-        _html("""
-            <div class="top-nav" style="margin-bottom:0;border-bottom:none;">
-                <div class="top-nav-brand">Concord</div>
-                <div class="top-nav-meta">Evaluation Results</div>
-            </div>
-        """)
-    _html('<div style="border-bottom:1px solid #E2E5EA;margin-bottom:0.75rem;"></div>')
+    # Patient heading
+    _html(f'<h1 class="page-patient-name">{patient["name"]}</h1>')
 
-    # ── Patient Banner ──
-    pdata = patient["data"]
-    conditions = []
-    if pdata.get("htn"):
-        conditions.append(("Hypertension", ""))
-    if pdata.get("diabetesMellitus"):
-        conditions.append(("Diabetes", ""))
-    if pdata.get("is_smoker"):
-        conditions.append(("Current Smoker", ""))
-    if pdata.get("former_smoker") and not pdata.get("is_smoker"):
-        conditions.append(("Former Smoker", ""))
-    if pdata.get("FamilyHxPrematureASCVD"):
-        conditions.append(("FHx ASCVD", ""))
+    rec_count = len(ranked)
+    _html(f'''
+        <p class="results-summary">
+            {summary.eligible_cpgs} of {summary.total_cpgs} guidelines evaluated
+            · {rec_count} recommendation{"s" if rec_count != 1 else ""}
+        </p>
+    ''')
 
-    meds = []
-    if pdata.get("med_statins"):
-        meds.append("Statins")
-    if pdata.get("med_for_htn"):
-        meds.append("Antihypertensives")
-    if pdata.get("med_nonstatins_chol"):
-        meds.append("Non-statin lipid Rx")
-
-    cond_chips = "".join(
-        f'<span class="condition-chip">{name}</span>' for name, _ in conditions
-    )
-    med_chips = "".join(
-        f'<span class="condition-chip med">{m}</span>' for m in meds
-    )
-
-    initials = "".join(w[0] for w in patient["name"].split()[:2]).upper()
-
-    # Calculate risk level from findings
-    risk_factors = sum([
-        bool(pdata.get("htn")),
-        bool(pdata.get("diabetesMellitus")),
-        bool(pdata.get("is_smoker")),
-        bool(pdata.get("FamilyHxPrematureASCVD")),
-        (pdata.get("LDL", [0])[0] if isinstance(pdata.get("LDL"), list) else pdata.get("LDL", 0)) > 160,
-        pdata.get("HDL", 100) < 40,
-    ])
-    if risk_factors >= 3:
-        risk_cls, risk_text = "risk-high", "High Risk"
-    elif risk_factors >= 1:
-        risk_cls, risk_text = "risk-moderate", "Moderate Risk"
-    else:
-        risk_cls, risk_text = "risk-low", "Low Risk"
-
-    _html(f"""
-        <div class="patient-banner">
-            <div class="patient-avatar">{initials}</div>
-            <div class="patient-info">
-                <p class="patient-name">{patient['name']} <span class="risk-badge {risk_cls}">{risk_text}</span></p>
-                <p class="patient-demo">{patient['age']} years · {patient['gender']} · {pdata.get('Ethnicity', '')}</p>
-            </div>
-            <div class="patient-conditions">
-                {cond_chips}
-                {med_chips}
-                {f'<span class="condition-chip ok">No active conditions</span>' if not conditions else ''}
-            </div>
-        </div>
-    """)
-
-    # ── Stats Row ──
-    conflict_count = len(summary.conflicts.conflicts) if summary.has_conflicts else 0
-    conflict_class = "error" if conflict_count > 0 else "success"
-    total_assessments = sum(len(r.assessments) for r in summary.evaluations.values())
-
-    rec_label = "Recommendation" if len(ranked) == 1 else "Recommendations"
-    conflict_label = "Conflict" if conflict_count == 1 else "Conflicts"
-
-    _html(f"""
-        <div class="stats-row">
-            <div class="stat-card">
-                <div class="stat-card-value accent">{summary.eligible_cpgs}<span style="font-size:0.875rem;font-weight:500;color:#94A3B8;">/{summary.total_cpgs}</span></div>
-                <div class="stat-card-label">Eligible Guidelines</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-card-value">{summary.executable_cpgs}</div>
-                <div class="stat-card-label">Executable</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-card-value {'success' if ranked else ''}">{len(ranked)}</div>
-                <div class="stat-card-label">{rec_label}</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-card-value">{total_assessments}</div>
-                <div class="stat-card-label">Assessments</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-card-value {conflict_class}">{conflict_count}</div>
-                <div class="stat-card-label">{conflict_label}</div>
-            </div>
-        </div>
-    """)
-
-    # ── Conflict Alert ──
+    # Conflict alert
     if summary.has_conflicts and summary.conflicts.conflicts:
         n = len(summary.conflicts.conflicts)
         descs = "; ".join(
-            cf.description[:80] for cf in summary.conflicts.conflicts[:2]
+            cf.description[:60] for cf in summary.conflicts.conflicts[:2]
         )
-        _html(f"""
-            <div class="conflict-banner">
-                <div class="conflict-banner-icon">&#9888;</div>
-                <div class="conflict-banner-text">
-                    <p class="conflict-banner-title">{n} inter-guideline conflict{'s' if n > 1 else ''} detected</p>
-                    <p class="conflict-banner-desc">{descs}</p>
-                </div>
+        _html(f'''
+            <div class="alert-row">
+                <span class="alert-icon">&#9888;</span>
+                <span>{n} guideline conflict{"s" if n > 1 else ""} &#8212; {descs}</span>
             </div>
-        """)
+        ''')
 
-    # ── Main two-column layout: Recs + Health Data ──
-    col_main, col_side = st.columns([7, 5], gap="large")
+    # Recommendations
+    _html(f'<p class="section-heading">Recommendations <span class="section-count">{rec_count}</span></p>')
 
-    with col_main:
-        _render_recommendations(ranked)
-        _render_key_findings(patient, summary)
-        _render_assessments(summary)
-        _render_guideline_overview(summary)
+    if not ranked:
+        _html('<p class="empty-text">No actionable recommendations at this time.</p>')
+    else:
+        for rec in ranked:
+            _render_rec(rec)
 
-    with col_side:
-        _render_health_data(patient)
-        _render_coverage_gaps(summary)
+    # Detail expanders
+    _html('<div style="height: 1rem;"></div>')
 
-    # ── Conflicts Detail ──
+    _render_assessments_expander(summary)
+
     if summary.has_conflicts and summary.conflicts.conflicts:
-        _render_conflicts_detail(summary)
+        _render_conflicts_expander(summary)
 
-    # ── Errors ──
     if summary.errors:
         with st.expander(f"Errors ({len(summary.errors)})"):
             for err in summary.errors:
-                st.markdown(f"- `{err}`")
+                st.markdown(f"`{err}`")
+
+    # Back button
+    _html('<div style="height: 1.5rem;"></div>')
+    _, btn_col, _ = st.columns([1, 2, 1])
+    with btn_col:
+        if st.button("Back to guidelines", type="secondary", use_container_width=True):
+            st.session_state.pop("show_results", None)
+            st.session_state.pop("results", None)
+            st.rerun()
 
 
-# ─── Result Sub-Sections ──────────────────────────────────────────────
+# ─── Shared Components ───────────────────────────────────────────────
 
 
-def _render_key_findings(patient, summary):
-    """Render auto-generated key clinical findings."""
-    pdata = patient["data"]
-    findings = []
+def _render_rec(rec):
+    """Render a single recommendation card."""
+    var = rec.recommendation.recommendation
+    title = getattr(var, "title", None) or getattr(var, "id", "Recommendation")
+    narrative = getattr(rec.recommendation, "narrative", "") or ""
 
-    # Lipid findings
-    ldl = pdata.get("LDL")
-    if ldl:
-        ldl_val = ldl[0] if isinstance(ldl, list) else ldl
-        if ldl_val > 190:
-            findings.append(("LDL critically elevated", f"{ldl_val} mg/dL (>190)", "critical"))
-        elif ldl_val > 160:
-            findings.append(("LDL elevated", f"{ldl_val} mg/dL (>160)", "high"))
+    grade = ""
+    if g := getattr(var, "class_of_recommendation", None):
+        grade = f"Class {g.value if hasattr(g, 'value') else g}"
+    elif g := getattr(var, "uspstf_grade", None):
+        grade = f"Grade {g.value if hasattr(g, 'value') else g}"
 
-    hdl = pdata.get("HDL")
-    if hdl and hdl < 40:
-        findings.append(("Low HDL", f"{hdl} mg/dL (<40)", "high"))
+    priority_map = {
+        "CRITICAL": "critical",
+        "HIGH": "high",
+        "MODERATE": "moderate",
+        "LOW": "low",
+        "INFORMATIONAL": "info",
+    }
+    priority_name = rec.priority.name if hasattr(rec.priority, "name") else str(rec.priority)
+    priority_cls = priority_map.get(priority_name, "low")
+    priority_label = priority_name.capitalize()
 
-    # BP
-    bp = pdata.get("bloodpressure", (None, None))
-    if bp and bp[0]:
-        if bp[0] >= 140 or bp[1] >= 90:
-            findings.append(("Hypertension", f"{bp[0]}/{bp[1]} mmHg", "high"))
+    if len(narrative) > 280:
+        narrative = narrative[:280].rsplit(" ", 1)[0] + "..."
 
-    # Metabolic
-    hba1c = pdata.get("HbA_one_c")
-    if hba1c:
-        if hba1c >= 6.5:
-            findings.append(("HbA1c in diabetic range", f"{hba1c}%", "critical"))
-        elif hba1c >= 5.7:
-            findings.append(("HbA1c pre-diabetic", f"{hba1c}%", "moderate"))
+    grade_html = f'<span class="rec-grade">{grade}</span>' if grade else ""
+    narrative_html = f'<p class="rec-narrative">{narrative}</p>' if narrative else ""
 
-    bmi = pdata.get("BMI")
-    if bmi:
-        if bmi >= 30:
-            findings.append(("Obesity", f"BMI {bmi}", "high"))
-        elif bmi >= 25:
-            findings.append(("Overweight", f"BMI {bmi}", "moderate"))
-
-    # Triglycerides
-    tg = pdata.get("triglycerides")
-    if tg and tg > 200:
-        findings.append(("Elevated triglycerides", f"{tg} mg/dL", "high"))
-
-    # Kidney
-    egfr = pdata.get("eGFR")
-    if egfr and egfr < 60:
-        findings.append(("Reduced eGFR", f"{egfr} mL/min", "high"))
-
-    # Risk factors
-    if pdata.get("FamilyHxPrematureASCVD"):
-        findings.append(("Family history of premature ASCVD", "", "moderate"))
-
-    if pdata.get("is_smoker"):
-        findings.append(("Active smoker", "", "critical"))
-
-    if not findings:
-        return
-
-    _html('<div style="height: 1rem;"></div>')
-    _html(f"""
-        <div class="section-header">
-            <p class="section-title">Key Findings</p>
-            <span class="section-count">{len(findings)} flagged</span>
-        </div>
-    """)
-
-    findings_html = "".join(
-        f'<div class="finding-row">'
-        f'<span class="finding-dot {sev}"></span>'
-        f'<span class="finding-label">{label}</span>'
-        f'<span class="finding-value">{value}</span>'
-        f'</div>'
-        for label, value, sev in findings
-    )
-    _html(f'<div class="findings-panel">{findings_html}</div>')
-
-
-def _render_recommendations(ranked):
-    """Render priority-ranked recommendation cards."""
-    _html(f"""
-        <div class="section-header">
-            <p class="section-title">Recommendations</p>
-            <span class="section-count">{len(ranked)} total</span>
-        </div>
-    """)
-
-    if not ranked:
-        _html('<div class="empty-state positive">No actionable recommendations at this time. Continue monitoring per guideline protocols.</div>')
-        return
-
-    for rec in ranked:
-        var = rec.recommendation.recommendation
-        title = getattr(var, "title", None) or getattr(var, "id", "Recommendation")
-        narrative = getattr(rec.recommendation, "narrative", "") or ""
-
-        grade = ""
-        if g := getattr(var, "class_of_recommendation", None):
-            grade = f"Class {g.value if hasattr(g, 'value') else g}"
-        elif g := getattr(var, "uspstf_grade", None):
-            grade = f"Grade {g.value if hasattr(g, 'value') else g}"
-
-        priority_map = {
-            "CRITICAL": "critical",
-            "HIGH": "high",
-            "MODERATE": "moderate",
-            "LOW": "low",
-            "INFORMATIONAL": "info",
-        }
-        priority_name = rec.priority.name if hasattr(rec.priority, "name") else str(rec.priority)
-        priority_cls = priority_map.get(priority_name, "low")
-        priority_label = priority_name.capitalize()
-
-        if len(narrative) > 200:
-            narrative = narrative[:200].rsplit(" ", 1)[0] + "..."
-
-        conflict_html = ""
-        if rec.conflicts_with:
-            conflict_html = '<span class="rec-card-conflict">&#9888; Conflict</span>'
-
-        evidence_html = ""
-        if grade:
-            evidence_html = f'<span class="rec-evidence">{grade}</span>'
-
-        narrative_html = f'<p class="rec-card-narrative">{narrative}</p>' if narrative else ""
-
-        _html(f"""
-            <div class="rec-card priority-{priority_cls}">
-                <div class="rec-card-top">
-                    <div class="rec-card-meta">
-                        <span class="rec-priority-tag {priority_cls}">{priority_label}</span>
-                        <span class="rec-category-tag">{rec.category}</span>
-                        {conflict_html}
-                    </div>
-                    {evidence_html}
-                </div>
-                <p class="rec-card-title">{title}</p>
-                {narrative_html}
-                <span class="rec-card-source">{rec.cpg_title}</span>
+    _html(f'''
+        <div class="rec-card priority-{priority_cls}">
+            <div class="rec-top">
+                <span class="rec-priority {priority_cls}">{priority_label}</span>
+                {grade_html}
             </div>
-        """)
+            <p class="rec-title">{title}</p>
+            {narrative_html}
+            <span class="rec-source">{rec.cpg_title}</span>
+        </div>
+    ''')
 
 
-def _render_assessments(summary):
-    """Render assessment results grouped by CPG in a compact table."""
-    # Collect assessments by CPG
+def _render_assessments_expander(summary):
+    """Render assessments inside an expander, grouped by CPG."""
     by_cpg = {}
     total = 0
-    counts = {"positive": 0, "negative": 0, "unavailable": 0, "error": 0}
 
     for cpg_id, result in summary.evaluations.items():
         if not result.assessments:
@@ -556,20 +433,12 @@ def _render_assessments(summary):
                 result_str = str(
                     eval_result.value if hasattr(eval_result, "value") else eval_result
                 ).lower()
-                if "success" in result_str:
-                    dot_cls = "true"
-                    counts["positive"] += 1
-                else:
-                    dot_cls = "false"
-                    counts["negative"] += 1
+                dot_cls = "true" if "success" in result_str else "false"
             elif error:
                 dot_cls = "error"
-                counts["error"] += 1
             else:
                 dot_cls = "false"
-                counts["negative"] += 1
 
-            # Format value with color class
             value_str = str(value) if value is not None else "—"
             if value_str.startswith("Val="):
                 value_str = value_str[4:]
@@ -582,12 +451,10 @@ def _render_assessments(summary):
                 val_cls = "v-false"
             elif value_str == "—":
                 val_cls = "v-missing"
-                counts["unavailable"] += 1
-                counts["negative"] -= 1  # correct the count
             else:
                 val_cls = "v-number"
 
-            disp_title = title if len(title) <= 45 else title[:42] + "..."
+            disp_title = title if len(title) <= 50 else title[:47] + "..."
             rows.append((dot_cls, disp_title, value_str, val_cls))
 
         if rows:
@@ -596,350 +463,48 @@ def _render_assessments(summary):
     if not by_cpg:
         return
 
-    _html('<div style="height: 1.5rem;"></div>')
-    _html(f"""
-        <div class="section-header">
-            <p class="section-title">Assessments</p>
-            <span class="section-count">{total} evaluated</span>
-        </div>
-    """)
-
-    # Summary bar
-    summary_items = []
-    if counts["positive"]:
-        summary_items.append(f'<span class="assess-summary-item"><span class="assess-summary-dot positive"></span>{counts["positive"]} positive</span>')
-    if counts["negative"]:
-        summary_items.append(f'<span class="assess-summary-item"><span class="assess-summary-dot negative"></span>{counts["negative"]} negative</span>')
-    if counts["unavailable"]:
-        summary_items.append(f'<span class="assess-summary-item"><span class="assess-summary-dot unavailable"></span>{counts["unavailable"]} unavailable</span>')
-    if counts["error"]:
-        summary_items.append(f'<span class="assess-summary-item"><span class="assess-summary-dot error"></span>{counts["error"]} errors</span>')
-    _html('<div class="assess-summary">' + "".join(summary_items) + "</div>")
-
-    # Table per CPG - collapsed inside an expander
-    for cpg_title, rows in by_cpg.items():
-        with st.expander(f"{cpg_title} ({len(rows)} assessments)", expanded=False):
-            table_rows = "".join(
-                f'<div class="assess-row">'
-                f'<span class="assess-dot {dot}"></span>'
-                f'<span class="assess-name">{name}</span>'
-                f'<span class="assess-val {vcls}">{val}</span>'
-                f'</div>'
-                for dot, name, val, vcls in rows
-            )
-            header = (
-                '<div class="assess-table-header">'
-                '<span></span>'
-                '<span>Assessment</span>'
-                '<span style="text-align:right;">Value</span>'
-                '</div>'
-            )
-            _html(f'<div class="assess-table">{header}{table_rows}</div>')
-
-
-def _render_health_data(patient):
-    """Render comprehensive patient health data panels."""
-    pdata = patient["data"]
-
-    # Vitals
-    bp = pdata.get("bloodpressure", (None, None))
-    bmi = pdata.get("BMI")
-    vitals_rows = []
-    if bp and bp[0]:
-        bp_cls = "high" if bp[0] >= 140 or bp[1] >= 90 else "normal"
-        vitals_rows.append(("Blood Pressure", f"{bp[0]}/{bp[1]} mmHg", bp_cls))
-    if bmi:
-        bmi_cls = "high" if bmi >= 30 else ("low" if bmi >= 25 else "normal")
-        vitals_rows.append(("BMI", f"{bmi}", bmi_cls))
-    _health_panel("Vitals", vitals_rows)
-
-    # Lipids
-    lipid_rows = []
-    ldl = pdata.get("LDL")
-    if ldl is not None:
-        if isinstance(ldl, list):
-            ldl_display = ", ".join(str(v) for v in ldl)
-            ldl_val = ldl[0]
-        else:
-            ldl_display = str(ldl)
-            ldl_val = ldl
-        ldl_cls = "high" if ldl_val > 160 else ("normal" if ldl_val < 130 else "")
-        lipid_rows.append(("LDL Cholesterol", f"{ldl_display} mg/dL", ldl_cls))
-
-    hdl = pdata.get("HDL")
-    if hdl is not None:
-        hdl_cls = "low" if hdl < 40 else "normal"
-        lipid_rows.append(("HDL Cholesterol", f"{hdl} mg/dL", hdl_cls))
-
-    tg = pdata.get("triglycerides")
-    if tg is not None:
-        tg_cls = "high" if tg > 200 else "normal"
-        lipid_rows.append(("Triglycerides", f"{tg} mg/dL", tg_cls))
-
-    chol = pdata.get("Chol")
-    if chol is not None:
-        chol_cls = "high" if chol > 240 else ("normal" if chol < 200 else "")
-        lipid_rows.append(("Total Cholesterol", f"{chol} mg/dL", chol_cls))
-    _health_panel("Lipid Panel", lipid_rows)
-
-    # Metabolic
-    metabolic_rows = []
-    hba1c = pdata.get("HbA_one_c")
-    if hba1c is not None:
-        hba1c_cls = "high" if hba1c >= 6.5 else ("low" if hba1c >= 5.7 else "normal")
-        metabolic_rows.append(("HbA1c", f"{hba1c}%", hba1c_cls))
-
-    glu = pdata.get("glu")
-    if glu is not None:
-        glu_cls = "high" if glu >= 126 else ("low" if glu >= 100 else "normal")
-        metabolic_rows.append(("Fasting Glucose", f"{glu} mg/dL", glu_cls))
-
-    egfr = pdata.get("eGFR")
-    if egfr is not None:
-        egfr_cls = "low" if egfr < 60 else "normal"
-        metabolic_rows.append(("eGFR", f"{egfr} mL/min", egfr_cls))
-    _health_panel("Metabolic", metabolic_rows)
-
-    # Demographics
-    demo_rows = [
-        ("Age", f"{pdata.get('Age', '—')} years", ""),
-        ("Gender", pdata.get("Gender", "—"), ""),
-    ]
-    ethnicity = pdata.get("Ethnicity")
-    if ethnicity:
-        demo_rows.append(("Ethnicity", ethnicity, ""))
-    _health_panel("Demographics", demo_rows)
-
-    # Conditions
-    condition_rows = []
-    bool_labels = {
-        "diabetesMellitus": "Diabetes Mellitus",
-        "htn": "Hypertension",
-        "is_smoker": "Current Smoker",
-        "former_smoker": "Former Smoker",
-        "ckd": "Chronic Kidney Disease",
-        "elevated_tg": "Elevated Triglycerides",
-        "FamilyHxPrematureASCVD": "Family Hx Premature ASCVD",
-    }
-    for key, label in bool_labels.items():
-        val = pdata.get(key)
-        if val is not None:
-            display = "Yes" if val else "No"
-            cls = "high" if val and key not in ("former_smoker",) else ("normal" if not val else "")
-            if key == "former_smoker" and val:
-                cls = ""
-            condition_rows.append((label, display, cls))
-    _health_panel("Conditions & Risk Factors", condition_rows)
-
-    # Medications
-    med_rows = []
-    med_labels = {
-        "med_statins": "Statin Therapy",
-        "med_for_htn": "Antihypertensive",
-        "med_nonstatins_chol": "Non-statin Lipid Rx",
-    }
-    for key, label in med_labels.items():
-        val = pdata.get(key)
-        if val is not None:
-            display = "Active" if val else "None"
-            cls = "normal" if val else ""
-            med_rows.append((label, display, cls))
-    _health_panel("Medications", med_rows)
-
-    # Smoking History
-    smoking_rows = []
-    pack_years = pdata.get("pack_years")
-    if pack_years is not None:
-        py_cls = "high" if pack_years >= 20 else ""
-        smoking_rows.append(("Pack-years", str(pack_years), py_cls))
-
-    years_quit = pdata.get("years_since_quit")
-    if years_quit is not None:
-        smoking_rows.append(("Years Since Quit", str(years_quit), ""))
-
-    ever_smoked = pdata.get("ever_smoked")
-    if ever_smoked is not None:
-        smoking_rows.append(("Ever Smoked", "Yes" if ever_smoked else "No", "high" if ever_smoked else "normal"))
-
-    if smoking_rows:
-        _health_panel("Smoking History", smoking_rows)
-
-
-_PANEL_ICONS = {
-    "Vitals": "vitals",
-    "Lipid Panel": "lipids",
-    "Metabolic": "metabolic",
-    "Demographics": "demo",
-    "Conditions & Risk Factors": "conditions",
-    "Medications": "meds",
-    "Smoking History": "smoking",
-}
-
-
-def _health_panel(title: str, rows: list[tuple[str, str, str]]):
-    """Render a health data panel with title and rows of (label, value, status_class)."""
-    if not rows:
-        return
-
-    icon_cls = _PANEL_ICONS.get(title, "demo")
-
-    rows_html = "".join(
-        f'<div class="health-row"><span class="health-row-label">{label}</span><span class="health-row-value {cls}">{value}</span></div>'
-        for label, value, cls in rows
-    )
-
-    _html(f'<div class="health-panel"><div class="health-panel-header"><span class="panel-icon {icon_cls}"></span>{title}</div><div class="health-panel-body">{rows_html}</div></div>')
-
-
-def _render_coverage_gaps(summary):
-    """Render coverage analysis — missing variables that would unlock more CPGs."""
-    coverage = getattr(summary, 'coverage', None)
-    if not coverage or not coverage.gaps:
-        return
-
-    _html('<div style="height: 1rem;"></div>')
-    _html(f"""
-        <div class="section-header">
-            <p class="section-title">Coverage Gaps</p>
-            <span class="section-count">{coverage.missing_variables} missing</span>
-        </div>
-    """)
-
-    # Progress bar: provided / total
-    total = max(coverage.total_unique_variables, 1)
-    pct = round(100 * coverage.provided_variables / total)
-    _html(f"""
-        <div style="background:{COLORS['bg_secondary']};border-radius:6px;height:8px;overflow:hidden;margin-bottom:4px;">
-            <div style="width:{pct}%;height:100%;background:{COLORS['accent']};border-radius:6px;transition:width 0.3s;"></div>
-        </div>
-        <p style="font-size:0.75rem;color:{COLORS['text_muted']};margin:0 0 12px 0;">{coverage.provided_variables}/{coverage.total_unique_variables} variables provided</p>
-    """)
-
-    # Top gaps (up to 8)
-    for gap in coverage.gaps[:8]:
-        n = len(gap.cpg_ids)
-        tags = []
-        if gap.is_required:
-            tags.append(f'<span style="font-size:0.625rem;padding:1px 5px;border-radius:3px;background:#FEF2F2;color:#DC2626;">Required</span>')
-        if gap.is_attestable:
-            tags.append(f'<span style="font-size:0.625rem;padding:1px 5px;border-radius:3px;background:#F0FDF4;color:#059669;">Attestable</span>')
-        tags_html = " ".join(tags)
-        _html(f"""
-            <div class="health-row">
-                <span class="health-row-label">{gap.variable_title} {tags_html}</span>
-                <span class="health-row-value" style="font-size:0.75rem;color:{COLORS['text_muted']};">{n} CPG{'s' if n > 1 else ''}</span>
-            </div>
-        """)
-
-
-def _render_guideline_overview(summary):
-    """Render guideline status overview."""
-    loader = st.session_state.loader
-    available_map = {cpg["id"]: cpg for cpg in loader.get_available_cpgs()}
-
-    _html('<div style="height: 1.5rem;"></div>')
-    _html(f"""
-        <div class="section-header">
-            <p class="section-title">Guideline Overview</p>
-            <span class="section-count">{summary.total_cpgs} evaluated</span>
-        </div>
-    """)
-
-    # Render guideline cards side by side
-    gl_items = list(summary.evaluations.items())
-    if gl_items:
-        cols = st.columns(len(gl_items))
-        for i, (cpg_id, result) in enumerate(gl_items):
-            with cols[i]:
-                meta = available_map.get(cpg_id, {})
-                eligible = result.is_eligible
-                status_cls = "eligible" if eligible else "not-eligible"
-                status_text = "Eligible" if eligible else "Not Eligible"
-                card_cls = "eligible" if eligible else ""
-                n_applied = len(result.applied_recommendations)
-                n_assessments = len(result.assessments)
-
-                _html(f"""
-                    <div class="gl-card {card_cls}">
-                        <div class="gl-card-top">
-                            <span class="gl-card-category">{meta.get('category', 'General')}</span>
-                            <span class="gl-status {status_cls}">{status_text}</span>
-                        </div>
-                        <p class="gl-card-title">{result.cpg_title}</p>
-                        <div class="gl-card-stats">
-                            <div class="gl-card-stat">
-                                <span class="gl-card-stat-value">{n_applied}</span>
-                                <span class="gl-card-stat-label">Recs Applied</span>
-                            </div>
-                            <div class="gl-card-stat">
-                                <span class="gl-card-stat-value">{n_assessments}</span>
-                                <span class="gl-card-stat-label">Assessments</span>
-                            </div>
-                        </div>
+    with st.expander(f"Assessments ({total})"):
+        for cpg_title, rows in by_cpg.items():
+            _html(f'<p class="detail-cpg-title">{cpg_title}</p>')
+            for dot, name, val, vcls in rows:
+                _html(f'''
+                    <div class="detail-row">
+                        <span class="detail-dot {dot}"></span>
+                        <span class="detail-label">{name}</span>
+                        <span class="detail-value {vcls}">{val}</span>
                     </div>
-                """)
-
-    with st.expander("Detailed Guideline Results"):
-        for cpg_id, result in summary.evaluations.items():
-            st.markdown(f"**{result.cpg_title}** — {'Eligible' if result.is_eligible else 'Not Eligible'}")
-            if result.error:
-                st.error(f"Error: {result.error}")
-                continue
-
-            if result.applied_recommendations:
-                for rec in result.applied_recommendations:
-                    var = rec.recommendation
-                    title = getattr(var, "title", None) or getattr(var, "id", "—")
-                    narrative = getattr(rec, "narrative", "") or ""
-                    if len(narrative) > 120:
-                        narrative = narrative[:120] + "..."
-                    st.markdown(f"- **{title}**: {narrative}" if narrative else f"- **{title}**")
-            else:
-                st.caption("No recommendations apply")
-
-            st.markdown("---")
+                ''')
 
 
-def _render_conflicts_detail(summary):
-    """Render detailed conflict section."""
-    c = COLORS
+def _render_conflicts_expander(summary):
+    """Render conflict details inside an expander."""
+    conflicts = summary.conflicts.conflicts
 
-    _html('<div style="height: 1rem;"></div>')
-    _html(f"""
-        <div class="section-header">
-            <p class="section-title">Conflict Details</p>
-            <span class="section-count">{len(summary.conflicts.conflicts)} detected</span>
-        </div>
-    """)
+    with st.expander(f"Conflicts ({len(conflicts)})"):
+        for conflict in conflicts:
+            severity = (
+                conflict.severity.value
+                if hasattr(conflict.severity, "value")
+                else str(conflict.severity)
+            )
+            conflict_type = (
+                conflict.conflict_type.value
+                if hasattr(conflict.conflict_type, "value")
+                else str(conflict.conflict_type)
+            )
 
-    for conflict in summary.conflicts.conflicts:
-        severity = (
-            conflict.severity.value
-            if hasattr(conflict.severity, "value")
-            else str(conflict.severity)
-        )
-        conflict_type = (
-            conflict.conflict_type.value
-            if hasattr(conflict.conflict_type, "value")
-            else str(conflict.conflict_type)
-        )
-        severity_cls = severity.lower()
+            cpg_list = " · ".join(
+                inv.get("cpg_title", "")[:30] for inv in conflict.involved_cpgs
+            )
 
-        cpg_list = " · ".join(
-            inv.get("cpg_title", "")[:25] for inv in conflict.involved_cpgs
-        )
-
-        _html(f"""
-            <div class="conflict-card">
-                <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-                    <span class="conflict-severity {severity_cls}">{severity}</span>
-                    <span style="font-size:0.8125rem;color:{c['text_muted']};">{conflict_type.replace('_', ' ').title()}</span>
+            _html(f'''
+                <div class="conflict-item">
+                    <span class="conflict-severity-tag {severity.lower()}">{severity}</span>
+                    <span class="conflict-type">{conflict_type.replace('_', ' ').title()}</span>
                 </div>
-                <p style="font-size:0.9375rem;color:{c['text_secondary']};margin:0 0 8px 0;line-height:1.6;">{conflict.description}</p>
-                <span style="font-size:0.6875rem;color:{c['text_muted']};">{cpg_list}</span>
-            </div>
-        """)
+            ''')
+            _html(f'<p class="conflict-desc">{conflict.description}</p>')
+            _html(f'<p class="conflict-cpgs">{cpg_list}</p>')
 
-        if conflict.suggested_resolution:
-            with st.expander("Suggested Resolution"):
-                st.write(conflict.suggested_resolution)
+            if conflict.suggested_resolution:
+                _html(f'<p class="conflict-resolution">{conflict.suggested_resolution}</p>')

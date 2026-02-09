@@ -3,16 +3,12 @@
 
 import pytest
 
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
-from core.sufficiency import SufficiencyEvaluator, SufficiencyResult
-from core.evaluation import EvaluatedRecord, EvaluationContext, SufficiencyResultStatus
-from variables.record import Record
-from variables.var import Var
-from variables.value import Value
-from primitives.types import Persona
+from concordcore.core.sufficiency import SufficiencyEvaluator, SufficiencyResult
+from concordcore.core.evaluation import EvaluatedRecord, EvaluationContext, SufficiencyResultStatus
+from concordcore.variables.record import Record
+from concordcore.variables.var import Var
+from concordcore.variables.value import Value
+from concordcore.primitives.types import Persona
 
 
 class TestSufficiencyEvaluator:
@@ -77,7 +73,7 @@ class TestSufficiencyResult:
 
     def test_result_is_executable_when_sufficient(self):
         """Test is_executable when all required variables are sufficient."""
-        from core.evaluation import EvaluatedRecord, EvaluationResultStatus
+        from concordcore.core.evaluation import EvaluatedRecord, EvaluationResultStatus
         context = EvaluationContext()
         var = Var(id='test', title='Test', required=True)
         record = Record(var=var, initial_values=[Value(100)])
@@ -89,7 +85,7 @@ class TestSufficiencyResult:
 
     def test_result_not_executable_when_insufficient(self):
         """Test is_executable when required variables are missing."""
-        from core.evaluation import EvaluatedRecord, EvaluationResultStatus
+        from concordcore.core.evaluation import EvaluatedRecord, EvaluationResultStatus
         context = EvaluationContext()
         var = Var(id='test', title='Test', required=True, user_attestable=False)
         record = Record(var=var, initial_values=None)  # No value
@@ -170,7 +166,7 @@ class TestDependencyGraph:
 
     def test_empty_variables(self):
         """DependencyGraph from variables with no validators."""
-        from core.sufficiency import DependencyGraph
+        from concordcore.core.sufficiency import DependencyGraph
         vars = [Var(id='A'), Var(id='B')]
         graph = DependencyGraph.from_variables(vars)
         assert graph.dependencies == {}
@@ -178,7 +174,7 @@ class TestDependencyGraph:
 
     def test_panel_validator_dependencies(self):
         """DependencyGraph detects panel validator dependencies."""
-        from core.sufficiency import DependencyGraph
+        from concordcore.core.sufficiency import DependencyGraph
         vars = [
             Var(id='LDL', validator={'panel': '$HDL + $LDL < 300'}),
             Var(id='HDL'),
@@ -190,7 +186,7 @@ class TestDependencyGraph:
 
     def test_missing_dependencies(self):
         """get_missing_dependencies reports unavailable deps."""
-        from core.sufficiency import DependencyGraph
+        from concordcore.core.sufficiency import DependencyGraph
         vars = [
             Var(id='Ratio', validator={'panel': '$LDL / $HDL < 5'}),
             Var(id='LDL'),
@@ -202,7 +198,7 @@ class TestDependencyGraph:
 
     def test_no_missing_when_all_available(self):
         """get_missing_dependencies returns empty when all deps present."""
-        from core.sufficiency import DependencyGraph
+        from concordcore.core.sufficiency import DependencyGraph
         vars = [
             Var(id='Ratio', validator={'panel': '$LDL / $HDL < 5'}),
             Var(id='LDL'),
@@ -214,7 +210,7 @@ class TestDependencyGraph:
 
     def test_value_reference_excluded(self):
         """$value references in panel expressions are not counted as dependencies."""
-        from core.sufficiency import DependencyGraph
+        from concordcore.core.sufficiency import DependencyGraph
         vars = [
             Var(id='LDL', validator={'plausible': '$value > 0 and $value < 500'}),
         ]

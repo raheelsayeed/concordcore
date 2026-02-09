@@ -2,24 +2,19 @@
 """Integration tests for the full Concord evaluation workflow."""
 
 import pytest
-from pathlib import Path
-
-import sys
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
-from core.concord import Concord, NeedAttestationError
-from core.cpg import CPG
-from core.healthcontext import HealthContext
-from core.eligibility import EligibilityResult
-from core.sufficiency import SufficiencyResult
-from core.assessment import AssessmentResult
-from core.recommendation import RecommendationResult
-from variables.record import Record
-from variables.var import Var
-from variables.value import Value
-from variables.age import Age
-from primitives.code import Code
-from primitives.types import Persona
+from concordcore.core.concord import Concord, NeedAttestationError
+from concordcore.core.cpg import CPG
+from concordcore.core.healthcontext import HealthContext
+from concordcore.core.eligibility import EligibilityResult
+from concordcore.core.sufficiency import SufficiencyResult
+from concordcore.core.assessment import AssessmentResult
+from concordcore.core.recommendation import RecommendationResult
+from concordcore.variables.record import Record
+from concordcore.variables.var import Var
+from concordcore.variables.value import Value
+from concordcore.variables.age import Age
+from concordcore.primitives.code import Code
+from concordcore.primitives.types import Persona
 
 
 @pytest.mark.integration
@@ -134,7 +129,7 @@ class TestConcordWithCholesterolCPG:
     @pytest.fixture
     def cholesterol_cpg(self):
         """Load the cholesterol CPG."""
-        from core.cpg_registry import get_registry
+        from concordcore.core.cpg_registry import get_registry
         try:
             return get_registry().get('2019AccPrimaryPreventionASCVD')
         except KeyError:
@@ -143,7 +138,7 @@ class TestConcordWithCholesterolCPG:
     @pytest.fixture
     def complete_healthcontext(self):
         """Create a comprehensive health context for cholesterol CPG."""
-        from ontology.codes import ConcordDefinition, CodeGender, CodeRaceEthnicity
+        from concordcore.ontology.codes import ConcordDefinition, CodeGender, CodeRaceEthnicity
 
         age = Age(55)
         gender = ConcordDefinition.code_Gender.as_record(CodeGender.female_snomed.value)

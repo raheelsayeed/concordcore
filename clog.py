@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 
-from core.assessment import AssessmentRecord
-from core.recommendation import RecommendationVar
-from variables import record
+from concordcore.core.assessment import AssessmentRecord
+from concordcore.core.recommendation import RecommendationVar
+from concordcore.variables import record
 from rich import console, table, box
 
-from variables.var import Var
-from variables.value import Value
-from variables.record import Record
+from concordcore.variables.var import Var
+from concordcore.variables.value import Value
+from concordcore.variables.record import Record
 
 from rich.panel import Panel
 from rich.markdown import Markdown
@@ -76,8 +76,8 @@ def print_records(records: list[Record], title=None):
 
 
 def print_evaluatedrecords(variables, title = None, subtitle = None):
-    from core.sufficiency import SufficiencyResultStatus
-    from core.evaluation import EvaluationResultStatus
+    from concordcore.core.sufficiency import SufficiencyResultStatus
+    from concordcore.core.evaluation import EvaluationResultStatus
 
     table_ = table.Table(box=box.SIMPLE_HEAD, title_justify='left', highlight=True, title_style="bold blue", show_header=True, show_edge=False, header_style="dim", title=f'Evaluated: {title} -- ')
     table_.add_column('No.', style="dim")

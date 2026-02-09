@@ -10,8 +10,8 @@ from pathlib import Path
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from core.cpg import CPG
-from core.cpg_registry import get_registry
+from concordcore.core.cpg import CPG
+from concordcore.core.cpg_registry import get_registry
 
 
 class CPGLoaderService:
