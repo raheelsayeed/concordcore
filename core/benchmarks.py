@@ -344,7 +344,8 @@ class BenchmarkRunner:
         """
         self.cpg_dir = Path(cpg_dir)
         self._sample_healthcontext = None
-        self._loaded_cpgs: dict = {}
+        from core.cpg_registry import get_registry
+        self._registry = get_registry(self.cpg_dir)
 
     def _get_sample_healthcontext(self):
         """Get or create sample health context for benchmarking."""
@@ -355,20 +356,11 @@ class BenchmarkRunner:
 
     def _load_cpg(self, cpg_id: str):
         """Load a CPG by ID."""
-        if cpg_id not in self._loaded_cpgs:
-            from core.cpg import CPG
-            cpg_path = self.cpg_dir / f"{cpg_id}.yaml"
-            if not cpg_path.exists():
-                raise FileNotFoundError(f"CPG not found: {cpg_path}")
-            self._loaded_cpgs[cpg_id] = CPG.from_document_path(str(cpg_path))
-        return self._loaded_cpgs[cpg_id]
+        return self._registry.get(cpg_id)
 
     def _get_available_cpgs(self) -> list[str]:
-        """Get list of available CPG IDs."""
-        cpgs = []
-        for path in self.cpg_dir.glob("*.yaml"):
-            cpgs.append(path.stem)
-        return sorted(cpgs)
+        """Get list of available CPG identifiers."""
+        return self._registry.identifiers()
 
     def benchmark_single_cpg(
         self,

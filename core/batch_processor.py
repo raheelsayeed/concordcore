@@ -11,6 +11,8 @@ Technical Advantages:
 - Parallel execution with configurable workers
 """
 
+from __future__ import annotations
+
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -526,3 +528,206 @@ class MultiCPGEvaluator:
             )
             results.append(result)
         return results
+
+
+# ============================================================================
+# PatientScreener — Efficient single-patient multi-CPG screening
+# ============================================================================
+
+@dataclass(frozen=True)
+class CoverageGap:
+    """A missing variable that would unlock or improve CPG evaluations."""
+    variable_id: str
+    variable_title: str
+    cpg_ids: tuple[str, ...]   # CPGs needing this variable
+    is_required: bool          # Required by at least one CPG
+    is_attestable: bool        # Can be user-attested
+    impact_score: float        # 0–1, higher = more impactful
+
+
+@dataclass(frozen=True)
+class CoverageAnalysis:
+    """Which missing variables would unlock the most CPGs."""
+    gaps: tuple[CoverageGap, ...]  # Sorted by impact_score desc
+    total_unique_variables: int
+    provided_variables: int
+    missing_variables: int
+
+
+@dataclass(frozen=True)
+class CPGScreeningResult:
+    """Result for a single CPG in the screening."""
+    cpg_id: str
+    cpg_title: str
+    is_eligible: bool
+    is_executable: bool
+    pipeline_result: PipelineResult | None
+    error: str | None
+
+
+@dataclass(frozen=True)
+class ScreeningResult:
+    """Complete screening result for a patient across all CPGs."""
+    patient_id: str
+    results: tuple[CPGScreeningResult, ...]
+    coverage: CoverageAnalysis
+    eligible_count: int
+    executable_count: int
+    total_cpgs: int
+    elapsed_ms: float
+
+
+class PatientScreener:
+    """Screens a patient against all applicable CPGs with coverage analysis.
+
+    Single-pass: eligibility triage → full evaluation → coverage derived
+    from sufficiency results (no redundant variable scanning).
+    """
+
+    def __init__(self, cpg_ids: list[str] | None = None):
+        self._cpg_ids = cpg_ids
+
+    def _load_cpgs(self) -> list[CPG]:
+        from .cpg_registry import get_registry
+        registry = get_registry()
+        cpgs = []
+        for cid in (self._cpg_ids or registry.identifiers()):
+            try:
+                cpgs.append(registry.get(cid))
+            except Exception as e:
+                log.warning(f"Skipping CPG {cid}: {e}")
+        return cpgs
+
+    def screen(
+        self,
+        health_context: HealthContext,
+        patient_id: str = "",
+        ignore_attestations: bool = True,
+    ) -> ScreeningResult:
+        """Screen patient against all applicable CPGs.
+
+        Single loop: eligibility check → full pipeline for eligible CPGs.
+        Coverage analysis derived from sufficiency results (zero extra work).
+        """
+        start_time = time.perf_counter()
+
+        from .record_index import RecordIndex
+        from .sufficiency import build_code_index
+        from .eligibility import EligibilityEvaluator
+
+        cpgs = self._load_cpgs()
+
+        # Shared indexes + hash — built once, reused by all CPG evaluations
+        record_index = RecordIndex(health_context.records)
+        code_index = build_code_index(health_context.records)
+        input_hash = self._hash_records(health_context.records)
+
+        results: list[CPGScreeningResult] = []
+
+        for cpg in cpgs:
+            # Eligibility triage
+            if cpg.eligibility_variables:
+                try:
+                    elig = EligibilityEvaluator(cpg.eligibility_variables).evaluate(
+                        health_context, record_index=record_index
+                    )
+                    if not elig.is_eligible:
+                        results.append(CPGScreeningResult(
+                            cpg.identifier, cpg.title,
+                            is_eligible=False, is_executable=False,
+                            pipeline_result=None, error=None))
+                        continue
+                except Exception as e:
+                    results.append(CPGScreeningResult(
+                        cpg.identifier, cpg.title,
+                        is_eligible=False, is_executable=False,
+                        pipeline_result=None, error=str(e)))
+                    continue
+
+            # Full evaluation (eligibility already confirmed)
+            try:
+                concord = Concord(cpg=cpg, healthcontext=health_context,
+                                  ignore_eligibility=True)
+                pr = concord.evaluate(
+                    skip_eligibility=True,
+                    ignore_attestations=ignore_attestations,
+                    record_index=record_index, code_index=code_index,
+                    _input_data_hash=input_hash)
+                results.append(CPGScreeningResult(
+                    cpg.identifier, cpg.title,
+                    is_eligible=True, is_executable=pr.is_complete,
+                    pipeline_result=pr, error=None))
+            except Exception as e:
+                log.error(f"Evaluation failed for {cpg.identifier}: {e}")
+                results.append(CPGScreeningResult(
+                    cpg.identifier, cpg.title,
+                    is_eligible=True, is_executable=False,
+                    pipeline_result=None, error=str(e)))
+
+        elapsed_ms = (time.perf_counter() - start_time) * 1000
+
+        return ScreeningResult(
+            patient_id=patient_id,
+            results=tuple(results),
+            coverage=self._build_coverage(results),
+            eligible_count=sum(1 for r in results if r.is_eligible),
+            executable_count=sum(1 for r in results if r.is_executable),
+            total_cpgs=len(cpgs),
+            elapsed_ms=elapsed_ms,
+        )
+
+    @staticmethod
+    def _hash_records(records) -> str:
+        """Compute SHA-256 of patient records once for all CPG evaluations."""
+        import hashlib, json
+        data = sorted(
+            [{"id": r.id, "values": [{"value": str(v.value),
+              "date": str(v.date) if v.date else None}
+              for v in (r.values or [])]} for r in records],
+            key=lambda x: x["id"])
+        return hashlib.sha256(json.dumps(data, sort_keys=True).encode()).hexdigest()
+
+    @staticmethod
+    def _build_coverage(results: list[CPGScreeningResult]) -> CoverageAnalysis:
+        """Derive coverage from sufficiency results — no extra variable scanning."""
+        all_var_ids: set[str] = set()
+        provided_ids: set[str] = set()
+        # var_id -> [cpg_id_list, is_required, is_attestable, title]
+        missing: dict[str, list] = {}
+
+        for r in results:
+            suff = r.pipeline_result.sufficiency if r.pipeline_result else None
+            if not suff:
+                continue
+            for ev in suff.context.evaluation_list:
+                var = ev.record.var
+                all_var_ids.add(var.id)
+                if ev.record.has_value:
+                    provided_ids.add(var.id)
+                elif var.id not in provided_ids:
+                    entry = missing.get(var.id)
+                    if entry is None:
+                        entry = [[], False, False, var.title or var.id]
+                        missing[var.id] = entry
+                    entry[0].append(r.cpg_id)
+                    if var.required:
+                        entry[1] = True
+                    if var.user_attestable:
+                        entry[2] = True
+
+        # Drop vars that were provided by some CPG's perspective
+        for vid in provided_ids:
+            missing.pop(vid, None)
+
+        num_eligible = max(sum(1 for r in results if r.is_eligible), 1)
+        gaps = []
+        for var_id, (cpg_ids, is_req, is_att, title) in missing.items():
+            score = 0.6 * (len(cpg_ids) / num_eligible) + 0.4 * (1.0 if is_req else 0.5)
+            if is_att:
+                score = min(1.0, score + 0.2)
+            gaps.append(CoverageGap(var_id, title, tuple(cpg_ids),
+                                    is_req, is_att, round(score, 3)))
+
+        gaps.sort(key=lambda g: g.impact_score, reverse=True)
+        return CoverageAnalysis(
+            tuple(gaps), len(all_var_ids), len(provided_ids), len(missing))
