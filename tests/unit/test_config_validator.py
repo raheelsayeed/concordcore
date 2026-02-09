@@ -2,9 +2,7 @@
 """Tests for institutional configuration validation."""
 
 import pytest
-from pathlib import Path
-
-from core.config_validator import (
+from concordcore.core.config_validator import (
     ConfigValidator,
     ValidationResult,
     ValidationSeverity,
@@ -13,7 +11,7 @@ from core.config_validator import (
     visualize_inheritance_chain,
     SAFE_RANGES,
 )
-from core.institution_config import (
+from concordcore.core.institution_config import (
     InstitutionConfig,
     ThresholdOverride,
     ExpressionOverride,

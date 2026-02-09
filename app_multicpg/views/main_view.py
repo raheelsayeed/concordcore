@@ -10,8 +10,8 @@ from app_multicpg.data import get_patient_health_context, SAMPLE_PATIENTS
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-from primitives import Persona
-from core.cpg_registry import get_registry
+from concordcore.primitives import Persona
+from concordcore.core.cpg_registry import get_registry
 
 
 def _html(text: str) -> None:

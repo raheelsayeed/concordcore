@@ -1,7 +1,7 @@
 """Tests for Recommendations improvements."""
 
 import pytest
-from core.recommendation import (
+from concordcore.core.recommendation import (
     RecommendationActionType,
     RecommendationAction,
     RecommendationVar,
@@ -44,7 +44,7 @@ class TestEvaluatedRecommendation:
 
 class TestConcordUserRecommendationActions:
     def test_record_recommendation_action(self):
-        from core.concord_user import ConcordUser
+        from concordcore.core.concord_user import ConcordUser
         user = ConcordUser(user_id='p1')
         user.record_recommendation_action('statin_rec', 'accepted', reason='Patient agreed')
         assert len(user.recommendation_actions) == 1
@@ -54,13 +54,13 @@ class TestConcordUserRecommendationActions:
         assert action['reason'] == 'Patient agreed'
 
     def test_record_invalid_action_raises(self):
-        from core.concord_user import ConcordUser
+        from concordcore.core.concord_user import ConcordUser
         user = ConcordUser(user_id='p1')
         with pytest.raises(ValueError):
             user.record_recommendation_action('rec1', 'invalid-action')
 
     def test_multiple_actions(self):
-        from core.concord_user import ConcordUser
+        from concordcore.core.concord_user import ConcordUser
         user = ConcordUser(user_id='p1')
         user.record_recommendation_action('rec1', 'accepted')
         user.record_recommendation_action('rec2', 'deferred', reason='Need more info')
@@ -68,14 +68,14 @@ class TestConcordUserRecommendationActions:
         assert len(user.recommendation_actions) == 3
 
     def test_actions_serialized(self):
-        from core.concord_user import ConcordUser
+        from concordcore.core.concord_user import ConcordUser
         user = ConcordUser(user_id='p1')
         user.record_recommendation_action('rec1', 'accepted')
         d = user.to_dict()
         assert len(d['recommendation_actions']) == 1
 
     def test_actions_cleared(self):
-        from core.concord_user import ConcordUser
+        from concordcore.core.concord_user import ConcordUser
         user = ConcordUser(user_id='p1')
         user.record_recommendation_action('rec1', 'accepted')
         user.clear()

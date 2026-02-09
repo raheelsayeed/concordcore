@@ -10,7 +10,7 @@ This module defines the core types for provider-specific LLM instructions:
 from dataclasses import dataclass, field
 from typing import Any
 
-from primitives.types import YMLStrEnum
+from concordcore.primitives.types import YMLStrEnum
 
 
 class LLMProviderType(YMLStrEnum):

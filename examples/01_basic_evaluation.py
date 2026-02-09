@@ -17,15 +17,15 @@ from pathlib import Path
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from core.cpg_registry import get_registry
-from core.concord import Concord, NeedAttestationError
-from core.healthcontext import HealthContext
-from variables.record import Record
-from variables.var import Var
-from variables.value import Value
-from variables.age import Age
-from primitives.code import Code
-from primitives.types import Persona
+from concordcore.core.cpg_registry import get_registry
+from concordcore.core.concord import Concord, NeedAttestationError
+from concordcore.core.healthcontext import HealthContext
+from concordcore.variables.record import Record
+from concordcore.variables.var import Var
+from concordcore.variables.value import Value
+from concordcore.variables.age import Age
+from concordcore.primitives.code import Code
+from concordcore.primitives.types import Persona
 
 
 def main():

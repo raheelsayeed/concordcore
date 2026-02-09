@@ -1,7 +1,7 @@
 """Tests for Code hierarchy (parent_code and is_descendant_of)."""
 
 import pytest
-from primitives.code import Code
+from concordcore.primitives.code import Code
 
 
 class TestCodeHierarchy:

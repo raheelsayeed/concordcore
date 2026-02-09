@@ -11,11 +11,11 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Callable, TYPE_CHECKING
 
-from core.cpg import CPG
-from core.concord import Concord, PipelineResult
-from core.errors import NeedAttestationError
-from core.healthcontext import HealthContext
-from primitives.types import Persona
+from concordcore.core.cpg import CPG
+from concordcore.core.concord import Concord, PipelineResult
+from concordcore.core.errors import NeedAttestationError
+from concordcore.core.healthcontext import HealthContext
+from concordcore.primitives.types import Persona
 from .llm_provider import ConversationProvider
 
 if TYPE_CHECKING:
@@ -145,8 +145,8 @@ class HealthCopilot:
     Example:
         ```python
         from ai import HealthCopilot
-        from core.cpg_registry import get_registry
-        from core.healthcontext import HealthContext
+        from concordcore.core.cpg_registry import get_registry
+        from concordcore.core.healthcontext import HealthContext
 
         # Initialize
         cpg = get_registry().get('2019AccPrimaryPreventionASCVD')

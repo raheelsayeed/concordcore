@@ -4,15 +4,11 @@
 import pytest
 from datetime import datetime
 
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
-from variables.record import Record
-from variables.var import Var, Narrative
-from variables.value import Value
-from primitives.code import Code
-from primitives.types import Persona
+from concordcore.variables.record import Record
+from concordcore.variables.var import Var, Narrative
+from concordcore.variables.value import Value
+from concordcore.primitives.code import Code
+from concordcore.primitives.types import Persona
 
 
 class TestRecordCreation:

@@ -5,10 +5,6 @@ import pytest
 import json
 from pathlib import Path
 
-import sys
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
-
 @pytest.mark.fhir
 class TestFHIRValueParsing:
     """Tests for parsing FHIR resources into Values."""
@@ -80,7 +76,7 @@ class TestFHIRValueParsing:
 
     def test_parse_observation_to_fhirvalue(self, sample_observation_json):
         """Test parsing FHIR Observation to FHIRValue."""
-        from fhir_parsers.fhirvalue import FHIRValue
+        from concordcore.fhir_parsers.fhirvalue import FHIRValue
 
         try:
             fhir_value = FHIRValue.from_fhir(sample_observation_json)
@@ -93,7 +89,7 @@ class TestFHIRValueParsing:
 
     def test_parse_condition_to_fhirvalue(self, sample_condition_json):
         """Test parsing FHIR Condition to FHIRValue."""
-        from fhir_parsers.fhirvalue import FHIRValue
+        from concordcore.fhir_parsers.fhirvalue import FHIRValue
 
         try:
             fhir_value = FHIRValue.from_fhir(sample_condition_json)
@@ -107,7 +103,7 @@ class TestFHIRValueParsing:
 
     def test_parse_medication_request_to_fhirvalue(self, sample_medication_request_json):
         """Test parsing FHIR MedicationRequest to FHIRValue."""
-        from fhir_parsers.fhirvalue import FHIRValue
+        from concordcore.fhir_parsers.fhirvalue import FHIRValue
 
         try:
             fhir_value = FHIRValue.from_fhir(sample_medication_request_json)
@@ -119,7 +115,7 @@ class TestFHIRValueParsing:
 
     def test_fhirvalue_has_code(self, sample_observation_json):
         """Test that FHIRValue extracts code information."""
-        from fhir_parsers.fhirvalue import FHIRValue
+        from concordcore.fhir_parsers.fhirvalue import FHIRValue
 
         try:
             fhir_value = FHIRValue.from_fhir(sample_observation_json)
@@ -158,9 +154,9 @@ class TestFHIRToHealthContext:
 
     def test_create_healthcontext_from_fhir_values(self, fhir_ndjson_path):
         """Test creating HealthContext from FHIR values."""
-        from core.healthcontext import HealthContext
-        from fhir_parsers.fhirvalue import FHIRValue
-        from primitives.types import Persona
+        from concordcore.core.healthcontext import HealthContext
+        from concordcore.fhir_parsers.fhirvalue import FHIRValue
+        from concordcore.primitives.types import Persona
 
         obs_file = fhir_ndjson_path / 'Observation.ndjson'
         if not obs_file.exists():
@@ -192,7 +188,7 @@ class TestFHIRWithCPG:
     @pytest.fixture
     def cholesterol_cpg(self):
         """Load the cholesterol CPG."""
-        from core.cpg_registry import get_registry
+        from concordcore.core.cpg_registry import get_registry
         try:
             return get_registry().get('2019AccPrimaryPreventionASCVD')
         except KeyError:
@@ -209,10 +205,10 @@ class TestFHIRWithCPG:
 
     def test_complete_workflow_with_fhir_data(self, cholesterol_cpg):
         """Test complete workflow using FHIR sample data."""
-        from core.concord import Concord
-        from core.healthcontext import HealthContext
-        from primitives.types import Persona
-        from variables.age import Age
+        from concordcore.core.concord import Concord
+        from concordcore.core.healthcontext import HealthContext
+        from concordcore.primitives.types import Persona
+        from concordcore.variables.age import Age
         import misc
 
         # Use the sample_fhir_values helper
@@ -252,7 +248,7 @@ class TestFHIRCodeMatching:
 
     def test_loinc_code_matching(self):
         """Test that LOINC codes are properly matched."""
-        from primitives.code import Code
+        from concordcore.primitives.code import Code
 
         # LDL LOINC code
         ldl_code = Code.loinc('13457-7')
@@ -261,7 +257,7 @@ class TestFHIRCodeMatching:
 
     def test_snomed_code_matching(self):
         """Test that SNOMED codes are properly matched."""
-        from primitives.code import Code
+        from concordcore.primitives.code import Code
 
         # Diabetes SNOMED code
         dm_code = Code.snomed('44054006')
@@ -270,7 +266,7 @@ class TestFHIRCodeMatching:
 
     def test_rxnorm_code_matching(self):
         """Test that RxNorm codes are properly matched."""
-        from primitives.code import Code
+        from concordcore.primitives.code import Code
 
         # Atorvastatin RxNorm code
         statin_code = Code.rxnorm('83367')
@@ -287,7 +283,7 @@ class TestFHIRAdapterBundleParsing:
 
     @pytest.fixture
     def adapter(self):
-        from formats.fhir_adapter import FHIRAdapter
+        from concordcore.formats.fhir_adapter import FHIRAdapter
         return FHIRAdapter()
 
     @pytest.fixture
@@ -329,8 +325,8 @@ class TestFHIRAdapterBundleParsing:
         }
 
     def test_parse_bundle_matches_variables(self, adapter, fhir_bundle):
-        from primitives.code import Code
-        from variables.var import Var
+        from concordcore.primitives.code import Code
+        from concordcore.variables.var import Var
 
         variables = [
             Var(id='LDL', code=[Code.loinc('13457-7')]),
@@ -343,7 +339,7 @@ class TestFHIRAdapterBundleParsing:
         assert 'DM' in ids
 
     def test_parse_bundle_empty(self, adapter):
-        from variables.var import Var
+        from concordcore.variables.var import Var
         bundle = {"resourceType": "Bundle", "entry": []}
         records = adapter.parse_bundle_to_records(bundle, [Var(id='X')])
         assert records == []
@@ -357,8 +353,8 @@ class TestHealthContextMixedSourcesWithConcordUser:
     """Tests for ConcordUser integration in from_mixed_sources."""
 
     def test_concord_user_fills_missing_data(self, minimal_cpg):
-        from core.healthcontext import HealthContext
-        from core.concord_user import ConcordUser
+        from concordcore.core.healthcontext import HealthContext
+        from concordcore.core.concord_user import ConcordUser
 
         user = ConcordUser(user_id='p1')
         user.add_input('Age', 55)
@@ -368,7 +364,7 @@ class TestHealthContextMixedSourcesWithConcordUser:
         assert 'Age' in ids
 
     def test_attestations_still_work(self, minimal_cpg):
-        from core.healthcontext import HealthContext
+        from concordcore.core.healthcontext import HealthContext
 
         ctx = HealthContext.from_mixed_sources(
             cpg=minimal_cpg,
@@ -379,8 +375,8 @@ class TestHealthContextMixedSourcesWithConcordUser:
 
     def test_concord_user_takes_precedence_over_attestations(self, minimal_cpg):
         """When both concord_user and attestations are provided, concord_user wins."""
-        from core.healthcontext import HealthContext
-        from core.concord_user import ConcordUser
+        from concordcore.core.healthcontext import HealthContext
+        from concordcore.core.concord_user import ConcordUser
 
         user = ConcordUser(user_id='p1')
         user.add_input('Age', 99)
@@ -454,7 +450,7 @@ class TestFHIRBundleEndToEnd:
     @pytest.fixture
     def cholesterol_cpg_loaded(self):
         """Load the cholesterol CPG."""
-        from core.cpg_registry import get_registry
+        from concordcore.core.cpg_registry import get_registry
         try:
             return get_registry().get('2019AccPrimaryPreventionASCVD')
         except KeyError:
@@ -463,7 +459,7 @@ class TestFHIRBundleEndToEnd:
     @pytest.fixture
     def adapter(self):
         """Create a FHIRAdapter instance."""
-        from formats.fhir_adapter import FHIRAdapter
+        from concordcore.formats.fhir_adapter import FHIRAdapter
         return FHIRAdapter()
 
     @pytest.fixture
@@ -727,7 +723,7 @@ class TestFHIRBundleEndToEnd:
         self, fhir_bundle_from_ndjson, cholesterol_cpg_loaded, adapter
     ):
         """Parsed records should have date information from FHIR effectiveDateTime."""
-        from primitives.valuedate import ValueDate
+        from concordcore.primitives.valuedate import ValueDate
 
         records = adapter.parse_bundle_to_records(
             fhir_bundle_from_ndjson, cholesterol_cpg_loaded.variables
@@ -881,8 +877,8 @@ class TestFHIRBundleEndToEnd:
         it falls back to only cpg.variables. We verify the method still produces
         records from the variables list.
         """
-        from core.healthcontext import HealthContext
-        from primitives.types import Persona
+        from concordcore.core.healthcontext import HealthContext
+        from concordcore.primitives.types import Persona
 
         ctx = HealthContext.from_mixed_sources(
             cpg=cholesterol_cpg_loaded,
@@ -907,9 +903,9 @@ class TestFHIRBundleEndToEnd:
         This bypasses HealthContext._parse_fhir_bundle to confirm the adapter itself
         functions correctly end-to-end with cholesterol CPG variables.
         """
-        from formats.fhir_adapter import FHIRAdapter
-        from core.healthcontext import HealthContext
-        from primitives.types import Persona
+        from concordcore.formats.fhir_adapter import FHIRAdapter
+        from concordcore.core.healthcontext import HealthContext
+        from concordcore.primitives.types import Persona
 
         adapter = FHIRAdapter()
         fhir_records = adapter.parse_bundle_to_records(
@@ -931,9 +927,9 @@ class TestFHIRBundleEndToEnd:
         self, synthetic_bundle, cholesterol_cpg_loaded
     ):
         """HealthContext records from FHIR should retain correct numeric values."""
-        from formats.fhir_adapter import FHIRAdapter
-        from core.healthcontext import HealthContext
-        from primitives.types import Persona
+        from concordcore.formats.fhir_adapter import FHIRAdapter
+        from concordcore.core.healthcontext import HealthContext
+        from concordcore.primitives.types import Persona
 
         adapter = FHIRAdapter()
         fhir_records = adapter.parse_bundle_to_records(
@@ -949,8 +945,8 @@ class TestFHIRBundleEndToEnd:
         self, cholesterol_cpg_loaded
     ):
         """Attestations should work as a data source in from_mixed_sources."""
-        from core.healthcontext import HealthContext
-        from primitives.types import Persona
+        from concordcore.core.healthcontext import HealthContext
+        from concordcore.primitives.types import Persona
 
         ctx = HealthContext.from_mixed_sources(
             cpg=cholesterol_cpg_loaded,
@@ -965,9 +961,9 @@ class TestFHIRBundleEndToEnd:
         self, fhir_bundle_from_ndjson, cholesterol_cpg_loaded
     ):
         """FHIRAdapter should work with real NDJSON bundle data via HealthContext."""
-        from formats.fhir_adapter import FHIRAdapter
-        from core.healthcontext import HealthContext
-        from primitives.types import Persona
+        from concordcore.formats.fhir_adapter import FHIRAdapter
+        from concordcore.core.healthcontext import HealthContext
+        from concordcore.primitives.types import Persona
 
         adapter = FHIRAdapter()
         fhir_records = adapter.parse_bundle_to_records(

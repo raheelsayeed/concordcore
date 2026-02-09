@@ -10,12 +10,12 @@ import time
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from core.cpg import CPG
-from core.concord import Concord, PipelineResult
-from core.healthcontext import HealthContext
-from core.conflict_detection import ConflictDetector, ConflictReport
-from core.batch_processor import PatientScreener, CoverageAnalysis
-from primitives import Persona
+from concordcore.core.cpg import CPG
+from concordcore.core.concord import Concord, PipelineResult
+from concordcore.core.healthcontext import HealthContext
+from concordcore.core.conflict_detection import ConflictDetector, ConflictReport
+from concordcore.core.batch_processor import PatientScreener, CoverageAnalysis
+from concordcore.primitives import Persona
 
 from .cpg_loader import get_cpg_loader
 

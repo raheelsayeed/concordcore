@@ -8,34 +8,29 @@ Uses the real cholesterol CPG to verify the full evaluation lifecycle.
 """
 
 import pytest
-from pathlib import Path
-
-import sys
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
-from core.concord import Concord, PipelineResult
-from core.cpg import CPG
-from core.healthcontext import HealthContext
-from core.eligibility import EligibilityResult
-from core.sufficiency import SufficiencyResult
-from core.assessment import AssessmentResult
-from core.recommendation import RecommendationResult
-from core.concord_user import ConcordUser
-from pghd.converter import PGHDConverter
-from pghd.input_source import InputSource
-from variables.record import Record
-from variables.var import Var
-from variables.value import Value
-from variables.age import Age
-from primitives.code import Code
-from primitives.types import Persona
-from ontology.codes import ConcordDefinition, CodeGender, CodeRaceEthnicity
+from concordcore.core.concord import Concord, PipelineResult
+from concordcore.core.cpg import CPG
+from concordcore.core.healthcontext import HealthContext
+from concordcore.core.eligibility import EligibilityResult
+from concordcore.core.sufficiency import SufficiencyResult
+from concordcore.core.assessment import AssessmentResult
+from concordcore.core.recommendation import RecommendationResult
+from concordcore.core.concord_user import ConcordUser
+from concordcore.pghd.converter import PGHDConverter
+from concordcore.pghd.input_source import InputSource
+from concordcore.variables.record import Record
+from concordcore.variables.var import Var
+from concordcore.variables.value import Value
+from concordcore.variables.age import Age
+from concordcore.primitives.code import Code
+from concordcore.primitives.types import Persona
+from concordcore.ontology.codes import ConcordDefinition, CodeGender, CodeRaceEthnicity
 
 
 @pytest.fixture
 def cholesterol_cpg():
     """Load the real cholesterol CPG from disk."""
-    from core.cpg_registry import get_registry
+    from concordcore.core.cpg_registry import get_registry
     try:
         return get_registry().get('2019AccPrimaryPreventionASCVD')
     except KeyError:
@@ -314,7 +309,7 @@ class TestE2EPGHDFlow:
 
     def test_pghd_converter_rejects_non_attestable_variable(self):
         """Verify PGHDConverter refuses to create records for non-attestable variables."""
-        from pghd.validator import PGHDValidationError
+        from concordcore.pghd.validator import PGHDValidationError
 
         converter = PGHDConverter()
         ldl_var = Var(id='LDL', title='LDL Cholesterol', user_attestable=False)

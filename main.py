@@ -2,9 +2,9 @@
 
 import argparse
 from typing import final
-from core import cpg, healthcontext
-from core.concord import Concord
-from core.errors import NeedAttestationError
+from concordcore.core import cpg, healthcontext
+from concordcore.core.concord import Concord
+from concordcore.core.errors import NeedAttestationError
 from clog import ht, p, con, print_records, print_variables, print_evaluatedrecords
 import misc
 

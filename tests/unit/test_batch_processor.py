@@ -4,7 +4,7 @@
 import pytest
 from datetime import date
 
-from core.batch_processor import (
+from concordcore.core.batch_processor import (
     BatchProcessor,
     BatchResult,
     BatchProcessingReport,
@@ -12,11 +12,11 @@ from core.batch_processor import (
     MultiCPGResult,
     ProcessingMode,
 )
-from core.cpg import CPG
-from core.healthcontext import HealthContext
-from variables.value import Value
-from variables.record import Record
-from variables.var import Var
+from concordcore.core.cpg import CPG
+from concordcore.core.healthcontext import HealthContext
+from concordcore.variables.value import Value
+from concordcore.variables.record import Record
+from concordcore.variables.var import Var
 
 
 class TestBatchResult:

@@ -4,7 +4,7 @@
 from dataclasses import dataclass
 from enum import Enum, auto
 from typing import Any
-from core.recommendation import RecommendationResult
+from concordcore.core.recommendation import RecommendationResult
 
 
 class MarketPlaceCategory(Enum):

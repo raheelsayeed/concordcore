@@ -3,12 +3,12 @@ import os, logging, jinja2
 from dataclasses import dataclass
 from enum import Enum, auto
 from typing import Protocol
-from variables.record import Record
+from concordcore.variables.record import Record
 
-from core.assessment import AssessedRecord
-from core.recommendation import EvaluatedRecommendation
-from core.evaluation import EvaluatedRecord
-from core.concord import Concord
+from concordcore.core.assessment import AssessedRecord
+from concordcore.core.recommendation import EvaluatedRecommendation
+from concordcore.core.evaluation import EvaluatedRecord
+from concordcore.core.concord import Concord
 from outomes.outcome import Advisory
 
 log = logging.getLogger(__name__)

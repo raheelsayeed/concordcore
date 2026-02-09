@@ -9,8 +9,8 @@ from typing import Any
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from core.healthcontext import HealthContext
-from primitives import Persona
+from concordcore.core.healthcontext import HealthContext
+from concordcore.primitives import Persona
 
 
 # Sample patient profiles

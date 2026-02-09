@@ -4,20 +4,20 @@
 import pytest
 from datetime import date
 
-from core.reproducibility import (
+from concordcore.core.reproducibility import (
     ReproducibilityVerifier,
     VerificationStatus,
     VerificationResult,
     compute_output_hash,
     verify_evaluation,
 )
-from core.cpg import CPG
-from core.concord import Concord, PipelineResult
-from core.healthcontext import HealthContext
-from primitives.types import Persona
-from variables.value import Value
-from variables.record import Record
-from variables.var import Var
+from concordcore.core.cpg import CPG
+from concordcore.core.concord import Concord, PipelineResult
+from concordcore.core.healthcontext import HealthContext
+from concordcore.primitives.types import Persona
+from concordcore.variables.value import Value
+from concordcore.variables.record import Record
+from concordcore.variables.var import Var
 
 
 class TestComputeOutputHash:

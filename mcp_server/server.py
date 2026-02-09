@@ -12,11 +12,11 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
-from core.concord import Concord, NeedAttestationError
-from core.cpg_registry import get_registry
-from core.healthcontext import HealthContext
-from primitives.types import Persona
-from variables.var import Var
+from concordcore.core.concord import Concord, NeedAttestationError
+from concordcore.core.cpg_registry import get_registry
+from concordcore.core.healthcontext import HealthContext
+from concordcore.primitives.types import Persona
+from concordcore.variables.var import Var
 
 from .state import ConcordState
 from .guidelines import MANDATORY_GUIDELINES, PROTECTED_TOOLS

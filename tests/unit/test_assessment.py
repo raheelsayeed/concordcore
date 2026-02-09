@@ -3,16 +3,12 @@
 
 import pytest
 
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
-from core.assessment import AssessmentVar, AssessmentRecord, AssessmentEvaluator, AssessmentResult, AssessedRecord
-from core.evaluation import EvaluatedRecord, EvaluationResultStatus
-from variables.record import Record
-from variables.var import Var, Narrative
-from variables.value import Value
-from primitives.types import Persona
+from concordcore.core.assessment import AssessmentVar, AssessmentRecord, AssessmentEvaluator, AssessmentResult, AssessedRecord
+from concordcore.core.evaluation import EvaluatedRecord, EvaluationResultStatus
+from concordcore.variables.record import Record
+from concordcore.variables.var import Var, Narrative
+from concordcore.variables.value import Value
+from concordcore.primitives.types import Persona
 
 
 class TestAssessmentVarCreation:
@@ -163,7 +159,7 @@ class TestAssessmentEvaluator:
     @pytest.fixture
     def ldl_evaluated_record(self):
         """Create an evaluated LDL record."""
-        from core.evaluation import EvaluationResultStatus
+        from concordcore.core.evaluation import EvaluationResultStatus
         var = Var(id='LDL', title='LDL')
         record = Record(var=var, initial_values=[Value(150)])
         return EvaluatedRecord(record=record, evaluation_result=EvaluationResultStatus.Successful)

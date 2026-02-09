@@ -6,7 +6,7 @@ import tempfile
 import yaml
 from pathlib import Path
 
-from core.changelog import (
+from concordcore.core.changelog import (
     CPGDiffer,
     ChangelogGenerator,
     ExpressionDiffer,

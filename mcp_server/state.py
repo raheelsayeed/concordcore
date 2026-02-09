@@ -8,12 +8,12 @@ from pathlib import Path
 from typing import Any
 import logging
 
-from core.cpg import CPG
-from core.cpg_registry import get_registry
-from core.concord import Concord
-from core.concord_user import ConcordUser
-from core.healthcontext import HealthContext
-from primitives.types import Persona
+from concordcore.core.cpg import CPG
+from concordcore.core.cpg_registry import get_registry
+from concordcore.core.concord import Concord
+from concordcore.core.concord_user import ConcordUser
+from concordcore.core.healthcontext import HealthContext
+from concordcore.primitives.types import Persona
 
 log = logging.getLogger(__name__)
 

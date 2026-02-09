@@ -14,12 +14,12 @@ from typing import TYPE_CHECKING
 from ai.llm_provider import ExtractionResult, LLMProvider
 from ai.clinical_note import ClinicalNote
 from ai.adapters import get_adapter, is_registered
-from variables.var import Var
-from variables.value import Value
-from variables.record import Record
+from concordcore.variables.var import Var
+from concordcore.variables.value import Value
+from concordcore.variables.record import Record
 
 if TYPE_CHECKING:
-    from core.cpg import CPG
+    from concordcore.core.cpg import CPG
 
 log = logging.getLogger(__name__)
 
@@ -74,7 +74,7 @@ class ClinicalNotesExtractor:
 
     Example:
         from ai.notes_extractor import ClinicalNotesExtractor, ExtractionConfig
-        from core.cpg_registry import get_registry
+        from concordcore.core.cpg_registry import get_registry
 
         cpg = get_registry().get('uspstf_colorectal_cancer_screening')
         config = ExtractionConfig(provider='anthropic')

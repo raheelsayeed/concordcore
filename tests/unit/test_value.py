@@ -4,12 +4,8 @@
 import pytest
 from datetime import datetime, timedelta
 
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
-from variables.value import Value
-from primitives.code import Code
+from concordcore.variables.value import Value
+from concordcore.primitives.code import Code
 
 
 class TestValueCreation:

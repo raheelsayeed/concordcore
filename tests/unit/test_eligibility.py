@@ -3,15 +3,11 @@
 
 import pytest
 
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
-from core.eligibility import EligibilityVar, EligibilityRecord, EligibilityEvaluator, EligibilityResult
-from variables.record import Record
-from variables.var import Var
-from variables.value import Value
-from primitives.types import Persona
+from concordcore.core.eligibility import EligibilityVar, EligibilityRecord, EligibilityEvaluator, EligibilityResult
+from concordcore.variables.record import Record
+from concordcore.variables.var import Var
+from concordcore.variables.value import Value
+from concordcore.primitives.types import Persona
 
 
 class TestEligibilityVarCreation:
@@ -152,7 +148,7 @@ class TestEligibilityResult:
 
     def test_eligibility_result_eligible(self):
         """Test EligibilityResult when eligible (empty context means all passed)."""
-        from core.evaluation import EvaluationContext
+        from concordcore.core.evaluation import EvaluationContext
         context = EvaluationContext()
         # With empty context (no failing eligibility checks), is_eligible is True
         result = EligibilityResult(context=context)
@@ -160,7 +156,7 @@ class TestEligibilityResult:
 
     def test_eligibility_result_not_eligible(self):
         """Test EligibilityResult when not eligible (computed from context)."""
-        from core.evaluation import EvaluationContext
+        from concordcore.core.evaluation import EvaluationContext
         # is_eligible is a computed property based on evaluation_list
         # With empty context, it returns True (no failures)
         context = EvaluationContext()
@@ -170,7 +166,7 @@ class TestEligibilityResult:
 
     def test_eligibility_result_has_context(self):
         """Test that EligibilityResult has evaluation context."""
-        from core.evaluation import EvaluationContext
+        from concordcore.core.evaluation import EvaluationContext
         context = EvaluationContext()
         result = EligibilityResult(context=context)
         assert result.context is not None

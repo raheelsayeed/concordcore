@@ -10,7 +10,7 @@ SAMPLE_NDJSON_FILES = SAMPLE_FHIR_DATA_PATH + '/ndjson/'
 
 def sample_fhir_values():
 
-    from fhir_parsers.fhirvalue import FHIRValue
+    from concordcore.fhir_parsers.fhirvalue import FHIRValue
 
     obs = read_ndjson(SAMPLE_NDJSON_FILES + 'Observation.ndjson')
     conditions = read_ndjson(SAMPLE_NDJSON_FILES + 'Condition.ndjson')
@@ -72,13 +72,13 @@ def sample_data():
 
 def sample_healthcontext(persona_text = 'patient'):
 
-    from core.healthcontext import HealthContext, Persona
-    from variables.record import Record
-    from variables.value import Value
-    from variables.var import Var
-    from variables.age import Age
-    from primitives.code import Code
-    from ontology.codes import ConcordDefinition, CodeRaceEthnicity, CodeGender, Code_LabLoinc
+    from concordcore.core.healthcontext import HealthContext, Persona
+    from concordcore.variables.record import Record
+    from concordcore.variables.value import Value
+    from concordcore.variables.var import Var
+    from concordcore.variables.age import Age
+    from concordcore.primitives.code import Code
+    from concordcore.ontology.codes import ConcordDefinition, CodeRaceEthnicity, CodeGender, Code_LabLoinc
     from datetime import datetime, timedelta
 
 
