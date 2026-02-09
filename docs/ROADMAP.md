@@ -39,8 +39,12 @@ This document outlines the development roadmap for ConcordCore, including comple
 - [ ] API reference documentation
 
 ### Code Quality
-- [ ] Type hints throughout codebase
-- [ ] Consistent error handling patterns
+- [x] Type hints for core module (`core/` — `| None` annotations on all nullable fields)
+- [x] Consistent error handling in core (`CPGDefinitionError`, `PipelineError` replacing bare `Exception`)
+- [x] Core module bug fixes (`.date()` call, class-level UUID, `__str__`, uninitialized field)
+- [x] Dead code removal in core (commented blocks, unused classes, duplicate methods)
+- [ ] Type hints for remaining modules (`variables/`, `primitives/`, `fhir/`, `renderer/`)
+- [ ] Consistent error handling in remaining modules
 - [ ] Code style standardization (black, ruff)
 
 ---

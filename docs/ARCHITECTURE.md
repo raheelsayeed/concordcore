@@ -47,7 +47,7 @@ The CPG class represents a clinical practice guideline definition loaded from YA
 - **Recommendation Variables**: Conditional recommendations based on assessments
 
 ```python
-cpg = CPG.from_document_path('cpgs/cholesterol.yaml')
+cpg = CPG.from_document_path('cpgs/cholesterol/cholesterol.yaml')
 ```
 
 ### 2. HealthContext

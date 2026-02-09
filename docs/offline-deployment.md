@@ -231,7 +231,7 @@ from core.cpg import CPG
 from core.concord import Concord
 from misc import sample_healthcontext
 
-cpg = CPG.from_document_path("cpgs/cholesterol.yaml")
+cpg = CPG.from_document_path("cpgs/cholesterol/cholesterol.yaml")
 hc = sample_healthcontext()
 
 concord = Concord(cpg=cpg, healthcontext=hc)
@@ -270,7 +270,7 @@ print(f'✓ Found {len(cpgs)} CPGs')
 python3 -c "
 from core import CPG, Concord
 from misc import sample_healthcontext
-cpg = CPG.from_document_path('cpgs/cholesterol.yaml')
+cpg = CPG.from_document_path('cpgs/cholesterol/cholesterol.yaml')
 hc = sample_healthcontext()
 result = Concord(cpg=cpg, healthcontext=hc).evaluate()
 print('✓ Evaluation successful')
@@ -319,10 +319,10 @@ echo "All checks passed!"
 2. **CPG corruption recovery**:
    ```bash
    # Restore specific CPG version
-   git checkout v1.0.0 -- cpgs/cholesterol.yaml
+   git checkout v1.0.0 -- cpgs/cholesterol/cholesterol.yaml
 
    # Or restore from backup
-   cp /backup/cpgs/cholesterol.yaml cpgs/
+   cp /backup/cpgs/cholesterol/cholesterol.yaml cpgs/
    ```
 
 3. **Full system recovery**:
@@ -430,7 +430,7 @@ from core import CPG
 from core.batch_processor import BatchProcessor, ProcessingMode
 
 # Load CPG
-cpg = CPG.from_document_path("/opt/concord/cpgs/cholesterol.yaml")
+cpg = CPG.from_document_path("/opt/concord/cpgs/cholesterol/cholesterol.yaml")
 
 # Load patients from local database
 from local_ehr import get_all_patients

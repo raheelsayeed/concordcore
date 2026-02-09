@@ -13,7 +13,7 @@ ConcordCore is a Python framework for evaluating Clinical Practice Guidelines (C
 python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt
 
 # Run with a CPG
-./main.py -f cpgs/cholesterol.yaml -t document -p patient
+./main.py -f cpgs/cholesterol/cholesterol.yaml -t document -p patient
 
 # CLI arguments
 #   -f <path/to/cpg.yaml>    CPG definition file
@@ -35,11 +35,30 @@ pytest -v                               # Verbose output
 
 ## Architecture
 
+### CPG Registry
+
+`CPGRegistry` (`core/cpg_registry.py`) is the single source of truth for discovering and loading CPGs:
+
+```python
+from core.cpg_registry import get_registry
+
+registry = get_registry()                  # Module-level singleton
+cpg = registry.get('2019AccPrimaryPreventionASCVD')  # Load by identifier
+entries = registry.list()                  # Lightweight metadata (CPGEntry)
+by_cat = registry.list_by_category()       # Grouped by category
+ids = registry.identifiers()               # All discovered identifiers
+```
+
+All consumers (`app_multicpg`, `mcp_server`, `app/server`, `core/benchmarks`) delegate to the registry. Do not construct CPG file paths manually—use `get_registry().get(identifier)`.
+
 ### Core Evaluation Flow
 
 The `Concord` orchestrator class (`core/concord.py`) manages the evaluation pipeline:
 
 ```python
+from core.cpg_registry import get_registry
+
+cpg = get_registry().get('2019AccPrimaryPreventionASCVD')
 concord = Concord(cpg, healthcontext)
 concord.eligibility()      # Check if CPG applies to patient
 concord.sufficiency()      # Check if health data is sufficient
@@ -51,7 +70,7 @@ Each phase must complete successfully before the next can proceed. `NeedAttestat
 
 ### Key Modules
 
-- **`core/`**: Evaluation pipeline (`concord.py`, `eligibility.py`, `sufficiency.py`, `assessment.py`, `recommendation.py`)
+- **`core/`**: Evaluation pipeline (`concord.py`, `eligibility.py`, `sufficiency.py`, `assessment.py`, `recommendation.py`) + `cpg_registry.py` for auto-discovery
 - **`variables/`**: Data model - `Var` (variable definition), `Value` (data value), `Record` (var + values)
 - **`primitives/`**: Types, codes (LOINC, SNOMED, RxNorm, CPT), units, validation
 - **`renderer/`**: Jinja2 templates for generating patient/provider output
@@ -124,9 +143,19 @@ Sufficient, SufficientWithUserAttestation, Insufficient, Optional
 
 ## Available CPGs
 
-Sample CPG definitions in `cpgs/`:
-- `cholesterol.yaml` - Primary example for lipid management
-- `uspstf_statinuse.yaml` - USPSTF statin recommendations
-- `screeninglungcancer.yaml` - Lung cancer screening
+CPGs are auto-discovered by `CPGRegistry` from `cpgs/**/*.yaml`. Use `get_registry().identifiers()` to list all available identifiers. Key CPGs:
 
-Each YAML CPG can have an accompanying `.py` module for custom functions (e.g., `ascvd_risk_scores.py`).
+| Identifier | Description |
+|---|---|
+| `2019AccPrimaryPreventionASCVD` | Cholesterol/lipid management (ACC/AHA 2019) |
+| `uspstfStatinUse` | Statin use for primary prevention (USPSTF) |
+| `screening_for_cervical_cancer` | Cervical cancer screening |
+| `uspstf_colorectal_cancer_screening` | Colorectal cancer screening |
+| `uspstf_hypertension_screening` | Hypertension screening |
+| `uspstf_diabetes_screening` | Diabetes screening |
+| `uspstf_hiv_screening` | HIV screening |
+| `uspstf_hepatitis_c_screening` | Hepatitis C screening |
+| `uspstf_hepatitis_b_screening` | Hepatitis B screening |
+| `uspstf_depression_screening` | Depression screening |
+
+Each YAML CPG can have an accompanying `.py` module for custom functions (e.g., `cholesterol/ascvd_risk_scores.py`).

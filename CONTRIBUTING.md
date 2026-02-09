@@ -31,7 +31,7 @@ Thank you for your interest in contributing to Concord! This document provides g
 
 4. **Verify installation**
    ```bash
-   ./main.py -f cpgs/cholesterol.yaml -t document -p patient
+   ./main.py -f cpgs/cholesterol/cholesterol.yaml -t document -p patient
    ```
 
 ## Code Standards
