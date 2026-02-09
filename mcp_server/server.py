@@ -1,7 +1,7 @@
 """FastMCP server for Concord with MCP Apps UI support (v2).
 
-7 tools: acknowledge_guidelines, list_cpgs, get_cpg_info, create_health_context,
-evaluate_patient, collect_attestation, submit_attestation.
+8 tools: acknowledge_guidelines, list_cpgs, get_cpg_info, screen_patient,
+create_health_context, evaluate_patient, collect_attestation, submit_attestation.
 """
 
 from __future__ import annotations
@@ -13,6 +13,8 @@ from typing import Any
 from mcp.server.fastmcp import FastMCP
 
 from core.concord import Concord, NeedAttestationError
+from core.cpg_registry import get_registry
+from core.healthcontext import HealthContext
 from primitives.types import Persona
 from variables.var import Var
 
@@ -165,6 +167,62 @@ def get_cpg_info(cpg_id: str) -> str:
 
 
 # --- Tool 4 ---
+
+@mcp.tool()
+def screen_patient(health_data: list[dict[str, Any]]) -> str:
+    """Screen a patient against all CPGs and return the ones they are eligible for.
+
+    Accepts patient health data and automatically checks eligibility against
+    every registered clinical practice guideline. No session or prior
+    acknowledgement required — this is a read-only discovery tool.
+
+    health_data: array of {variable_id, value} e.g.
+      [{"variable_id": "Age", "value": 55}, {"variable_id": "Gender", "value": "Male"}]
+
+    Returns eligible CPGs with metadata, plus ineligible CPGs and any errors.
+    Use the returned CPG identifiers with evaluate_patient for full evaluation.
+    """
+    # Build HealthContext from provided data
+    data_dict = {item["variable_id"]: item["value"] for item in health_data}
+    try:
+        ctx = HealthContext.from_dict(data_dict, persona=Persona.provider)
+    except Exception as e:
+        return json.dumps({"error": f"Failed to build health context: {e}"}, indent=2)
+
+    screening = get_registry().screen(ctx)
+    eligible = []
+    ineligible = []
+
+    for sr in screening:
+        entry = {
+            "identifier": sr.cpg_identifier,
+            "title": sr.cpg_title,
+            "description": sr.description,
+            "category": sr.category,
+            "publisher": sr.publisher,
+        }
+        if sr.is_eligible:
+            eligible.append(entry)
+        else:
+            ineligible.append(entry)
+
+    log.info(f"screen_patient: {len(eligible)}/{len(eligible)+len(ineligible)} eligible")
+    return json.dumps({
+        "status": "screened",
+        "eligible_count": len(eligible),
+        "total_cpgs": len(eligible) + len(ineligible),
+        "eligible_cpgs": eligible,
+        "ineligible_cpgs": ineligible,
+        "errors": errors or None,
+        "_instructions": (
+            "These are the guidelines this patient is eligible for. "
+            "To evaluate, call acknowledge_guidelines, then create_health_context "
+            "with the same data, then evaluate_patient for each eligible CPG."
+        ),
+    }, indent=2, default=str)
+
+
+# --- Tool 5 ---
 
 @mcp.tool()
 def create_health_context(
