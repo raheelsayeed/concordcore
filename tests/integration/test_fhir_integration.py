@@ -192,11 +192,11 @@ class TestFHIRWithCPG:
     @pytest.fixture
     def cholesterol_cpg(self):
         """Load the cholesterol CPG."""
-        cpg_path = Path(__file__).parent.parent.parent / 'cpgs' / 'cholesterol.yaml'
-        if not cpg_path.exists():
+        from core.cpg_registry import get_registry
+        try:
+            return get_registry().get('2019AccPrimaryPreventionASCVD')
+        except KeyError:
             pytest.skip("Cholesterol CPG not found")
-        from core.cpg import CPG
-        return CPG.from_document_path(str(cpg_path))
 
     def test_fhir_values_match_cpg_variables(self, cholesterol_cpg):
         """Test that FHIR values can match CPG variable codes."""
@@ -454,11 +454,11 @@ class TestFHIRBundleEndToEnd:
     @pytest.fixture
     def cholesterol_cpg_loaded(self):
         """Load the cholesterol CPG."""
-        cpg_path = Path(__file__).parent.parent.parent / 'cpgs' / 'cholesterol.yaml'
-        if not cpg_path.exists():
+        from core.cpg_registry import get_registry
+        try:
+            return get_registry().get('2019AccPrimaryPreventionASCVD')
+        except KeyError:
             pytest.skip("Cholesterol CPG not found")
-        from core.cpg import CPG
-        return CPG.from_document_path(str(cpg_path))
 
     @pytest.fixture
     def adapter(self):

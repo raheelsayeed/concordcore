@@ -598,20 +598,20 @@ class ClinicalTransparencyEngine:
 
         # Level 1: Assessments that feed into this recommendation
         if concord.assessment_result:
-            for ev in concord.assessment_result.context.evaluation_list:
+            for assessed in concord.assessment_result.assessments:
                 # Check if this assessment is referenced in the recommendation
                 rec_expr = rec.recommendation.expression if hasattr(rec.recommendation, 'expression') else ""
-                if rec_expr and f"${ev.id}" in str(rec_expr):
+                if rec_expr and f"${assessed.id}" in str(rec_expr):
                     chain.append(EvidenceChainLink(
                         level=1,
-                        id=ev.id,
+                        id=assessed.id,
                         type="assessment",
-                        value=ev.record.value.value if ev.record.value else None,
-                        expression=ev.record.var.expression if hasattr(ev.record.var, 'expression') else None,
+                        value=assessed.value.value if assessed.value else None,
+                        expression=assessed.var.expression if hasattr(assessed.var, 'expression') else None,
                         depends_on=[],
-                        citation=ev.record.var.title if hasattr(ev.record.var, 'title') else None
+                        citation=assessed.var.title if hasattr(assessed.var, 'title') else None
                     ))
-                    chain[0].depends_on.append(ev.id)
+                    chain[0].depends_on.append(assessed.id)
 
         # Level 0: Raw patient data
         for record in concord.healthcontext.records:

@@ -1,0 +1,551 @@
+CPG:
+  title: "USPSTF Unhealthy Alcohol Use Screening and Counseling"
+  identifier: uspstf_alcohol_use_screening_2018
+  publisher: "United States Preventive Services Task Force"
+  uri: "https://www.uspreventiveservicestaskforce.org/uspstf/recommendation/unhealthy-alcohol-use-in-adolescents-and-adults-screening-and-behavioral-counseling-interventions"
+  doi: 10.1001/jama.2018.16789
+  type: [screening, preventive]
+  revision: 1.0
+  revision_date: 2024-01-15
+  description: >
+    The USPSTF recommends screening for unhealthy alcohol use in primary care settings
+    in adults 18 years or older, including pregnant persons, and providing persons
+    engaged in risky or hazardous drinking with brief behavioral counseling interventions
+    to reduce unhealthy alcohol use (Grade B).
+
+
+variables:
+
+#--------------------------------------------------------
+# Demographics
+  - id: Age
+    title: "Age"
+    type: integer
+    required: True
+    code:
+      concord: ['Age']
+
+  - id: Gender
+    title: "Gender"
+    required: False
+    code:
+      concord: ['Gender']
+
+#--------------------------------------------------------
+# Screening Instruments
+  - id: audit_c_score
+    title: "AUDIT-C Score"
+    type: integer
+    required: False
+    user_attestable: False
+    code:
+      loinc: ["75624-7"]
+    validator:
+      plausible: '$value >= 0 and $value <= 12'
+    llm_prompt: |
+      What is the patient's AUDIT-C score?
+      AUDIT-C is a 3-question alcohol screening tool (score 0-12).
+      Look for: AUDIT-C score, AUDIT-C result, alcohol screening score.
+      Return: numeric score (0-12), or null if not mentioned.
+    narrative:
+      patient:
+        HasValue: "Your AUDIT-C alcohol screening score is $value."
+      provider:
+        HasValue: "AUDIT-C score: $value"
+
+  - id: audit_full_score
+    title: "AUDIT Full Score"
+    type: integer
+    required: False
+    user_attestable: False
+    code:
+      loinc: ["75625-4"]
+    validator:
+      plausible: '$value >= 0 and $value <= 40'
+    llm_prompt: |
+      What is the patient's full AUDIT score?
+      AUDIT is a 10-question alcohol screening tool (score 0-40).
+      Look for: AUDIT score, full AUDIT, alcohol use disorders identification test.
+      Return: numeric score (0-40), or null if not mentioned.
+    narrative:
+      patient:
+        HasValue: "Your AUDIT alcohol screening score is $value."
+      provider:
+        HasValue: "AUDIT full score: $value"
+
+#--------------------------------------------------------
+# Alcohol Use Pattern
+  - id: drinks_per_week
+    title: "Drinks Per Week"
+    type: integer
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      How many standard alcoholic drinks does the patient consume per week?
+      Look for: drinks per week, alcohol consumption frequency, standard drinks.
+      A standard drink = 12 oz beer, 5 oz wine, or 1.5 oz spirits.
+      Return: number of drinks per week, or null if not mentioned.
+    narrative:
+      patient:
+        HasValue: "You report consuming approximately $value drinks per week."
+      provider:
+        HasValue: "Self-reported alcohol intake: $value drinks/week"
+
+  - id: binge_drinking
+    title: "Binge Drinking"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Does the patient engage in binge drinking?
+      Binge drinking: 5+ drinks for men or 4+ drinks for women on a single occasion.
+      Look for: binge drinking, heavy episodic drinking, drinking to excess.
+      Return: true if binge drinking, false if denied, null if not mentioned.
+    narrative:
+      patient:
+        True: "You report episodes of binge drinking (consuming large amounts at one time)."
+        False: "You do not report binge drinking episodes."
+      provider:
+        True: "Binge drinking reported"
+        False: "No binge drinking reported"
+
+#--------------------------------------------------------
+# Current Status
+  - id: known_alcohol_use_disorder
+    title: "Known Alcohol Use Disorder"
+    type: boolean
+    required: False
+    user_attestable: True
+    code:
+      snomed: ["7200002", "15167005"]
+    llm_prompt: |
+      Does the patient have a known alcohol use disorder?
+      Look for: alcohol use disorder, AUD, alcohol dependence, alcoholism, alcohol abuse.
+      Return: true if AUD diagnosis, false if denied, null if not mentioned.
+    narrative:
+      patient:
+        True: "You have a diagnosis of alcohol use disorder."
+        False: "No alcohol use disorder diagnosis found."
+      provider:
+        True: "Known alcohol use disorder"
+
+  - id: in_treatment_for_aud
+    title: "Currently in Treatment for Alcohol Use Disorder"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Is the patient currently receiving treatment for alcohol use disorder?
+      Look for: alcohol treatment, AA, Alcoholics Anonymous, naltrexone, acamprosate,
+      disulfiram, alcohol rehabilitation, substance abuse treatment.
+      Return: true if in treatment, false if not, null if not mentioned.
+    narrative:
+      patient:
+        True: "You are currently receiving treatment for alcohol use."
+      provider:
+        True: "In treatment for AUD"
+
+  - id: is_pregnant
+    title: "Currently Pregnant"
+    type: boolean
+    required: False
+    user_attestable: True
+    code:
+      snomed: ["77386006"]
+    llm_prompt: |
+      Is the patient currently pregnant?
+      Look for: pregnant, pregnancy, gestational, prenatal, expecting.
+      Return: true if pregnant, false if not, null if not mentioned.
+    narrative:
+      patient:
+        True: "You are currently pregnant."
+        False: "You are not currently pregnant."
+      provider:
+        True: "Currently pregnant"
+
+#--------------------------------------------------------
+# Risk Factors
+  - id: liver_disease
+    title: "Liver Disease"
+    type: boolean
+    required: False
+    user_attestable: True
+    code:
+      snomed: ["235856003", "197321007"]
+    llm_prompt: |
+      Does the patient have liver disease?
+      Look for: liver disease, hepatitis, cirrhosis, fatty liver, NAFLD, NASH,
+      elevated liver enzymes, alcoholic liver disease.
+      Return: true if liver disease, false if denied, null if not mentioned.
+    narrative:
+      patient:
+        True: "You have liver disease. Alcohol use can worsen liver conditions."
+      provider:
+        True: "Liver disease present - alcohol use contraindicated"
+
+#--------------------------------------------------------
+# Screening Status
+  - id: screened_past_year
+    title: "Screened for Alcohol Use in Past Year"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Has the patient been screened for unhealthy alcohol use in the past year?
+      Look for: AUDIT-C, AUDIT, alcohol screening, alcohol use screening,
+      asked about alcohol use, alcohol questionnaire.
+      Return: true if screened in past year, false if not, null if not mentioned.
+    narrative:
+      patient:
+        True: "You have been screened for alcohol use within the past year."
+        False: "You have not been screened for alcohol use in the past year."
+      provider:
+        True: "Alcohol screening completed within past year"
+        False: "No alcohol screening within past year"
+
+
+#--------------------------------------------------------
+# Eligibility
+eligibility:
+  - id: adult
+    title: "Adult (18 Years or Older)"
+    expression: $Age >= 18
+    narrative:
+      patient:
+        True: "You are an adult eligible for alcohol use screening."
+        False: "This screening recommendation is for adults 18 years and older."
+      provider:
+        True: "Adult - eligible for alcohol use screening"
+        False: "Under 18 - adolescent screening guideline may apply"
+
+  - id: not_in_aud_treatment
+    title: "Not Currently in AUD Treatment"
+    expression: $in_treatment_for_aud is not True
+    narrative:
+      patient:
+        True: "Alcohol screening applies to those not currently receiving alcohol use disorder treatment."
+        False: "Since you are currently receiving treatment for alcohol use disorder, screening is not the primary need."
+      provider:
+        True: "Not currently in AUD treatment - screening applicable"
+        False: "Currently in AUD treatment - continue treatment plan"
+
+
+#--------------------------------------------------------
+# Assessments
+assessments:
+  # AUDIT-C Screen Results
+  - id: audit_c_positive_female
+    title: "AUDIT-C Positive Screen (Female, >= 3)"
+    description: "AUDIT-C score of 3 or higher in women suggests unhealthy alcohol use"
+    expression: $Gender == "female" and $audit_c_score >= 3
+    required: False
+    narrative:
+      patient:
+        True: "Your AUDIT-C score of $audit_c_score suggests you may have unhealthy alcohol use patterns."
+      provider:
+        True: "AUDIT-C $audit_c_score - positive screen (female threshold >=3)"
+
+  - id: audit_c_positive_male
+    title: "AUDIT-C Positive Screen (Male, >= 4)"
+    description: "AUDIT-C score of 4 or higher in men suggests unhealthy alcohol use"
+    expression: $Gender == "male" and $audit_c_score >= 4
+    required: False
+    narrative:
+      patient:
+        True: "Your AUDIT-C score of $audit_c_score suggests you may have unhealthy alcohol use patterns."
+      provider:
+        True: "AUDIT-C $audit_c_score - positive screen (male threshold >=4)"
+
+  - id: audit_c_positive
+    title: "AUDIT-C Positive Screen"
+    description: "AUDIT-C screen is positive (gender-specific thresholds)"
+    expression: $audit_c_positive_female is True or $audit_c_positive_male is True
+    narrative:
+      patient:
+        True: "Your alcohol screening indicates a need for further evaluation."
+        False: "Your alcohol screening result is below the threshold for concern."
+      provider:
+        True: "AUDIT-C screen positive"
+        False: "AUDIT-C screen negative"
+
+  # Full AUDIT Risk Tiers
+  - id: audit_low_risk
+    title: "AUDIT Low Risk (Score 0-7)"
+    description: "Full AUDIT score indicates low risk"
+    expression: $audit_full_score >= 0 and $audit_full_score <= 7
+    required: False
+    narrative:
+      patient:
+        True: "Your full AUDIT score of $audit_full_score indicates __low risk__ alcohol use."
+      provider:
+        True: "AUDIT $audit_full_score - Low risk"
+
+  - id: audit_hazardous
+    title: "AUDIT Hazardous Drinking (Score 8-15)"
+    description: "Full AUDIT score indicates hazardous drinking"
+    expression: $audit_full_score >= 8 and $audit_full_score <= 15
+    required: False
+    narrative:
+      patient:
+        True: "Your AUDIT score of $audit_full_score indicates __hazardous__ drinking patterns. Brief counseling can help reduce your risk."
+      provider:
+        True: "AUDIT $audit_full_score - Hazardous drinking (8-15)"
+
+  - id: audit_harmful
+    title: "AUDIT Harmful Drinking (Score 16-19)"
+    description: "Full AUDIT score indicates harmful drinking"
+    expression: $audit_full_score >= 16 and $audit_full_score <= 19
+    required: False
+    narrative:
+      patient:
+        True: "Your AUDIT score of $audit_full_score indicates __harmful__ drinking patterns. Further evaluation and counseling are recommended."
+      provider:
+        True: "AUDIT $audit_full_score - Harmful drinking (16-19)"
+
+  - id: audit_likely_dependent
+    title: "AUDIT Likely Dependence (Score 20-40)"
+    description: "Full AUDIT score suggests likely alcohol dependence"
+    expression: $audit_full_score >= 20
+    required: False
+    narrative:
+      patient:
+        True: "Your AUDIT score of $audit_full_score suggests __possible alcohol dependence__. Professional evaluation and treatment are strongly recommended."
+      provider:
+        True: "AUDIT $audit_full_score - Likely dependence (>=20). Refer for evaluation."
+
+  # Drinking Pattern Assessments
+  - id: heavy_drinking_male
+    title: "Heavy Drinking (Male > 14/week)"
+    description: "Exceeds recommended limits for men"
+    expression: $Gender == "male" and $drinks_per_week > 14
+    required: False
+    narrative:
+      patient:
+        True: "Your alcohol intake of $drinks_per_week drinks per week exceeds the recommended limit for men (14 per week)."
+      provider:
+        True: "Heavy drinking: $drinks_per_week drinks/week (male limit >14)"
+
+  - id: heavy_drinking_female
+    title: "Heavy Drinking (Female > 7/week)"
+    description: "Exceeds recommended limits for women"
+    expression: $Gender == "female" and $drinks_per_week > 7
+    required: False
+    narrative:
+      patient:
+        True: "Your alcohol intake of $drinks_per_week drinks per week exceeds the recommended limit for women (7 per week)."
+      provider:
+        True: "Heavy drinking: $drinks_per_week drinks/week (female limit >7)"
+
+  - id: heavy_drinking_pattern
+    title: "Heavy Drinking Pattern"
+    description: "Patient exceeds recommended alcohol limits or binge drinks"
+    expression: $heavy_drinking_male is True or $heavy_drinking_female is True or $binge_drinking is True
+    required: False
+    narrative:
+      patient:
+        True: "Your drinking pattern exceeds recommended limits."
+        False: "Your drinking pattern is within recommended limits."
+      provider:
+        True: "Heavy or binge drinking pattern identified"
+
+  - id: pregnant_any_alcohol
+    title: "Pregnant with Alcohol Use"
+    description: "Pregnant patient reporting any alcohol use"
+    expression: $is_pregnant is True and $drinks_per_week > 0
+    required: False
+    narrative:
+      patient:
+        True: "You are pregnant and reporting alcohol use. **No amount of alcohol is safe during pregnancy.**"
+      provider:
+        True: "ALERT: Pregnant patient with reported alcohol use"
+
+  - id: needs_screening
+    title: "Needs Alcohol Screening"
+    description: "Patient should be screened for unhealthy alcohol use"
+    expression: $screened_past_year is not True
+    narrative:
+      patient:
+        True: "You should be screened for unhealthy alcohol use."
+        False: "You have been screened for alcohol use recently."
+      provider:
+        True: "Alcohol screening due"
+        False: "Alcohol screening current"
+
+  - id: needs_full_audit
+    title: "Needs Full AUDIT Assessment"
+    description: "AUDIT-C positive, full AUDIT not completed"
+    expression: $audit_c_positive is True and $audit_full_score is None
+    required: False
+    narrative:
+      patient:
+        True: "Your initial screening was positive. A more detailed assessment is recommended."
+      provider:
+        True: "AUDIT-C positive - administer full AUDIT"
+
+
+#--------------------------------------------------------
+# Recommendations
+recommendations:
+  - id: recommend_screening
+    title: "Alcohol Use Screening Recommended"
+    category: evaluation
+    description: "USPSTF recommends screening for unhealthy alcohol use"
+    expression: $needs_screening is True
+    uspstf_grade: B
+    level_of_evidence: B-R
+    class_of_recommendation: I
+    narrative:
+      patient:
+        True: |
+          ## Alcohol Use Screening Recommended
+
+          The USPSTF recommends screening for unhealthy alcohol use for all adults.
+
+          **Screening involves:**
+          - A brief questionnaire (AUDIT-C) about your drinking habits
+          - Takes only a few minutes to complete
+          - Helps identify if your drinking may be putting your health at risk
+
+          **Please be honest** in your responses - this is a confidential health assessment
+          to help your provider give you the best care.
+        False: "Alcohol use screening is not needed at this time."
+      provider:
+        True: |
+          **USPSTF Grade B Recommendation**
+
+          Screen for unhealthy alcohol use.
+
+          Recommended screening tool: AUDIT-C (3 questions).
+          Positive thresholds: >=3 for women, >=4 for men.
+          If positive, administer full AUDIT.
+    citations:
+      - 'The USPSTF recommends screening for unhealthy alcohol use in primary care settings in adults 18 years or older, including pregnant persons.'
+
+  - id: administer_full_audit
+    title: "Full AUDIT Recommended"
+    category: evaluation
+    description: "Administer full AUDIT following positive AUDIT-C screen"
+    expression: $needs_full_audit is True
+    narrative:
+      patient:
+        True: |
+          ## Further Alcohol Assessment Recommended
+
+          Your initial screening suggests your alcohol use may need further evaluation.
+          A more detailed questionnaire (full AUDIT) will help your provider better
+          understand your drinking pattern and determine the best next steps.
+      provider:
+        True: |
+          AUDIT-C positive (score $audit_c_score). Administer full 10-question AUDIT
+          to determine risk tier and guide intervention:
+          - 0-7: Low risk (alcohol education)
+          - 8-15: Hazardous (brief intervention)
+          - 16-19: Harmful (brief intervention + monitoring)
+          - 20-40: Likely dependence (referral for evaluation)
+
+  - id: brief_counseling_intervention
+    title: "Brief Behavioral Counseling Intervention"
+    category: medication
+    description: "Brief counseling for persons engaged in risky or hazardous drinking"
+    expression: $audit_hazardous is True or $heavy_drinking_pattern is True
+    uspstf_grade: B
+    level_of_evidence: A
+    class_of_recommendation: I
+    narrative:
+      patient:
+        True: |
+          ## Reducing Your Alcohol Use
+
+          Based on your screening results, your drinking pattern may be putting your
+          health at risk. **Brief counseling** can help you reduce your alcohol use.
+
+          **Healthy drinking limits:**
+          - Men: No more than 2 drinks per day / 14 per week
+          - Women: No more than 1 drink per day / 7 per week
+
+          **A standard drink is:**
+          - 12 oz of regular beer
+          - 5 oz of wine
+          - 1.5 oz of spirits
+
+          **Strategies to reduce drinking:**
+          - Set a limit before you start drinking
+          - Alternate alcoholic drinks with water
+          - Avoid drinking triggers
+          - Find alternative activities
+        False: "Brief counseling for alcohol use is not indicated at this time."
+      provider:
+        True: |
+          **USPSTF Grade B: Brief behavioral counseling intervention recommended.**
+
+          Evidence-based brief intervention (5-15 minutes):
+          1. Provide feedback on screening results
+          2. Advise to reduce or abstain
+          3. Agree on a drinking goal
+          4. Arrange follow-up
+
+          Multi-contact interventions (6-15 min initial + follow-up) are most effective.
+    citations:
+      - 'The USPSTF recommends providing persons engaged in risky or hazardous drinking with brief behavioral counseling interventions to reduce unhealthy alcohol use.'
+      - 'Brief counseling interventions in primary care settings can reduce unhealthy alcohol use.'
+
+  - id: referral_for_aud_evaluation
+    title: "Referral for Alcohol Use Disorder Evaluation"
+    category: medication
+    description: "Referral for patients with high AUDIT scores suggesting dependence"
+    expression: $audit_harmful is True or $audit_likely_dependent is True
+    narrative:
+      patient:
+        True: |
+          ## Specialist Evaluation Recommended
+
+          Your screening results suggest you may benefit from a **specialist evaluation**
+          for alcohol use. This is an important step toward getting the right support.
+
+          **Treatment is effective** and can include:
+          - Counseling and therapy
+          - Medications that reduce cravings
+          - Support groups
+          - Rehabilitation programs
+
+          **Talk to your provider** about a referral to an addiction medicine specialist
+          or behavioral health provider.
+      provider:
+        True: |
+          AUDIT score $audit_full_score suggests harmful use or possible dependence.
+
+          Recommended:
+          - Diagnostic evaluation for alcohol use disorder (DSM-5 criteria)
+          - Consider referral to addiction medicine or behavioral health
+          - Pharmacotherapy options: naltrexone, acamprosate, disulfiram
+          - Assess for medical complications (liver, GI, neurologic)
+    citations:
+      - 'Brief interventions are less effective for persons with alcohol dependence, who may need more intensive treatment.'
+
+  - id: pregnancy_counseling
+    title: "Pregnancy-Specific Alcohol Counseling"
+    category: display_patient
+    description: "Counseling for pregnant persons about alcohol use"
+    expression: $is_pregnant is True
+    narrative:
+      patient:
+        True: |
+          ## Alcohol and Pregnancy
+
+          **No amount of alcohol is known to be safe during pregnancy.**
+
+          Alcohol use during pregnancy can cause:
+          - Fetal alcohol spectrum disorders (FASD)
+          - Low birth weight
+          - Miscarriage and stillbirth
+          - Developmental and behavioral problems
+
+          **If you are currently drinking**, talk to your healthcare provider about
+          support for stopping. It is never too late in pregnancy to stop drinking.
+      provider:
+        True: |
+          Pregnant patient - screen for alcohol use per USPSTF.
+          No safe level of alcohol during pregnancy.
+          If alcohol use identified, provide counseling and refer for support services.
+    citations:
+      - 'The USPSTF recommends screening for unhealthy alcohol use in primary care settings in adults 18 years or older, including pregnant persons.'

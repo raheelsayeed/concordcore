@@ -26,8 +26,8 @@ logger = logging.getLogger("tests")
 
 if __name__ == '__main__':
 
-    from core.cpg import CPG
-    cpg = CPG.from_document_path('cpgs/cholesterol.yaml')
+    from core.cpg_registry import get_registry
+    cpg = get_registry().get('2019AccPrimaryPreventionASCVD')
     import misc
     manager = concord.Concord(cpg, misc.sample_healthcontext())
 
@@ -142,10 +142,9 @@ if __name__ == '__main__':
     # --- Test: Verify sample data is accurately matched to CPG variables ---
     ht("[black on green]# --- SAMPLE DATA MATCHING TEST --- [/black on green]")
 
-    from core.cpg import CPG
     from core.concord import Concord
 
-    test_cpg = CPG.from_document_path('cpgs/cholesterol.yaml')
+    test_cpg = get_registry().get('2019AccPrimaryPreventionASCVD')
     test_hc = misc.sample_healthcontext()
     test_concord = Concord(cpg=test_cpg, healthcontext=test_hc, ignore_eligibility=True)
 

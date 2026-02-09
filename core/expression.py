@@ -135,8 +135,8 @@ class Expression:
             if not isinstance(expression_result, bool):
                 raise ValueError(f'Recommendation.expression result must be a bool-type, got={type(expression_result)}')
             return expression_result
-        except Exception as e:
-            raise e
+        except Exception:
+            raise
 
     def evaluate(self, records, record_index=None):
         """Evaluate expression against provided records.

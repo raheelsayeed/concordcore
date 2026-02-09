@@ -11,7 +11,8 @@ import logging
 from typing import Any, Protocol
 
 from .expression import Expression
-from .evaluation import EvaluatedRecord, EvaluationContext, EvaluationResult, SufficiencyResultStatus
+from .evaluation import EvaluatedRecord, EvaluationResultStatus
+from .errors import CPGDefinitionError
 from primitives.errors import VariableEvaluationError
 from primitives.types import Persona, ValueType
 from primitives.vlist import vlist
@@ -34,12 +35,12 @@ class EvaluableVar(var.Var):
     """
 
     type: ValueType = ValueType.boolean
-    expression: str = None
-    function: str = None
+    expression: str | None = None
+    function: str | None = None
 
     def __post_init__(self):
         if not self.expression and not self.function:
-            raise Exception(f'{self.__class__.__name__}<{self.id}> must have either an expression or a function')
+            raise CPGDefinitionError(f'{self.__class__.__name__}<{self.id}> must have either an expression or a function')
 
     def __hash__(self):
         return hash(self.id)
@@ -65,10 +66,10 @@ class AssessmentVar(EvaluableVar):
     """
 
     show_if_negative: bool = False
-    dated: datetime = None
-    reference: Any = None
+    dated: datetime | None = None
+    reference: Any | None = None
     user_attestable: bool = False
-    llm_prompt: str = None
+    llm_prompt: str | None = None
 
     def __hash__(self):
         return hash(self.id)
@@ -82,7 +83,7 @@ class AssessmentRecord(record.Record):
 
     var: AssessmentVar
     __expression: Expression = field(init=False)
-    __assessed_value: value.Value = None
+    __assessed_value: value.Value | None = None
 
     def __post_init__(self, initial_values=None):
         super().__post_init__(initial_values)
@@ -155,37 +156,59 @@ class AssessmentRecord(record.Record):
 
 
 @dataclass
-class EvaluatedAssessmentRecord(EvaluatedRecord):
-    pass
+class AssessedRecord:
+    """Result of evaluating one assessment variable."""
+    record: AssessmentRecord
+    evaluation_result: EvaluationResultStatus
+    error: Exception | None = None
 
+    @property
+    def id(self) -> str:
+        return self.record.id
+
+    @property
+    def var(self) -> AssessmentVar:
+        return self.record.var
+
+    @property
+    def value(self) -> value.Value | None:
+        return self.record.value
+
+    @property
+    def expression(self) -> Expression | None:
+        return self.record.expression
+
+    @property
+    def narrative(self) -> str | None:
+        return self.record.narrative
+
+    @property
+    def show_if_negative(self) -> bool:
+        return self.record.var.show_if_negative
 
 
 @dataclass(frozen=True)
-class AssessmentResult(EvaluationResult):
-    
+class AssessmentResult:
+    assessments: list[AssessedRecord]
+
     @property
     def success(self) -> bool:
-        # successful only when no records have Insufficient status 
-        log.info('AssessmentResult is successful only when no evaluated assessment records are designated=Insufficient')
-        for eval_record in self.context.evaluation_list:
-            is_success = (eval_record.sufficiency_status != SufficiencyResultStatus.Insufficient)
-            if not is_success:
-                return False
+        return all(a.evaluation_result == EvaluationResultStatus.Successful
+                   for a in self.assessments if a.var.required)
 
-        return True
+    @property
+    def errors(self) -> list[Exception]:
+        return [a.error for a in self.assessments if a.error]
     
 
 class AssessmentEvaluatorProtocol(Protocol):
 
-    result: EvaluationResult = None
-
-    def assess(self, 
-                assessment_variables: list[AssessmentVar], 
+    def assess(self,
+                assessment_variables: list[AssessmentVar],
                 evaluated_records: list[EvaluatedRecord],
                 persona: Persona = Persona.patient,
-                functions_module=None,
-                context: EvaluationContext = None) -> AssessmentResult:
-        
+                functions_module=None) -> AssessmentResult:
+
         ...
 
 class AssessmentEvaluator(AssessmentEvaluatorProtocol):
@@ -195,8 +218,7 @@ class AssessmentEvaluator(AssessmentEvaluatorProtocol):
                assessment_variables: list[AssessmentVar],
                evaluated_records: list[EvaluatedRecord],
                persona: Persona = Persona.patient,
-               functions_module=None,
-               context: EvaluationContext = None) -> AssessmentResult:
+               functions_module=None) -> AssessmentResult:
         """Evaluate all assessment variables.
 
         Args:
@@ -204,14 +226,13 @@ class AssessmentEvaluator(AssessmentEvaluatorProtocol):
             evaluated_records: List of EvaluatedRecord from sufficiency phase
             persona: Persona for narrative generation
             functions_module: Module containing custom evaluation functions
-            context: Optional existing evaluation context
 
         Returns:
             AssessmentResult: Result containing evaluated assessments
         """
         from .record_index import RecordIndex
 
-        eval_context = context or EvaluationContext()
+        assessed_records: list[AssessedRecord] = []
 
         # Extract records from evaluated records
         records = [e.record for e in evaluated_records]
@@ -241,14 +262,21 @@ class AssessmentEvaluator(AssessmentEvaluatorProtocol):
                 all_records.append(assessment_record)
                 record_index.add(assessment_record)
                 record_dict[assessment_record.id] = assessment_record.value
-                eval_context.successful_evaluation(assessment_record)
+                assessed_records.append(AssessedRecord(
+                    record=assessment_record,
+                    evaluation_result=EvaluationResultStatus.Successful
+                ))
             except VariableEvaluationError as e:
                 all_records.append(assessment_record)
                 record_index.add(assessment_record)
                 record_dict[assessment_record.id] = assessment_record.value
-                eval_context.failed_evaluation(assessment_record, e)
-            except Exception as e:
-                raise e
+                assessed_records.append(AssessedRecord(
+                    record=assessment_record,
+                    evaluation_result=EvaluationResultStatus.Failed,
+                    error=e
+                ))
+            except Exception:
+                raise
 
-        return AssessmentResult(context=eval_context)
+        return AssessmentResult(assessments=assessed_records)
 

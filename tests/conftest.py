@@ -299,11 +299,11 @@ def minimal_cpg(minimal_cpg_dict):
 @pytest.fixture
 def cholesterol_cpg():
     """Load the cholesterol CPG from file."""
-    from core.cpg import CPG
-    cpg_path = Path(__file__).parent.parent / 'cpgs' / 'cholesterol.yaml'
-    if cpg_path.exists():
-        return CPG.from_document_path(str(cpg_path))
-    pytest.skip("Cholesterol CPG not found")
+    from core.cpg_registry import get_registry
+    try:
+        return get_registry().get('2019AccPrimaryPreventionASCVD')
+    except KeyError:
+        pytest.skip("Cholesterol CPG not found")
 
 
 # ============================================================================

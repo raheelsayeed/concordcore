@@ -1,0 +1,747 @@
+# ================================================================
+# USPSTF Screening for Cervical Cancer (2018)
+# Source: JAMA. 2018;320(7):674-686. doi:10.1001/jama.2018.10897
+# HEDIS CCS Measure: CMS124v11 (NCQA)
+# ================================================================
+
+# ---- Value Set Definitions (YAML anchors) ----
+
+# Cervical Cytology Lab Test
+define: &cervical_cytology_lab_snomed ['171149006', '416107004', '417036008', '440623000', '448651000124104']
+define: &cervical_cytology_lab_cpt ['88141', '88142', '88143', '88147', '88148', '88150', '88152', '88153', '88154', '88164', '88165', '88166', '88167', '88174', '88175']
+define: &cervical_cytology_lab_hcpcs ['G0123', 'G0124', 'G0141', 'G0143', 'G0144', 'G0145', 'G0147', 'G0148', 'P3000', 'P3001', 'Q0091']
+define: &cervical_cytology_lab_loinc ['10524-7', '18500-9', '19762-4', '19764-0', '19765-7', '19766-5', '19774-9', '33717-0', '47527-7', '47528-5']
+
+# Cervical Cytology Result or Finding
+define: &cervical_cytology_result_snomed ['168406009', '168407000', '168408005', '168410007', '168414003', '168415002', '168416001', '168424006', '250538001', '268543007', '269957009', '269958004', '269959007', '269960002', '269961003', '269963000', '275805003', '281101005', '309081009', '310841002', '310842009', '416030007', '416032004', '416033009', '439074000', '439776006', '439888000', '441087007', '441088002', '441094005', '441219009', '441667007', '700399008', '700400001', '1155766001', '62051000119105', '62061000119107', '98791000119102']
+
+# High-Risk HPV Lab Test
+define: &hpv_lab_cpt ['87624', '87625']
+define: &hpv_lab_hcpcs ['G0476']
+define: &hpv_lab_loinc ['30167-1', '38372-9', '82354-2', '82456-5', '21440-3', '77400-0', '59263-4', '59264-2', '82675-0', '95539-3', '59420-0', '69002-4', '71431-1', '75694-0', '77379-6', '77399-4']
+define: &hpv_lab_snomed ['448651000124104', '35904009']
+
+# High-Risk HPV Result
+define: &hpv_result_snomed ['718591004']
+
+# Cervical Cytology Abnormal
+define: &cervical_cytology_abnormal_snomed ['441087007']
+
+# Hysterectomy with no residual cervix
+define: &hysterectomy_cpt ['51925', '56308', '57530', '57531', '57540', '57545', '57550', '57555', '57556', '58150', '58152', '58180', '58200', '58210', '58240', '58260', '58262', '58263', '58267', '58270', '58275', '58280', '58285', '58290', '58291', '58292', '58293', '58294', '58541', '58542', '58543', '58544', '58548', '58550', '58552', '58553', '58554', '58570', '58571', '58572', '58573', '58575', '58951', '58953', '58954', '58956', '59135', '59525']
+define: &hysterectomy_icd10pcs ['0UTC0ZZ', '0UTC4ZZ', '0UTC7ZZ', '0UTC8ZZ']
+
+# Absence of cervix
+define: &absence_cervix_icd10cm ['Q51.5', 'Z90.710', 'Z90.712']
+
+# Cervical cancer and high-grade precancerous lesions
+define: &cervical_cancer_icd10cm ['C53', 'C53.0', 'C53.1', 'C53.8', 'C53.9', 'N87.1', 'N87.9', 'D06.0', 'D06.1', 'D06.7', 'D06.9']
+define: &cervical_cancer_snomed ['M74007', 'M74008', 'M81402', 'M74009', 'M80702', 'M80102', 'M80772']
+
+# ================================================================
+# CPG METADATA
+# ================================================================
+
+CPG:
+
+  identifier: screening_for_cervical_cancer
+  title: "USPSTF Screening for Cervical Cancer"
+  description: >
+    The USPSTF recommends screening for cervical cancer in women aged 21 to 65 years.
+    For women aged 21-29, screen every 3 years with cervical cytology alone (Grade A).
+    For women aged 30-65, screen every 3 years with cytology alone, every 5 years
+    with hrHPV testing alone, or every 5 years with cotesting (Grade A).
+    The USPSTF recommends against screening for women younger than 21, women older
+    than 65 with adequate prior screening, and women who have had a hysterectomy
+    with removal of the cervix (Grade D). This recommendation applies to asymptomatic
+    individuals with a cervix, regardless of sexual history or HPV vaccination status.
+    It does not apply to individuals with a history of high-grade precancerous cervical
+    lesion or cervical cancer, in utero DES exposure, or a compromised immune system.
+  publisher: US Preventive Services Task Force
+  type: [screening, preventive]
+  version: "2018"
+  revision: "1.1"
+  revision_date: 2018-08-21
+  uri: https://jamanetwork.com/journals/jama/fullarticle/2697704
+  uspstf: https://www.uspreventiveservicestaskforce.org/uspstf/recommendation/cervical-cancer-screening
+  doi: 10.1001/jama.2018.10897
+  # Value set source: https://vsac.nlm.nih.gov/valueset/expansions?pr=ecqm&rel=eCQM%20Update%202022-05-05&q=CMS124v11
+  # HEDIS measure reference: https://ecqi.healthit.gov/ecqm/ec/2022/cms0124v10
+
+
+# ================================================================
+# ELIGIBILITY
+# ================================================================
+
+eligibility:
+
+  - id: EligibleAge
+    title: Age 21 to 65 years
+    expression: $Age >= 21 and $Age <= 65
+    narrative:
+      patient:
+        True: You are within the recommended screening age range (21-65 years)
+        False: You are outside the standard screening age range
+      provider:
+        True: Patient meets age criterion (21-65 years)
+        False: Patient outside standard screening age range
+
+  - id: IndividualsWithCervix
+    title: Individuals with a cervix
+    expression: $Gender != "248152007|http://snomed.info/sct"
+    narrative:
+      patient:
+        True: This screening applies to individuals with a cervix
+      provider:
+        True: Patient has a cervix - eligible for screening
+        False: Male sex - cervical cancer screening not applicable
+
+
+# ================================================================
+# VARIABLES
+# ================================================================
+
+variables:
+
+  # ----- Demographics -----
+
+  - id: Age
+    title: Age
+    code:
+      concord: ['Age']
+
+  - id: Gender
+    title: Gender
+    code:
+      concord: ['Gender']
+
+  # ----- Cervical Cytology (Pap) Test -----
+
+  - id: cervical_cytology_labtest
+    title: Cervical cytology lab test (Pap test)
+    code:
+      snomed: *cervical_cytology_lab_snomed
+      loinc: *cervical_cytology_lab_loinc
+      cpt: *cervical_cytology_lab_cpt
+      hcpcs: *cervical_cytology_lab_hcpcs
+    filter:
+      after: 1095  # Within the last 3 years
+
+  - id: cervical_cytology_result
+    title: Cervical cytology result
+    code:
+      snomed: *cervical_cytology_result_snomed
+    filter:
+      after: 1095
+
+  # ----- High-Risk HPV Test -----
+
+  - id: hpv_test
+    title: High-risk HPV test
+    code:
+      loinc: *hpv_lab_loinc
+      cpt: *hpv_lab_cpt
+      hcpcs: *hpv_lab_hcpcs
+      snomed: *hpv_lab_snomed
+    filter:
+      after: 1825  # Within the last 5 years
+
+  - id: hpv_result
+    title: HPV test result
+    code:
+      snomed: *hpv_result_snomed
+    filter:
+      after: 1825
+
+  - id: cotesting
+    title: Pap and hrHPV co-test
+    code:
+      concord: ['concord-cotesting']
+
+  # ----- Symptoms and Signs -----
+
+  - id: symptoms_and_signs
+    required: True
+    code:
+      snomed: ['symptoms_cc']
+
+  # ----- Exclusion Conditions -----
+
+  - id: condition_cervical_cancer
+    title: Diagnosis of cervical cancer or high-grade precancerous lesion
+    type: boolean
+    user_attestable: True
+    code:
+      icd10cm: *cervical_cancer_icd10cm
+      snomed: *cervical_cancer_snomed
+    llm_prompt: |
+      Does the patient have cervical cancer or high-grade precancerous cervical lesions?
+      Look for: cervical cancer, carcinoma of cervix, CIN 2, CIN 3, cervical intraepithelial
+      neoplasia grade 2 or 3, HSIL (high-grade squamous intraepithelial lesion),
+      cervical dysplasia (moderate or severe), precancerous cervical lesion.
+      Return: true if cervical cancer or high-grade precancer, false if explicitly denied, null if not mentioned.
+    narrative:
+      patient:
+        True: You have a history of cervical cancer or high-grade precancerous lesion
+        False: No history of cervical cancer or high-grade precancerous lesion
+      provider:
+        True: History of cervical cancer/HSIL - standard screening does not apply
+        False: No cervical cancer/HSIL history
+
+  - id: des_exposure
+    title: In utero diethylstilbestrol (DES) exposure
+    type: boolean
+    user_attestable: True
+    required: False
+    llm_prompt: |
+      Was the patient exposed to diethylstilbestrol (DES) in utero?
+      Look for: DES exposure, diethylstilbestrol, DES daughter, mother took DES during pregnancy.
+      Return: true if DES exposure documented, false if explicitly denied, null if not mentioned.
+    narrative:
+      patient:
+        True: You have a history of in utero DES exposure and require individualized follow-up
+      provider:
+        True: DES exposure - requires individualized cervical cancer surveillance
+
+  - id: immunocompromised
+    title: Compromised immune system (e.g., HIV)
+    type: boolean
+    user_attestable: True
+    required: False
+    code:
+      icd10cm: ['B20', 'Z21']
+      snomed: ['86406008']
+    llm_prompt: |
+      Does the patient have a compromised immune system?
+      Look for: HIV positive, HIV/AIDS, immunocompromised, immunodeficiency,
+      organ transplant recipient, on immunosuppressive therapy.
+      Return: true if immunocompromised, false if explicitly denied, null if not mentioned.
+    narrative:
+      patient:
+        True: You have a compromised immune system and require individualized cervical cancer screening
+      provider:
+        True: Immunocompromised - requires individualized surveillance per specialized guidelines
+
+  - id: condition_hpv
+    title: HPV infection
+    type: boolean
+    code:
+      snomed: ['240532009']
+    llm_prompt: |
+      Does the patient have HPV (human papillomavirus) infection?
+      Look for: HPV positive, human papillomavirus, HPV infection, high-risk HPV,
+      HPV 16, HPV 18, abnormal HPV test.
+      Return: true if HPV positive, false if HPV negative, null if not mentioned.
+    narrative:
+      patient:
+        True: You have tested positive for HPV
+        False: No HPV infection documented
+      provider:
+        True: HPV positive
+        False: HPV negative or not documented
+
+  # ----- Procedures -----
+
+  - id: hysterectomy_no_cervix
+    title: Hysterectomy with removal of cervix
+    type: boolean
+    user_attestable: True
+    code:
+      cpt: *hysterectomy_cpt
+      icd10pcs: *hysterectomy_icd10pcs
+    llm_prompt: |
+      Has the patient had a hysterectomy with removal of the cervix?
+      Look for: total hysterectomy, hysterectomy with cervix removed, no residual cervix,
+      complete hysterectomy. Note: supracervical/subtotal hysterectomy preserves cervix.
+      Return: true if hysterectomy with cervix removed, false if not or if cervix preserved, null if not mentioned.
+    narrative:
+      patient:
+        True: You have had a hysterectomy with removal of the cervix
+        False: No hysterectomy with cervix removal documented
+      provider:
+        True: Status post hysterectomy with no residual cervix
+        False: No hysterectomy documented
+
+  - id: absence_of_cervix
+    title: Absence of cervix (congenital or acquired)
+    type: boolean
+    code:
+      icd10cm: *absence_cervix_icd10cm
+    llm_prompt: |
+      Does the patient have an absent cervix?
+      Look for: absence of cervix, congenital absence, cervical agenesis, cervix removed, no cervix.
+      Return: true if cervix absent, false if cervix present, null if not mentioned.
+
+  # ----- Screening History for Adequate Prior Screening Assessment -----
+
+  - id: cytology_last_10yr_3_results
+    title: Last 3 cervical cytology results within past 10 years
+    code:
+      snomed: *cervical_cytology_result_snomed
+      loinc: *cervical_cytology_lab_loinc
+      cpt: *cervical_cytology_lab_cpt
+      hcpcs: *cervical_cytology_lab_hcpcs
+    filter:
+      expression: '== False'
+      after: 3650
+      upper: 3
+
+  - id: hpv_negative_last_10yr_2_results
+    title: Last 2 negative HPV results within past 10 years
+    type: boolean
+    code:
+      snomed: *hpv_result_snomed
+    filter:
+      expression: '== False'
+      after: 3650
+      upper: 2
+
+
+# ================================================================
+# ASSESSMENTS
+# ================================================================
+
+assessments:
+
+  # ----- Exclusion Assessments -----
+
+  - id: has_cervical_cancer_history
+    title: History of cervical cancer or high-grade precancerous lesion
+    expression: $condition_cervical_cancer is True
+    required: False
+    narrative:
+      patient:
+        True: You have a history of cervical cancer or high-grade precancerous lesion. Standard screening guidelines do not apply to you.
+      provider:
+        True: History of cervical cancer/HSIL - requires individualized surveillance
+        False: No cervical cancer/HSIL history
+    llm_prompt: |
+      Does the patient have a history of cervical cancer or high-grade precancerous cervical lesions?
+      Look for: cervical cancer, carcinoma of cervix, CIN 2, CIN 3, cervical intraepithelial
+      neoplasia (grade 2 or 3), HSIL, high-grade squamous intraepithelial lesion, severe cervical
+      dysplasia, history of cervical precancer, treated for cervical precancer, LEEP/conization for HSIL.
+      Return: true if history of cervical cancer or high-grade precancer, false if explicitly denied
+      or only low-grade (CIN 1/LSIL/ASCUS), null if not mentioned.
+
+  - id: has_des_or_immunocompromised
+    title: DES exposure or compromised immune system
+    expression: $des_exposure is True or $immunocompromised is True
+    required: False
+    narrative:
+      patient:
+        True: You have a condition that requires individualized cervical cancer screening
+      provider:
+        True: DES exposure or immunocompromised - standard screening does not apply
+    llm_prompt: |
+      Does the patient have in utero DES (diethylstilbestrol) exposure or a compromised immune system?
+      Look for: DES exposure, DES daughter, mother took DES, diethylstilbestrol exposure,
+      HIV positive, HIV/AIDS, immunocompromised, immunosuppressed, organ transplant,
+      on immunosuppressive medications, chemotherapy, biologic therapy.
+      Return: true if either DES exposure or immunocompromised, false if both explicitly
+      denied, null if not mentioned.
+
+  - id: has_undergone_hysterectomy
+    title: Hysterectomy with no residual cervix
+    expression: $hysterectomy_no_cervix is True or $absence_of_cervix is True
+    narrative:
+      patient:
+        True: You have had a hysterectomy with removal of the cervix or have absence of cervix
+        False: No hysterectomy with cervix removal documented
+      provider:
+        True: No cervix present - screening not indicated (unless history of HSIL/cervical cancer)
+    llm_prompt: |
+      Has the patient had a hysterectomy with removal of the cervix, or is the cervix absent?
+      Look for: total hysterectomy, total abdominal hysterectomy (TAH), total vaginal hysterectomy (TVH),
+      radical hysterectomy, hysterectomy with cervix removed, no residual cervix, cervix absent,
+      cervical agenesis, congenital absence of cervix.
+      Important: supracervical or subtotal hysterectomy PRESERVES the cervix — return false for those.
+      Documentation of "hysterectomy" alone without specifying type is not sufficient for exclusion.
+      Return: true if cervix was removed or is absent, false if cervix is present or hysterectomy
+      was supracervical, null if not mentioned.
+
+  # ----- Adequate Prior Screening -----
+
+  - id: adequately_screened
+    title: Adequately screened in the past 10 years
+    description: >
+      ACS/ASCCP/ASCP define adequate prior screening as 3 consecutive negative
+      cytology results or 2 consecutive negative HPV results within 10 years,
+      with the most recent test within 5 years.
+    expression: $cytology_last_10yr_3_results.count == 3 or $hpv_negative_last_10yr_2_results.count == 2
+    type: boolean
+    narrative:
+      patient:
+        True: Your screening history shows adequate prior screening
+        False: You do not have adequate prior screening documented
+      provider:
+        True: Adequate prior screening (3 consecutive negative cytology OR 2 consecutive negative HPV within 10 years)
+        False: Inadequate prior screening history
+    llm_prompt: |
+      Has the patient been adequately screened for cervical cancer?
+      Adequate prior screening is defined as EITHER:
+        (a) 3 consecutive NEGATIVE cervical cytology (Pap) results within the past 10 years, OR
+        (b) 2 consecutive NEGATIVE high-risk HPV test results within the past 10 years,
+            with the most recent test performed within the past 5 years.
+      Look for: screening history, prior Pap results, HPV test results, "adequate screening",
+      "up to date with screening", consecutive negative results, normal Pap history.
+      Return: true if adequate screening criteria are met, false if screening history is
+      incomplete or results were abnormal, null if screening history not mentioned.
+
+  # ----- Age Group Assessments -----
+
+  - id: age_below_21
+    title: Age below 21 years
+    expression: $Age < 21
+    narrative:
+      patient:
+        True: You are under 21 years of age. The USPSTF recommends against cervical cancer screening before age 21.
+      provider:
+        True: Patient under 21 - screening not recommended
+
+  - id: age_21_to_29
+    title: Age 21 to 29 years
+    expression: $Age >= 21 and $Age <= 29
+    narrative:
+      patient:
+        True: You are between 21 and 29 years of age
+        False: You are not in the 21-29 age group
+      provider:
+        True: Age 21-29 - screen with cytology alone every 3 years
+
+  - id: age_30_to_65
+    title: Age 30 to 65 years
+    expression: $Age >= 30 and $Age <= 65
+    narrative:
+      patient:
+        True: You are between 30 and 65 years of age
+      provider:
+        True: Age 30-65 - screen q3y cytology, q5y hrHPV, or q5y cotesting
+
+  - id: age_over_65
+    title: Age over 65 years
+    expression: $Age > 65
+    narrative:
+      patient:
+        True: You are over 65 years of age
+      provider:
+        True: Age over 65 - assess adequacy of prior screening
+
+  # ----- Screening Status -----
+
+  - id: prior_pap_tests
+    title: Prior Pap tests documented
+    expression: $cervical_cytology_labtest.count > 0 or $cervical_cytology_result.count > 0
+    user_attestable: True
+    narrative:
+      patient:
+        True: You have a record of prior Pap tests
+        False: No record of Pap tests found in your data
+      provider:
+        True: Prior cervical cytology documented
+        False: No prior cervical cytology found
+    llm_prompt: |
+      Has the patient had prior Pap tests (cervical cytology)?
+      Look for: Pap smear, Pap test, cervical cytology, cervical screening,
+      Papanicolaou test, cervical cancer screening.
+      Return: true if prior Pap test documented, false if never had one, null if not mentioned.
+
+  - id: recent_pap_date
+    title: Date of most recent Pap test
+    type: date
+    expression: $cervical_cytology_labtest.date
+    required: False
+    narrative:
+      patient:
+        HasValue: Your last Pap test was on $cervical_cytology_labtest.date
+        None: A Pap test was not found in your record
+      provider:
+        HasValue: Last cervical cytology on $cervical_cytology_labtest.date
+    llm_prompt: |
+      When was the patient's most recent Pap test (cervical cytology)?
+      Look for: last Pap smear date, most recent cervical cytology, date of Pap test,
+      "Pap done on [date]", cervical screening date.
+      Return: the date in YYYY-MM-DD format if found, null if not mentioned.
+      If only a year is mentioned (e.g., "Pap test in 2022"), return YYYY-01-01.
+
+  - id: recent_hpv_date
+    title: Date of most recent hrHPV test
+    type: date
+    expression: $hpv_test.date
+    required: False
+    narrative:
+      patient:
+        HasValue: Your last hrHPV test was on $hpv_test.date
+        None: An hrHPV test was not found in your record
+      provider:
+        HasValue: Last hrHPV test on $hpv_test.date
+    llm_prompt: |
+      When was the patient's most recent high-risk HPV test?
+      Look for: last HPV test date, most recent hrHPV, HPV screening date,
+      "HPV test done on [date]", "HPV negative/positive on [date]".
+      Return: the date in YYYY-MM-DD format if found, null if not mentioned.
+      If only a year is mentioned, return YYYY-01-01.
+
+  - id: recent_cotest_date
+    title: Date of most recent co-test (Pap + hrHPV)
+    type: date
+    expression: $cotesting.date
+    required: False
+    narrative:
+      patient:
+        HasValue: Your last co-test (Pap and hrHPV) was completed
+        None: Co-testing was not found in your record
+    llm_prompt: |
+      When was the patient's most recent co-test (both Pap test and HPV test done together)?
+      Look for: cotesting date, co-testing, Pap and HPV done together, combined cervical
+      screening, "Pap with HPV reflex", both tests performed on the same date.
+      Return: the date in YYYY-MM-DD format if found, null if not mentioned or if tests
+      were done separately on different dates.
+
+  # ----- Due Date Calculations (function-based) -----
+
+  - id: next_pap_date_age_21_29
+    title: Next Pap test due date (ages 21-29)
+    function: nextDate_PapTest_Age21_29
+    required: False
+
+  - id: next_pap_date_30_65
+    title: Next Pap test due date (ages 30-65, cytology alone)
+    function: nextDatePolicy_PapTest_Alone
+    required: False
+
+  - id: next_hpv_date_30_65
+    title: Next hrHPV test due date (ages 30-65, hrHPV alone)
+    function: nextDatePolicy_hrHPVTest_Alone
+    required: False
+
+  - id: next_cotest_date_30_65
+    title: Next co-test due date (ages 30-65)
+    function: nextDatePolicy_CoTesting
+    required: False
+
+
+# ================================================================
+# RECOMMENDATIONS
+# ================================================================
+
+recommendations:
+
+  # Grade D: Women younger than 21
+
+  - id: no_screening_under_21
+    title: No screening for individuals younger than 21
+    expression: $age_below_21 is True
+    uspstf_grade: D
+    class_of_recommendation: "III: Harm"
+    citations:
+      - "The USPSTF recommends against screening for cervical cancer in women younger than 21 years. (D recommendation)"
+    narrative:
+      patient:
+        True: |
+          The USPSTF **recommends against** cervical cancer screening for individuals younger
+          than 21 years (Grade D).
+
+          Cervical cancer is rare before age 21. Screening in this age group may lead to
+          unnecessary follow-up procedures that can cause harm without significant benefit.
+          This applies regardless of sexual history or HPV vaccination status.
+      provider:
+        True: |
+          **USPSTF Grade D** - Do not screen for cervical cancer before age 21.
+          Harms outweigh benefits regardless of sexual activity or HPV vaccination status.
+          Treatment of CIN 2/3 in women under 21 may increase risk for adverse pregnancy outcomes.
+
+  # Grade A: Women aged 21-29
+
+  - id: screening_age_21_29
+    title: Screen every 3 years with cytology alone (ages 21-29)
+    expression: $age_21_to_29 is True and $has_undergone_hysterectomy is not True
+    uspstf_grade: A
+    class_of_recommendation: I
+    level_of_evidence: A
+    citations:
+      - "The USPSTF recommends screening for cervical cancer every 3 years with cervical cytology alone in women aged 21 to 29 years. (A recommendation)"
+    narrative:
+      patient:
+        True: |
+          ## Cervical Cancer Screening Recommended
+
+          As an individual aged 21-29 years, the USPSTF **recommends** (Grade A)
+          screening for cervical cancer **every 3 years with a Pap test (cervical cytology) alone**.
+
+          **Important notes:**
+          - hrHPV testing alone is **not recommended** for this age group because of the
+            high prevalence of transient HPV infections that resolve spontaneously
+          - Screening more frequently than every 3 years provides little additional benefit
+            but increases harms from unnecessary follow-up procedures
+          - This recommendation applies regardless of HPV vaccination status
+        False: This recommendation does not currently apply to you
+      provider:
+        True: |
+          **USPSTF Grade A** - Screen with cervical cytology alone every 3 years.
+          hrHPV testing not recommended in this age group due to high transient HPV infection
+          rates and risk of overdiagnosis and overtreatment.
+
+  # Grade A: Women aged 30-65
+
+  - id: screening_age_30_65
+    title: Screen with cytology, hrHPV, or cotesting (ages 30-65)
+    expression: $age_30_to_65 is True and $has_undergone_hysterectomy is not True
+    uspstf_grade: A
+    class_of_recommendation: I
+    level_of_evidence: A
+    citations:
+      - "The USPSTF recommends screening every 3 years with cervical cytology alone, every 5 years with hrHPV testing alone, or every 5 years with hrHPV testing in combination with cytology (cotesting) in women aged 30 to 65 years. (A recommendation)"
+    narrative:
+      patient:
+        True: |
+          ## Cervical Cancer Screening Recommended
+
+          As an individual aged 30-65 years, the USPSTF **recommends** (Grade A)
+          screening for cervical cancer using one of the following strategies:
+
+          1. **Pap test (cytology) alone** — every **3 years**
+          2. **hrHPV testing alone** — every **5 years**
+          3. **Co-testing (Pap + hrHPV)** — every **5 years**
+
+          All three strategies are effective. Discuss with your healthcare provider
+          which approach is best for you.
+
+          **Your screening status:**
+          - Pap test due by: __$next_pap_date_30_65__
+          - hrHPV test due by: __$next_hpv_date_30_65__
+          - Co-testing due by: __$next_cotest_date_30_65__
+
+          Screening more frequently than recommended does not substantially improve
+          benefit but increases harms from additional tests and follow-up procedures.
+        False: This recommendation does not currently apply to you
+      provider:
+        True: |
+          **USPSTF Grade A** - Screen for cervical cancer:
+          - Cytology alone q3y, OR
+          - hrHPV testing alone q5y, OR
+          - Cotesting (cytology + hrHPV) q5y
+
+          Cytology has lower sensitivity for CIN 2/3 but fewer false positives.
+          hrHPV testing and cotesting are more sensitive but have higher false-positive rates,
+          especially in women under 35. Evidence from RCTs and decision modeling supports
+          all three strategies as offering a reasonable balance of benefits and harms.
+
+  # Grade D: Women over 65 with adequate prior screening
+
+  - id: no_screening_over_65_adequate
+    title: No screening for women over 65 with adequate prior screening
+    expression: $age_over_65 is True and $adequately_screened is True
+    uspstf_grade: D
+    class_of_recommendation: "III: Harm"
+    citations:
+      - "The USPSTF recommends against screening for cervical cancer in women older than 65 years who have had adequate prior screening and are not otherwise at high risk for cervical cancer. (D recommendation)"
+    narrative:
+      patient:
+        True: |
+          The USPSTF **recommends against** continued cervical cancer screening
+          for individuals over 65 years who have had adequate prior screening (Grade D).
+
+          **Adequate prior screening** is defined as:
+          - 3 consecutive negative cytology results, **OR**
+          - 2 consecutive negative HPV test results within 10 years,
+            with the most recent test within 5 years
+
+          Once screening has stopped, it should not resume even with a new sexual partner.
+      provider:
+        True: |
+          **USPSTF Grade D** - Do not screen. Patient over 65 with adequate prior screening.
+          Adequate = 3 consecutive negative cytology OR 2 consecutive negative HPV results
+          within 10 years (most recent within 5 years). CIN incidence and prevalence decline
+          in the fourth decade. Decision modeling supports stopping at age 65 in adequately screened women.
+
+  # Women over 65 without adequate prior screening
+
+  - id: consider_screening_over_65_inadequate
+    title: Consider screening for women over 65 without adequate prior screening
+    expression: $age_over_65 is True and $adequately_screened is not True
+    required: False
+    narrative:
+      patient:
+        True: |
+          You are over 65 years of age, but adequate prior screening history was not found.
+          Screening may still be beneficial for you. Discuss with your healthcare provider
+          whether continued screening is appropriate.
+      provider:
+        True: |
+          Patient over 65 without documented adequate prior screening.
+          Consider continued screening. Approximately 13% of 65-year-olds have not been
+          adequately screened (37% if no regular health care provider). Majority of invasive
+          cervical cancer in women over 65 occurs in those who have not met criteria for
+          stopping screening. The decision to stop screening at age 65 should only be made
+          after confirming the patient has received adequate prior screening.
+
+  # Grade D: Women with hysterectomy (no cervix, no HSIL/cancer history)
+
+  - id: no_screening_hysterectomy
+    title: No screening for women with hysterectomy and no residual cervix
+    expression: $has_undergone_hysterectomy is True and $has_cervical_cancer_history is not True
+    uspstf_grade: D
+    class_of_recommendation: "III: Harm"
+    citations:
+      - "The USPSTF recommends against screening for cervical cancer in women who have had a hysterectomy with removal of the cervix and do not have a history of a high-grade precancerous lesion or cervical cancer. (D recommendation)"
+    narrative:
+      patient:
+        True: |
+          The USPSTF **recommends against** cervical cancer screening for individuals
+          who have had a hysterectomy with removal of the cervix and no history of
+          high-grade precancerous lesion or cervical cancer (Grade D).
+      provider:
+        True: |
+          **USPSTF Grade D** - Do not screen. Post-hysterectomy with no residual cervix
+          and no history of HSIL/cervical cancer. Vaginal cytology after hysterectomy
+          for benign indications has very low yield for detecting neoplasia.
+
+  # Individualized surveillance: DES or immunocompromised
+
+  - id: individualized_surveillance
+    title: Individualized surveillance for high-risk individuals
+    expression: $has_des_or_immunocompromised is True
+    required: False
+    narrative:
+      patient:
+        True: |
+          ## Individualized Screening Required
+
+          You have a condition that places you at higher risk for cervical cancer.
+          The standard USPSTF screening recommendations do not apply to you.
+          You should receive individualized follow-up as recommended by your healthcare provider.
+
+          **Conditions requiring individualized follow-up include:**
+          - In utero diethylstilbestrol (DES) exposure
+          - Compromised immune system (e.g., HIV)
+
+          These risk factors increase the risk for cervical cancer and require
+          more intensive screening and surveillance.
+      provider:
+        True: |
+          **Standard USPSTF screening does not apply.** Patient has DES exposure or
+          is immunocompromised. Refer to specialized guidelines:
+          - HIV: CDC/NIH/IDSA guidelines for cervical cancer screening in women with HIV
+          - DES exposure: individualized surveillance per gynecologic oncology guidance
+
+  # Specialized surveillance for cervical cancer/HSIL history
+
+  - id: specialized_surveillance_cancer_history
+    title: Specialized surveillance for cervical cancer/HSIL history
+    expression: $has_cervical_cancer_history is True
+    required: False
+    narrative:
+      patient:
+        True: |
+          ## Specialized Surveillance Required
+
+          Because you have a history of cervical cancer or high-grade precancerous lesion,
+          standard screening guidelines do not apply. You should follow your provider's
+          recommendations for surveillance, which typically includes more frequent screening
+          for at least 20 years after treatment, even if this extends screening past age 65.
+      provider:
+        True: |
+          History of cervical cancer/HSIL. Standard screening does not apply.
+          ACS/ASCCP/ASCP guidelines recommend routine screening continue for at least
+          20 years after spontaneous regression or appropriate management of a precancerous
+          lesion, even if this extends past age 65. Once stopped, should not resume.

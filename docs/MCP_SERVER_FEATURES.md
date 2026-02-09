@@ -4,66 +4,34 @@ This document outlines the current MCP server capabilities and proposed future f
 
 ---
 
-## Current Features (18 Tools)
+## Current Features (7 Tools)
+
+### Guidelines
+
+| Tool | Description |
+|------|-------------|
+| `acknowledge_guidelines` | Acknowledge mandatory usage guidelines before using other tools |
 
 ### CPG Discovery
 
 | Tool | Description |
 |------|-------------|
-| `list_cpgs` | List all available Clinical Practice Guidelines with metadata (variable count, assessments, recommendations) |
+| `list_cpgs` | List all available Clinical Practice Guidelines with metadata |
 | `get_cpg_info` | Get detailed information about a specific CPG including variables, eligibility criteria, assessments, and recommendations |
 
-### Health Context Creation
+### Health Context & Evaluation
 
 | Tool | Description |
 |------|-------------|
-| `create_health_context` | Create patient health context from variable/value pairs with strict rules against fabricating data |
-| `create_health_context_from_fhir` | Create health context from FHIR R4 resources (Bundle or array). Supports Observation, Condition, MedicationRequest, and Procedure resources |
+| `create_health_context` | Create patient health context from variable/value pairs |
+| `evaluate_patient` | Evaluate a patient against a specific CPG with missing data detection |
 
-### Evaluation
-
-| Tool | Description |
-|------|-------------|
-| `evaluate_patient` | Evaluate a patient against a specific CPG with missing data detection and reporting |
-| `evaluate_all_cpgs` | Evaluate patient against ALL available CPGs with streaming support |
-| `evaluate_multiple_cpgs` | Evaluate patient against multiple specific CPGs in parallel with conflict detection |
-
-### Recommendations
+### Attestation (MCP Apps)
 
 | Tool | Description |
 |------|-------------|
-| `get_recommendations` | Retrieve recommendations from a completed evaluation |
-| `get_prioritized_recommendations` | Get recommendations ranked by evidence strength (Class of Recommendation, Level of Evidence, USPSTF Grade) |
-| `explain_recommendation` | Generate deep explanations with assessment chains, evidence citations, and persona-appropriate summaries (patient/provider) |
-
-### Data Quality
-
-| Tool | Description |
-|------|-------------|
-| `get_confidence_scores` | Calculate confidence scores based on data completeness, freshness, validation status, and attestation burden |
-| `get_missing_data` | Identify health data missing and needed for CPG evaluation |
-| `submit_attestation` | Submit patient-attested health data for missing variables |
-
-### Reproducibility & Verification
-
-| Tool | Description |
-|------|-------------|
-| `get_evaluation_metadata` | Get cryptographic metadata (input hash, output hash, CPG version, timestamp) for reproducibility verification |
-| `verify_reproducibility` | Verify that a previous evaluation is reproducible by re-running and comparing hashes |
-
-### Institutional Configuration
-
-| Tool | Description |
-|------|-------------|
-| `validate_institution_config` | Validate institutional configuration files with schema checking, conflict detection, and impact analysis |
-| `get_institution_config_impact` | Analyze how institutional configuration would impact CPG evaluation |
-
-### LLM Instructions
-
-| Tool | Description |
-|------|-------------|
-| `get_llm_instructions` | Get provider-specific LLM instructions optimized for Claude, OpenAI, or Gemini |
-| `build_optimized_prompt` | Build prompts optimized for specific LLM providers with system prompts and few-shot examples |
+| `collect_attestation` | Collect missing patient data via an interactive MCP Apps HTML form |
+| `submit_attestation` | Submit patient-attested health data from the form |
 
 ---
 
@@ -247,10 +215,10 @@ This document outlines the current MCP server capabilities and proposed future f
 ### For New Tools
 
 - Follow existing patterns in `mcp_server/server.py`
-- Create dedicated handler modules for complex features (like `confidence.py`, `priority.py`)
-- Use frozen dataclasses for return types
-- Include `_ai_instructions` for guiding LLM behavior
-- Add corresponding resources/prompts where appropriate
+- Use FastMCP decorators (`@mcp.tool`, `@mcp.resource`)
+- Create dedicated modules for complex features (like `form_builder.py`, `guidelines.py`)
+- Use `meta={"ui": {...}}` for tools with MCP Apps UI
+- Add corresponding resources where appropriate
 
 ### Data Requirements
 

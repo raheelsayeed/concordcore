@@ -47,6 +47,7 @@ __all__ = [
     'SufficiencyResult',
     'SufficiencyEvaluator',
     'AssessmentResult',
+    'AssessedRecord',
     'AssessmentEvaluator',
     'RecommendationResult',
     'EvaluatedRecommendation',
@@ -82,6 +83,10 @@ __all__ = [
     'CPGDiffer',
     'ChangelogGenerator',
     'CPGDiff',
+    # CPG Registry
+    'CPGRegistry',
+    'CPGEntry',
+    'get_registry',
 ]
 
 
@@ -114,6 +119,9 @@ def __getattr__(name):
     elif name == 'AssessmentResult':
         from .assessment import AssessmentResult
         return AssessmentResult
+    elif name == 'AssessedRecord':
+        from .assessment import AssessedRecord
+        return AssessedRecord
     elif name == 'AssessmentEvaluator':
         from .assessment import AssessmentEvaluator
         return AssessmentEvaluator
@@ -207,4 +215,14 @@ def __getattr__(name):
     elif name == 'CPGDiff':
         from .changelog import CPGDiff
         return CPGDiff
+    # CPG Registry
+    elif name == 'CPGRegistry':
+        from .cpg_registry import CPGRegistry
+        return CPGRegistry
+    elif name == 'CPGEntry':
+        from .cpg_registry import CPGEntry
+        return CPGEntry
+    elif name == 'get_registry':
+        from .cpg_registry import get_registry
+        return get_registry
     raise AttributeError(f"module 'core' has no attribute '{name}'")

@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 
-# Jan, 2024     
-# raheel
-
 from dataclasses import dataclass, field
 from enum import Enum, auto, StrEnum
 from functools import cached_property
 
 from typing import Any, Protocol
 from variables import var
-from .assessment import EvaluatedAssessmentRecord
+from .errors import CPGDefinitionError
+from .assessment import AssessedRecord
 from .evaluation import EvaluatedRecord
 from .expression import Expression
 from .evaluation import EvaluationContext
@@ -50,14 +48,6 @@ class RecommendationAction(StrEnum):
     deferred = 'deferred'
     not_applicable = 'not-applicable'
 
-
-class ProviderDirective(Enum):
-    # Do this, do that, ??
-    pass
-
-class UserDirective(Enum):
-    discussion_with_provider = auto()
-    information = auto()
 
 # --- Strength of evidence
 class ClassOfRecommendation(StrEnum):
@@ -139,14 +129,14 @@ class USPSTFGrading(Enum):
 @dataclass(frozen=True)
 class RecommendationVar(var.Var):
 
-    expression: str = None
-    class_of_recommendation: ClassOfRecommendation = None 
-    level_of_evidence: LevelOfEvidence = None 
-    uspstf_grade: USPSTFGrading = None 
-    type: str = None
+    expression: str | None = None
+    class_of_recommendation: ClassOfRecommendation | None = None
+    level_of_evidence: LevelOfEvidence | None = None
+    uspstf_grade: USPSTFGrading | None = None
+    type: str | None = None
     citations: list = field(default_factory=list)
-    references: Any = None
-    compliance_expression: str = None
+    references: Any | None = None
+    compliance_expression: str | None = None
    
     def __hash__(self):
         return hash(self.id)
@@ -182,15 +172,15 @@ class RecommendationVar(var.Var):
 class EvaluatedRecommendation:
 
     recommendation: RecommendationVar
-    based_on: list[EvaluatedAssessmentRecord] = None
-    compliance: Expression = None
-    expression: Expression = None
-    applies: bool = None
-    compliant: bool  = None
-    error: Exception = None
-    narrative: str = None
-    compliance_narrative = None
-    non_compliance_evidence: list[EvaluatedRecord] = None
+    based_on: list[AssessedRecord] | None = None
+    compliance: Expression | None = None
+    expression: Expression | None = None
+    applies: bool | None = None
+    compliant: bool | None = None
+    error: Exception | None = None
+    narrative: str | None = None
+    compliance_narrative: str | None = None
+    non_compliance_evidence: list[EvaluatedRecord] | None = None
 
     @property
     def title(self):
@@ -229,7 +219,7 @@ class EvaluatedRecommendation:
         if self.recommendation.compliance_expression:
             self.compliance = Expression(self.recommendation.compliance_expression)
 
-    def evaluate(self, evaluated_assessments: vlist.vlist[EvaluatedAssessmentRecord],
+    def evaluate(self, evaluated_assessments: vlist.vlist[AssessedRecord],
                  evaluated_records: list[EvaluatedRecord] = None,
                  persona: Persona = Persona.patient,
                  assessment_index: dict = None,
@@ -237,10 +227,10 @@ class EvaluatedRecommendation:
         """Evaluates recommendations.
 
         Args:
-            evaluated_assessments: List of EvaluatedAssessmentRecords
+            evaluated_assessments: List of AssessedRecords
             evaluated_records: List of evaluated Patient Records (EvaluatedRecord)
             persona: Persona for narrative generation
-            assessment_index: Optional pre-built dict mapping id to EvaluatedAssessmentRecord
+            assessment_index: Optional pre-built dict mapping id to AssessedRecord
             record_index: Optional pre-built dict mapping id to EvaluatedRecord
         """
         rectype = self.recommendation.type
@@ -255,7 +245,7 @@ class EvaluatedRecommendation:
         elif show_if_patient:
             self.applies = persona == Persona.patient
         elif not self.expression:
-            raise Exception(f'Cannot evaluate, no expression found for recommendation={self.recommendation.id}')
+            raise CPGDefinitionError(f'Cannot evaluate, no expression found for recommendation={self.recommendation.id}')
         else:
             try:
                 self.applies = self.expression.evaluate_recommendation(evaluated_assessments)
@@ -310,10 +300,6 @@ class RecommendationResult:
     @property
     def applied(self):
         return [er for er in self.recommendations if er.applies is True]
-
-
-
-
 
 
 

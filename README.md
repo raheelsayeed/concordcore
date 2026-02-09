@@ -23,7 +23,7 @@ $ cd concord
 $ python3 -m venv .venv
 $ source .venv/bin/activate
 $ pip install -r requirements.txt
-$ ./main.py -f cpgs/cholesterol.yaml -t document -p patient
+$ ./main.py -f cpgs/cholesterol/cholesterol.yaml -t document -p patient
 ```
 
 

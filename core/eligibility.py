@@ -3,16 +3,13 @@
 from dataclasses import dataclass
 from enum import Enum, auto
 from functools import cached_property
-from typing import Any, Protocol
+from typing import Protocol
 from .assessment import EvaluableVar, AssessmentRecord
 from .healthcontext import HealthContext
 from .evaluation import EvaluationResult, EvaluationContext
 from .record_index import RecordIndex
 from primitives.types import YMLStrEnum, ValueType
 
-
-class EligbilityValueAbstract(Protocol):
-    ...
 
 @dataclass(frozen=True)
 class EligibilityResult(EvaluationResult):
@@ -47,8 +44,8 @@ class EligibilityVar(EvaluableVar):
         llm_prompt: Prompt text for extracting this variable from clinical notes
     """
 
-    criteria_type: EligbilityCriteriaType = None
-    llm_prompt: str = None
+    criteria_type: EligbilityCriteriaType | None = None
+    llm_prompt: str | None = None
 
     @classmethod
     def instantiate_from_yaml(cls, yml):
@@ -88,15 +85,16 @@ class EligibilityEvaluator(EligibilityEvaluatorProtocol):
 
     def evaluate(self,
                 healthcontext: HealthContext,
-                context: EvaluationContext = None) -> EligibilityResult:
+                context: EvaluationContext = None,
+                record_index: RecordIndex = None) -> EligibilityResult:
 
         if not self.criterias:
             raise ValueError('No criterias to evaluate')
 
         eval_ctx = context or EvaluationContext()
 
-        # Build record index once for O(1) lookups during expression evaluation
-        record_index = RecordIndex(healthcontext.records)
+        # Build record index once for O(1) lookups (or reuse pre-built one)
+        record_index = record_index or RecordIndex(healthcontext.records)
 
         # Pre-build record dict for function evaluations (built once, reused)
         record_dict = {r.id: r.value if r.value else None for r in healthcontext.records}
@@ -119,9 +117,6 @@ class EligibilityEvaluator(EligibilityEvaluatorProtocol):
             raise ExceptionGroup('EligibilityEvaluationError', eval_ctx.errors)
 
         return EligibilityResult(eval_ctx)
-
-
-
 
         
 

@@ -123,6 +123,16 @@ class NeedAttestationError(ConcordError):
         return f'Need user attestation for records={[ev.record.var.id for ev in self.records]}'
 
 
+class CPGDefinitionError(ConcordError):
+    """Error in CPG definition (missing variables, invalid structure)."""
+    pass
+
+
+class PipelineError(ConcordError):
+    """Error in evaluation pipeline execution (prerequisite not met)."""
+    pass
+
+
 class FHIRParseError(ConcordError):
     """Error parsing FHIR resources."""
     pass

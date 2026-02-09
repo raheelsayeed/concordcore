@@ -28,6 +28,7 @@ from pydantic import BaseModel
 import uvicorn
 
 from core.cpg import CPG
+from core.cpg_registry import get_registry
 from core.concord import Concord
 from core.healthcontext import HealthContext
 from core.batch_processor import MultiCPGEvaluator, BatchProcessor, ProcessingMode
@@ -43,27 +44,23 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# CPG cache
-_cpg_cache: dict[str, CPG] = {}
-_cpg_dir = Path(__file__).parent.parent / "cpgs"
+_registry = get_registry()
 
 
 def get_cpg(cpg_id: str) -> CPG:
-    """Get or load a CPG by ID."""
-    if cpg_id not in _cpg_cache:
-        cpg_path = _cpg_dir / f"{cpg_id}.yaml"
-        if not cpg_path.exists():
-            raise HTTPException(status_code=404, detail=f"CPG not found: {cpg_id}")
-        _cpg_cache[cpg_id] = CPG.from_document_path(str(cpg_path))
-    return _cpg_cache[cpg_id]
+    """Get or load a CPG by identifier."""
+    try:
+        return _registry.get(cpg_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"CPG not found: {cpg_id}")
 
 
 def get_available_cpgs() -> list[dict]:
     """Get list of available CPGs."""
     cpgs = []
-    for path in sorted(_cpg_dir.glob("*.yaml")):
+    for entry in _registry.list():
         try:
-            cpg = get_cpg(path.stem)
+            cpg = _registry.get(entry.identifier)
             cpgs.append({
                 "id": cpg.identifier,
                 "title": cpg.title,

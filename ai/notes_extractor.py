@@ -74,9 +74,9 @@ class ClinicalNotesExtractor:
 
     Example:
         from ai.notes_extractor import ClinicalNotesExtractor, ExtractionConfig
-        from core.cpg import CPG
+        from core.cpg_registry import get_registry
 
-        cpg = CPG.load('cpgs/uspstf_colorectal_cancer_screening.yaml')
+        cpg = get_registry().get('uspstf_colorectal_cancer_screening')
         config = ExtractionConfig(provider='anthropic')
         extractor = ClinicalNotesExtractor(config)
 

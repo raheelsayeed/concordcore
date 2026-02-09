@@ -1,0 +1,524 @@
+CPG:
+  title: "USPSTF Osteoporosis Screening to Prevent Fractures"
+  identifier: uspstf_osteoporosis_screening_2018
+  publisher: "United States Preventive Services Task Force"
+  uri: "https://www.uspreventiveservicestaskforce.org/uspstf/recommendation/osteoporosis-screening"
+  doi: 10.1001/jama.2018.7498
+  type: [screening, preventive]
+  revision: 1.0
+  revision_date: 2024-01-15
+  description: >
+    The USPSTF recommends screening for osteoporosis with bone measurement testing
+    (DEXA) to prevent osteoporotic fractures in women aged 65 years and older (Grade B)
+    and in postmenopausal women younger than 65 years who are at increased risk of
+    osteoporosis as determined by a formal clinical risk assessment tool (Grade B).
+
+
+define: &bmi_code ["39156-5"]
+define: &weight_code ["29463-7", "3141-9"]
+define: &dexa_code ["38265-5", "80947-1"]
+
+
+variables:
+
+#--------------------------------------------------------
+# Demographics
+  - id: Age
+    title: "Age"
+    type: integer
+    required: True
+    code:
+      concord: ['Age']
+
+  - id: Gender
+    title: "Gender"
+    required: True
+    code:
+      concord: ['Gender']
+
+#--------------------------------------------------------
+# Anthropometrics
+  - id: BMI
+    title: "Body Mass Index"
+    required: False
+    user_attestable: False
+    code:
+      loinc: *bmi_code
+    validator:
+      plausible: '$value > 10 and $value < 80'
+    narrative:
+      patient:
+        HasValue: "Your BMI is $value kg/m2."
+      provider:
+        HasValue: "BMI $value ($self.date)"
+
+  - id: weight_kg
+    title: "Body Weight (kg)"
+    required: False
+    user_attestable: True
+    code:
+      loinc: *weight_code
+    narrative:
+      patient:
+        HasValue: "Your weight is $value kg."
+
+#--------------------------------------------------------
+# Menopause Status
+  - id: is_postmenopausal
+    title: "Postmenopausal"
+    type: boolean
+    required: True
+    user_attestable: True
+    code:
+      snomed: ["76498008"]
+    llm_prompt: |
+      Is the patient postmenopausal?
+      Look for: postmenopausal, menopause, no menstrual periods, amenorrhea >12 months,
+      surgical menopause, oophorectomy.
+      Return: true if postmenopausal, false if premenopausal, null if not mentioned.
+    narrative:
+      patient:
+        True: "You are postmenopausal."
+        False: "You are premenopausal."
+      provider:
+        True: "Postmenopausal"
+        False: "Premenopausal"
+
+  - id: early_menopause
+    title: "Early Menopause (Before Age 45)"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Did the patient experience menopause before age 45?
+      Look for: early menopause, premature menopause, premature ovarian insufficiency,
+      menopause before 45, surgical menopause at young age.
+      Return: true if menopause before 45, false if after 45, null if not mentioned.
+    narrative:
+      patient:
+        True: "You experienced early menopause (before age 45), which increases osteoporosis risk."
+      provider:
+        True: "Early menopause (<45) - increased osteoporosis risk"
+
+#--------------------------------------------------------
+# DEXA Results
+  - id: dexa_tscore
+    title: "DEXA T-Score (Lowest)"
+    required: False
+    user_attestable: False
+    code:
+      loinc: *dexa_code
+    validator:
+      plausible: '$value > -6.0 and $value < 5.0'
+    llm_prompt: |
+      What is the patient's lowest DEXA T-score?
+      Look for: T-score, bone density score, DEXA result, DXA result, bone mineral density.
+      Return: the lowest T-score as a decimal number, or null if not mentioned.
+    narrative:
+      patient:
+        HasValue: "Your bone density T-score is $value."
+      provider:
+        HasValue: "DEXA T-score: $value ($self.date)"
+
+#--------------------------------------------------------
+# Risk Factors
+  - id: prior_fragility_fracture
+    title: "Prior Fragility Fracture"
+    type: boolean
+    required: False
+    user_attestable: True
+    code:
+      snomed: ["443165006"]
+    llm_prompt: |
+      Has the patient had a fragility fracture (fracture from minimal trauma)?
+      Look for: fragility fracture, osteoporotic fracture, compression fracture,
+      hip fracture from fall, wrist fracture from fall, vertebral fracture.
+      Return: true if fragility fracture, false if denied, null if not mentioned.
+    narrative:
+      patient:
+        True: "You have a history of a fragility fracture, which is a strong indicator of osteoporosis risk."
+        False: "No history of fragility fractures."
+      provider:
+        True: "Prior fragility fracture - significant osteoporosis risk"
+
+  - id: parent_hip_fracture
+    title: "Parental History of Hip Fracture"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Does the patient have a parent who had a hip fracture?
+      Look for: parent hip fracture, mother broke hip, father broke hip,
+      parental hip fracture history.
+      Return: true if parental hip fracture, false if denied, null if not mentioned.
+    narrative:
+      patient:
+        True: "A parent had a hip fracture, which increases your osteoporosis risk."
+      provider:
+        True: "Parental hip fracture history"
+
+  - id: current_smoking
+    title: "Current Smoker"
+    type: boolean
+    required: False
+    user_attestable: True
+    code:
+      snomed: ["8517006"]
+    llm_prompt: |
+      Does the patient currently smoke?
+      Look for: current smoker, smokes, tobacco use.
+      Return: true if current smoker, false if not, null if not mentioned.
+    narrative:
+      patient:
+        True: "Smoking increases your risk of osteoporosis and fractures."
+      provider:
+        True: "Current smoker - osteoporosis risk factor"
+
+  - id: excessive_alcohol
+    title: "Excessive Alcohol Use (3+ Drinks/Day)"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Does the patient consume 3 or more alcoholic drinks per day?
+      Look for: heavy drinking, excessive alcohol, 3+ drinks daily, alcohol abuse.
+      Return: true if 3+ drinks per day, false if less, null if not mentioned.
+    narrative:
+      patient:
+        True: "Excessive alcohol use (3 or more drinks per day) increases osteoporosis risk."
+      provider:
+        True: "Excessive alcohol use (3+ drinks/day) - osteoporosis risk factor"
+
+  - id: glucocorticoid_use
+    title: "Glucocorticoid Use (>=3 Months)"
+    type: boolean
+    required: False
+    user_attestable: True
+    code:
+      snomed: ["19487008"]
+    llm_prompt: |
+      Has the patient used systemic glucocorticoids for 3 months or more?
+      Look for: prednisone, prednisolone, dexamethasone, methylprednisolone,
+      chronic steroid use, long-term corticosteroids.
+      Return: true if glucocorticoid use >=3 months, false if not, null if not mentioned.
+    narrative:
+      patient:
+        True: "Long-term steroid use increases your risk of osteoporosis."
+      provider:
+        True: "Glucocorticoid use >=3 months - osteoporosis risk factor"
+
+  - id: rheumatoid_arthritis
+    title: "Rheumatoid Arthritis"
+    type: boolean
+    required: False
+    user_attestable: True
+    code:
+      snomed: ["69896004"]
+    llm_prompt: |
+      Does the patient have rheumatoid arthritis?
+      Look for: rheumatoid arthritis, RA, on methotrexate for RA, on biologics for RA.
+      Return: true if RA, false if denied, null if not mentioned.
+    narrative:
+      patient:
+        True: "Rheumatoid arthritis increases your risk of osteoporosis."
+      provider:
+        True: "Rheumatoid arthritis - osteoporosis risk factor"
+
+#--------------------------------------------------------
+# Treatment Status
+  - id: known_osteoporosis
+    title: "Known Osteoporosis Diagnosis"
+    type: boolean
+    required: False
+    user_attestable: True
+    code:
+      snomed: ["64859006"]
+    llm_prompt: |
+      Does the patient have a known diagnosis of osteoporosis?
+      Look for: osteoporosis, osteoporotic, on bisphosphonate, on denosumab,
+      on teriparatide for osteoporosis.
+      Return: true if osteoporosis diagnosis, false if denied, null if not mentioned.
+    narrative:
+      patient:
+        True: "You have a diagnosis of osteoporosis."
+        False: "No osteoporosis diagnosis found."
+      provider:
+        True: "Known osteoporosis diagnosis"
+
+  - id: on_osteoporosis_treatment
+    title: "Currently on Osteoporosis Treatment"
+    type: boolean
+    required: False
+    user_attestable: True
+    code:
+      rxnorm: ["1546170", "993449", "904416"]
+    llm_prompt: |
+      Is the patient currently receiving treatment for osteoporosis?
+      Look for: bisphosphonate (alendronate, risedronate, zoledronic acid), denosumab,
+      teriparatide, romosozumab, osteoporosis medication.
+      Return: true if on osteoporosis treatment, false if not, null if not mentioned.
+    narrative:
+      patient:
+        True: "You are currently receiving treatment for osteoporosis."
+      provider:
+        True: "On osteoporosis pharmacotherapy"
+
+
+#--------------------------------------------------------
+# Eligibility
+eligibility:
+  - id: is_female
+    title: "Female"
+    expression: $Gender == "female"
+    narrative:
+      patient:
+        True: "This osteoporosis screening guideline applies to women."
+        False: "This USPSTF recommendation specifically addresses screening in women."
+      provider:
+        True: "Female - eligible for USPSTF osteoporosis screening"
+        False: "Male - USPSTF osteoporosis screening recommendation applies to women"
+
+  - id: age_eligible
+    title: "Age 50 or Older"
+    expression: $Age >= 50
+    narrative:
+      patient:
+        True: "You are in the age range for osteoporosis screening consideration."
+        False: "Osteoporosis screening is typically considered for women aged 50 and older."
+      provider:
+        True: "Age >=50 - eligible for screening consideration"
+        False: "Under 50 - routine screening not typically indicated"
+
+  - id: is_postmenopausal_eligible
+    title: "Postmenopausal"
+    expression: $is_postmenopausal is True
+    narrative:
+      patient:
+        True: "As a postmenopausal woman, you are eligible for osteoporosis screening consideration."
+        False: "Osteoporosis screening is recommended for postmenopausal women."
+      provider:
+        True: "Postmenopausal - eligible for screening"
+        False: "Premenopausal - routine screening not indicated"
+
+  - id: not_already_treated
+    title: "Not Already Receiving Treatment"
+    expression: $on_osteoporosis_treatment is not True
+    narrative:
+      patient:
+        True: "You are not currently receiving osteoporosis treatment."
+        False: "Since you are already receiving osteoporosis treatment, screening for diagnosis is not needed."
+      provider:
+        True: "Not on osteoporosis treatment"
+        False: "Already on osteoporosis treatment - screening not indicated"
+
+
+#--------------------------------------------------------
+# Assessments
+assessments:
+  - id: age_65_or_older
+    title: "Age 65 or Older (Screen All)"
+    description: "All women 65 and older should be screened"
+    expression: $Age >= 65
+    narrative:
+      patient:
+        True: "As a woman aged 65 or older, routine bone density screening is recommended."
+        False: "You are under 65. Screening depends on your individual risk factors."
+      provider:
+        True: "Age >=65 - universal screening recommended"
+        False: "Age <65 - screen based on risk assessment"
+
+  - id: under_65_with_risk_factors
+    title: "Under 65 with Increased Fracture Risk"
+    description: "Postmenopausal women under 65 with risk factors for osteoporosis"
+    expression: $Age < 65 and ($prior_fragility_fracture is True or $parent_hip_fracture is True or $current_smoking is True or $excessive_alcohol is True or $glucocorticoid_use is True or $rheumatoid_arthritis is True or $early_menopause is True or $BMI < 20)
+    narrative:
+      patient:
+        True: "Although you are under 65, you have risk factors that increase your chance of osteoporosis. Screening may be appropriate."
+        False: "You are under 65 without significant additional risk factors for osteoporosis."
+      provider:
+        True: "Under 65 with osteoporosis risk factors - screening indicated"
+        False: "Under 65 without significant risk factors"
+
+  - id: tscore_normal
+    title: "T-Score Normal (>= -1.0)"
+    description: "Bone density is normal"
+    expression: $dexa_tscore >= -1.0
+    required: False
+    narrative:
+      patient:
+        True: "Your bone density T-score of $dexa_tscore is in the __normal__ range."
+      provider:
+        True: "T-score $dexa_tscore - Normal bone density"
+
+  - id: tscore_osteopenia
+    title: "T-Score Osteopenia (-1.0 to -2.5)"
+    description: "Bone density indicates osteopenia (low bone mass)"
+    expression: $dexa_tscore < -1.0 and $dexa_tscore > -2.5
+    required: False
+    narrative:
+      patient:
+        True: "Your bone density T-score of $dexa_tscore indicates __osteopenia__ (low bone mass). This is between normal and osteoporosis."
+      provider:
+        True: "T-score $dexa_tscore - Osteopenia"
+
+  - id: tscore_osteoporosis
+    title: "T-Score Osteoporosis (<= -2.5)"
+    description: "Bone density indicates osteoporosis"
+    expression: $dexa_tscore <= -2.5
+    required: False
+    narrative:
+      patient:
+        True: "Your bone density T-score of $dexa_tscore indicates __osteoporosis__. Treatment should be discussed with your healthcare provider."
+      provider:
+        True: "T-score $dexa_tscore - Osteoporosis (<=2.5)"
+
+  - id: low_bmi
+    title: "Low BMI (<20)"
+    description: "Low BMI is a risk factor for osteoporosis"
+    expression: $BMI < 20
+    required: False
+    narrative:
+      patient:
+        True: "Your BMI of $BMI is low, which increases your risk of osteoporosis."
+      provider:
+        True: "BMI $BMI <20 - osteoporosis risk factor"
+
+  - id: multiple_risk_factors
+    title: "Multiple Risk Factors Present"
+    description: "Patient has 2 or more osteoporosis risk factors"
+    expression: ($prior_fragility_fracture is True) and ($parent_hip_fracture is True or $current_smoking is True or $excessive_alcohol is True or $glucocorticoid_use is True or $rheumatoid_arthritis is True)
+    required: False
+    narrative:
+      patient:
+        True: "You have multiple risk factors for osteoporosis, placing you at higher fracture risk."
+      provider:
+        True: "Multiple osteoporosis risk factors - higher fracture risk"
+
+  - id: needs_screening
+    title: "Needs Bone Density Screening"
+    description: "Patient should receive DEXA screening"
+    expression: $age_65_or_older is True or $under_65_with_risk_factors is True
+    narrative:
+      patient:
+        True: "Bone density screening is recommended for you."
+        False: "Bone density screening is not indicated at this time based on your risk profile."
+      provider:
+        True: "DEXA screening indicated"
+        False: "DEXA screening not indicated at this time"
+
+
+#--------------------------------------------------------
+# Recommendations
+recommendations:
+  - id: recommend_dexa_screening
+    title: "DEXA Screening Recommended"
+    category: evaluation
+    description: "USPSTF recommends bone measurement testing to prevent osteoporotic fractures"
+    expression: $needs_screening is True
+    uspstf_grade: B
+    level_of_evidence: B-R
+    class_of_recommendation: I
+    narrative:
+      patient:
+        True: |
+          ## Bone Density Screening Recommended
+
+          Based on your age and risk factors, the USPSTF recommends **bone density testing (DEXA scan)**
+          to screen for osteoporosis.
+
+          **What to expect:**
+          - A DEXA scan is painless and takes about 10-15 minutes
+          - It measures bone mineral density at the hip and spine
+          - No special preparation is needed
+
+          **Why it matters:** Osteoporosis weakens bones and increases fracture risk. Early
+          detection allows treatment that can prevent fractures.
+        False: "Bone density screening is not recommended at this time."
+      provider:
+        True: |
+          **USPSTF Grade B Recommendation**
+
+          Bone measurement testing (DEXA) recommended.
+
+          Patient profile: Age $Age, postmenopausal.
+
+          Order central DEXA (hip and lumbar spine).
+    citations:
+      - 'The USPSTF recommends screening for osteoporosis with bone measurement testing to prevent osteoporotic fractures in women 65 years and older.'
+      - 'The USPSTF recommends screening for osteoporosis with bone measurement testing to prevent osteoporotic fractures in postmenopausal women younger than 65 years who are at increased risk of osteoporosis.'
+
+  - id: calcium_vitamin_d_counseling
+    title: "Calcium and Vitamin D Counseling"
+    category: display_patient
+    description: "Counseling on calcium and vitamin D for bone health"
+    expression: $needs_screening is True
+    narrative:
+      patient:
+        True: |
+          ## Bone Health: Calcium and Vitamin D
+
+          **Calcium:**
+          - Women 51-70: 1,200 mg/day
+          - Prefer dietary sources (dairy, leafy greens, fortified foods)
+          - Supplement only if dietary intake is insufficient
+
+          **Vitamin D:**
+          - Adults >=50: 600-800 IU/day
+          - Your provider may check your vitamin D level
+
+          **Note:** Talk to your provider before starting supplements.
+      provider:
+        True: "Counsel on adequate calcium (1,200 mg/day) and vitamin D (600-800 IU/day) intake."
+
+  - id: fall_prevention
+    title: "Fall Prevention Counseling"
+    category: display_patient
+    description: "Fall prevention for patients at risk of osteoporotic fractures"
+    expression: $Age >= 65
+    narrative:
+      patient:
+        True: |
+          ## Fall Prevention
+
+          Preventing falls is key to preventing fractures:
+
+          - **Exercise regularly** - balance and strength training reduce fall risk
+          - **Review medications** with your provider (some can cause dizziness)
+          - **Check your home** for tripping hazards (rugs, poor lighting, cords)
+          - **Have your vision checked** annually
+          - **Use assistive devices** if needed (grab bars, handrails)
+      provider:
+        True: "Recommend fall prevention: exercise/balance training, medication review, home safety assessment, vision check."
+    citations:
+      - 'The USPSTF recommends exercise interventions to prevent falls in community-dwelling adults 65 years and older who are at increased risk for falls.'
+
+  - id: treatment_referral
+    title: "Osteoporosis Treatment Referral"
+    category: medication
+    description: "Refer for treatment if osteoporosis is confirmed"
+    expression: $tscore_osteoporosis is True
+    narrative:
+      patient:
+        True: |
+          ## Osteoporosis Treatment
+
+          Your bone density results indicate osteoporosis. Treatment can significantly
+          reduce your risk of fractures.
+
+          **Treatment options include:**
+          - Bisphosphonates (e.g., alendronate, risedronate)
+          - Other medications (denosumab, teriparatide)
+          - Lifestyle modifications (exercise, calcium, vitamin D)
+
+          **Discuss treatment options** with your healthcare provider.
+      provider:
+        True: |
+          DEXA confirms osteoporosis (T-score $dexa_tscore).
+
+          Consider pharmacotherapy:
+          - First-line: bisphosphonate (alendronate, risedronate, zoledronic acid)
+          - Alternatives: denosumab, teriparatide, romosozumab (if high fracture risk)
+
+          Ensure adequate calcium/vitamin D supplementation.
+    citations:
+      - 'Pharmacologic treatment reduces fracture risk in postmenopausal women with osteoporosis.'

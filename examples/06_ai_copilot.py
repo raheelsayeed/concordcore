@@ -88,7 +88,7 @@ def main():
                         default='none', help='LLM provider')
     parser.add_argument('--dry-run', action='store_true',
                         help='Print prompts without calling LLM')
-    parser.add_argument('--cpg', default='cpgs/cholesterol.yaml',
+    parser.add_argument('--cpg', default='cpgs/cholesterol/cholesterol.yaml',
                         help='Path to CPG file')
     parser.add_argument('--persona', choices=['patient', 'provider'],
                         default='patient', help='Target persona')

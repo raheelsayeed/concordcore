@@ -17,7 +17,7 @@ from pathlib import Path
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from core.cpg import CPG
+from core.cpg_registry import get_registry
 from core.concord import Concord, NeedAttestationError
 from core.healthcontext import HealthContext
 from variables.record import Record
@@ -38,8 +38,7 @@ def main():
     print("Step 1: Loading CPG Definition")
     print("=" * 60)
 
-    cpg_path = Path(__file__).parent.parent / 'cpgs' / 'cholesterol.yaml'
-    cpg = CPG.from_document_path(str(cpg_path))
+    cpg = get_registry().get('2019AccPrimaryPreventionASCVD')
 
     print(f"Loaded: {cpg.title}")
     print(f"Publisher: {cpg.publisher}")

@@ -31,20 +31,22 @@ class CPG():
 
     identifier: str
     title: str
-    doi: str = None
-    parent: Self = None
-    code: list[Code] = None
-    publisher: str = None
-    version: str = None  # Semantic version (e.g., "1.0.0")
-    last_updated: str = None  # ISO date string (e.g., "2024-01-15")
-    source_url: str = None  # Original guideline URL
-    variables: list[var.Var] = None
-    eligibility_variables: list[EligibilityVar] = None
-    assessment_variables: list[AssessmentVar] = None
-    recommendation_variables: list[RecommendationVar] = None
-    rendering_template_path: str = None
-    functions_module_name: str = None
-    functions_module: Any = None
+    doi: str | None = None
+    parent: Self | None = None
+    code: list[Code] | None = None
+    publisher: str | None = None
+    version: str | None = None  # Semantic version (e.g., "1.0.0")
+    last_updated: str | None = None  # ISO date string (e.g., "2024-01-15")
+    source_url: str | None = None  # Original guideline URL
+    variables: list[var.Var] | None = None
+    eligibility_variables: list[EligibilityVar] | None = None
+    assessment_variables: list[AssessmentVar] | None = None
+    recommendation_variables: list[RecommendationVar] | None = None
+    description: str | None = None
+    category: list[str] | None = None
+    rendering_template_path: str | None = None
+    functions_module_name: str | None = None
+    functions_module: Any | None = None
 
     # for rendering reasons
     def as_dict(self):
@@ -105,13 +107,13 @@ class CPG():
 
 
     def __str__(self):
-        return  '''
-                CPG: {self.identifier}
-                Name: {self.title}
-                Vars: {len(self.variables)}
-                Assessments: {len(self.assessments)}
-                Recommendations: {len(self.recommendations)}
-                '''
+        return (
+            f"CPG: {self.identifier}\n"
+            f"Name: {self.title}\n"
+            f"Vars: {len(self.variables or [])}\n"
+            f"Assessments: {len(self.assessment_variables or [])}\n"
+            f"Recommendations: {len(self.recommendation_variables or [])}"
+        )
 
 
 
@@ -206,6 +208,8 @@ class CPG():
             last_updated=cpg_dict.get('last_updated', None),
             source_url=cpg_dict.get('uri', None) or cpg_dict.get('source_url', None),
             doi=cpg_dict.get('doi', None),
+            description=cpg_dict.get('description', None),
+            category=cpg_dict.get('type', None),
             variables=[var.Var.instantiate_from_yaml(d) for d in variables_dict],
             eligibility_variables=[EligibilityVar.instantiate_from_yaml(d) for d in eligibility_dict],
             assessment_variables=[AssessmentVar.instantiate_from_yaml(d) for d in assessments_dict],
@@ -329,22 +333,6 @@ class CPG():
             )
 
 
-        # Recommendations must be based on  Assessments only
-        def flatten(xss):
-            return [x for xs in xss for x in xs]
-        based_on_identifiers = []
-        # for recommendation in self.recommendation_variables:
-        #     if recommendation.based_on:
-        #         based_on = flatten(recommendation.based_on.values())
-        #         based_on_identifiers.extend(based_on)
-
-        a_var_ids = [a.id for a in self.assessment_variables] 
-        for assessment_id in set(based_on_identifiers):
-            if assessment_id not in a_var_ids:
-                errors.append(
-                        KeyError(f'CPG.recommendation has `{assessment_id}` Not declaired in assessment_variables')
-                        )
-
         if errors:
             raise ExceptionGroup('Error validating CPG definition', errors)
 
@@ -356,19 +344,18 @@ class CPG():
 
     # HELPERS
     
+    def codes_by_system(self, system_keyword: str) -> list[str]:
+        """Get variable code strings filtered by code system keyword."""
+        return [
+            v.code_string for v in (self.variables or [])
+            if v.code_string and system_keyword in v.code_string
+        ]
+
     def lab_test_codes(self):
-        codes = [v.code_string for v in self.variables if v.code_string is not None and 'loinc' in v.code_string]
-        return codes
+        return self.codes_by_system('loinc')
 
     def conditions_codes(self):
-        codes = [v.code_string for v in self.variables if v.code_string is not None and 'snomed' in v.code_string]
-        return codes
-
+        return self.codes_by_system('snomed')
 
     def medication_codes(self):
-        codes = [v.code_string for v in self.variables if v.code_string is not None and 'rxnorm' in v.code_string]
-        return codes
-
-
-
-        
+        return self.codes_by_system('rxnorm')

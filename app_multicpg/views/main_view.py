@@ -321,6 +321,10 @@ def _page_results():
                 <div class="stat-card-label">Eligible Guidelines</div>
             </div>
             <div class="stat-card">
+                <div class="stat-card-value">{summary.executable_cpgs}</div>
+                <div class="stat-card-label">Executable</div>
+            </div>
+            <div class="stat-card">
                 <div class="stat-card-value {'success' if ranked else ''}">{len(ranked)}</div>
                 <div class="stat-card-label">{rec_label}</div>
             </div>
@@ -362,6 +366,7 @@ def _page_results():
 
     with col_side:
         _render_health_data(patient)
+        _render_coverage_gaps(summary)
 
     # ── Conflicts Detail ──
     if summary.has_conflicts and summary.conflicts.conflicts:
@@ -784,6 +789,47 @@ def _health_panel(title: str, rows: list[tuple[str, str, str]]):
     )
 
     _html(f'<div class="health-panel"><div class="health-panel-header"><span class="panel-icon {icon_cls}"></span>{title}</div><div class="health-panel-body">{rows_html}</div></div>')
+
+
+def _render_coverage_gaps(summary):
+    """Render coverage analysis — missing variables that would unlock more CPGs."""
+    coverage = getattr(summary, 'coverage', None)
+    if not coverage or not coverage.gaps:
+        return
+
+    _html('<div style="height: 1rem;"></div>')
+    _html(f"""
+        <div class="section-header">
+            <p class="section-title">Coverage Gaps</p>
+            <span class="section-count">{coverage.missing_variables} missing</span>
+        </div>
+    """)
+
+    # Progress bar: provided / total
+    total = max(coverage.total_unique_variables, 1)
+    pct = round(100 * coverage.provided_variables / total)
+    _html(f"""
+        <div style="background:{COLORS['bg_secondary']};border-radius:6px;height:8px;overflow:hidden;margin-bottom:4px;">
+            <div style="width:{pct}%;height:100%;background:{COLORS['accent']};border-radius:6px;transition:width 0.3s;"></div>
+        </div>
+        <p style="font-size:0.75rem;color:{COLORS['text_muted']};margin:0 0 12px 0;">{coverage.provided_variables}/{coverage.total_unique_variables} variables provided</p>
+    """)
+
+    # Top gaps (up to 8)
+    for gap in coverage.gaps[:8]:
+        n = len(gap.cpg_ids)
+        tags = []
+        if gap.is_required:
+            tags.append(f'<span style="font-size:0.625rem;padding:1px 5px;border-radius:3px;background:#FEF2F2;color:#DC2626;">Required</span>')
+        if gap.is_attestable:
+            tags.append(f'<span style="font-size:0.625rem;padding:1px 5px;border-radius:3px;background:#F0FDF4;color:#059669;">Attestable</span>')
+        tags_html = " ".join(tags)
+        _html(f"""
+            <div class="health-row">
+                <span class="health-row-label">{gap.variable_title} {tags_html}</span>
+                <span class="health-row-value" style="font-size:0.75rem;color:{COLORS['text_muted']};">{n} CPG{'s' if n > 1 else ''}</span>
+            </div>
+        """)
 
 
 def _render_guideline_overview(summary):
