@@ -1,0 +1,476 @@
+CPG:
+  title: "USPSTF Obesity Screening and Behavioral Interventions"
+  identifier: uspstf_obesity_screening_2018
+  publisher: "United States Preventive Services Task Force"
+  uri: "https://www.uspreventiveservicestaskforce.org/uspstf/recommendation/obesity-in-adults-interventions"
+  doi: 10.1001/jama.2018.14854
+  type: [screening, preventive]
+  revision: 1.0
+  revision_date: 2024-01-15
+  description: >
+    The USPSTF recommends that clinicians screen all adults for obesity and offer or
+    refer adults with a BMI of 30 or higher to intensive, multicomponent behavioral
+    interventions (Grade B). Screening is done by calculating BMI from measured height
+    and weight.
+
+
+define: &bmi_code ["39156-5"]
+define: &weight_code ["29463-7", "3141-9"]
+define: &height_code ["8302-2"]
+define: &waist_code ["56086-2"]
+
+
+variables:
+
+#--------------------------------------------------------
+# Demographics
+  - id: Age
+    title: "Age"
+    type: integer
+    required: True
+    code:
+      concord: ['Age']
+
+  - id: Gender
+    title: "Gender"
+    required: False
+    code:
+      concord: ['Gender']
+
+#--------------------------------------------------------
+# Anthropometrics
+  - id: BMI
+    title: "Body Mass Index"
+    required: True
+    user_attestable: False
+    code:
+      loinc: *bmi_code
+    validator:
+      plausible: '$value > 10 and $value < 80'
+    narrative:
+      patient:
+        HasValue: "Your BMI is $value kg/m2."
+        NoValue: "BMI not found in your records."
+      provider:
+        HasValue: "BMI $value ($self.date)"
+
+  - id: weight_kg
+    title: "Body Weight (kg)"
+    required: False
+    user_attestable: True
+    code:
+      loinc: *weight_code
+    narrative:
+      patient:
+        HasValue: "Your weight is $value kg."
+
+  - id: height_cm
+    title: "Height (cm)"
+    required: False
+    user_attestable: True
+    code:
+      loinc: *height_code
+    narrative:
+      patient:
+        HasValue: "Your height is $value cm."
+
+  - id: waist_circumference
+    title: "Waist Circumference (cm)"
+    required: False
+    user_attestable: True
+    code:
+      loinc: *waist_code
+    validator:
+      plausible: '$value > 40 and $value < 200'
+    llm_prompt: |
+      What is the patient's waist circumference?
+      Look for: waist circumference, abdominal circumference, waist measurement.
+      Return: numeric value in cm, or null if not mentioned.
+    narrative:
+      patient:
+        HasValue: "Your waist circumference is $value cm."
+      provider:
+        HasValue: "Waist circumference $value cm"
+
+#--------------------------------------------------------
+# Obesity-Related Comorbidities
+  - id: type2_diabetes
+    title: "Type 2 Diabetes"
+    type: boolean
+    required: False
+    user_attestable: True
+    code:
+      snomed: ["44054006"]
+    llm_prompt: |
+      Does the patient have type 2 diabetes?
+      Look for: type 2 diabetes, T2DM, diabetes mellitus type 2, on metformin/insulin for diabetes.
+      Return: true if type 2 diabetes, false if denied, null if not mentioned.
+    narrative:
+      patient:
+        True: "You have type 2 diabetes, which is closely associated with obesity."
+      provider:
+        True: "Type 2 diabetes"
+
+  - id: hypertension
+    title: "Hypertension"
+    type: boolean
+    required: False
+    user_attestable: True
+    code:
+      snomed: ["38341003"]
+    llm_prompt: |
+      Does the patient have hypertension?
+      Look for: hypertension, HTN, high blood pressure, on antihypertensive.
+      Return: true if hypertension, false if denied, null if not mentioned.
+    narrative:
+      patient:
+        True: "You have high blood pressure, which can be improved with weight loss."
+      provider:
+        True: "Hypertension"
+
+  - id: dyslipidemia
+    title: "Dyslipidemia"
+    type: boolean
+    required: False
+    user_attestable: True
+    code:
+      snomed: ["55822004"]
+    llm_prompt: |
+      Does the patient have dyslipidemia?
+      Look for: dyslipidemia, high cholesterol, elevated LDL, low HDL, elevated triglycerides,
+      on statin.
+      Return: true if dyslipidemia, false if denied, null if not mentioned.
+    narrative:
+      patient:
+        True: "You have abnormal cholesterol levels, which can be improved with weight management."
+      provider:
+        True: "Dyslipidemia"
+
+  - id: obstructive_sleep_apnea
+    title: "Obstructive Sleep Apnea"
+    type: boolean
+    required: False
+    user_attestable: True
+    code:
+      snomed: ["78275009"]
+    llm_prompt: |
+      Does the patient have obstructive sleep apnea?
+      Look for: sleep apnea, OSA, on CPAP, uses CPAP, snoring with apnea.
+      Return: true if OSA, false if denied, null if not mentioned.
+    narrative:
+      patient:
+        True: "You have sleep apnea, which is often associated with excess weight."
+      provider:
+        True: "Obstructive sleep apnea"
+
+#--------------------------------------------------------
+# Intervention Status
+  - id: enrolled_behavioral_program
+    title: "Enrolled in Behavioral Weight Management Program"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Is the patient enrolled in or participating in a structured weight management
+      or behavioral intervention program?
+      Look for: weight management program, DPP, intensive lifestyle program, weight loss group,
+      behavioral counseling for weight, bariatric program.
+      Return: true if enrolled, false if not, null if not mentioned.
+    narrative:
+      patient:
+        True: "You are currently enrolled in a weight management program."
+        False: "You are not currently enrolled in a weight management program."
+      provider:
+        True: "Currently enrolled in behavioral intervention"
+        False: "Not enrolled in behavioral intervention"
+
+  - id: on_weight_loss_medication
+    title: "On Weight Loss Medication"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Is the patient currently taking weight loss medication?
+      Look for: semaglutide for weight, tirzepatide, Wegovy, Ozempic for weight,
+      Mounjaro, orlistat, phentermine, weight loss medication.
+      Return: true if on weight loss medication, false if not, null if not mentioned.
+    narrative:
+      patient:
+        True: "You are currently taking medication for weight management."
+      provider:
+        True: "On pharmacotherapy for obesity"
+
+
+#--------------------------------------------------------
+# Eligibility
+eligibility:
+  - id: adult
+    title: "Adult (18 Years or Older)"
+    expression: $Age >= 18
+    narrative:
+      patient:
+        True: "You are an adult eligible for obesity screening."
+        False: "This screening guideline is for adults aged 18 and older."
+      provider:
+        True: "Adult - eligible for obesity screening"
+        False: "Under 18 - pediatric obesity guideline applies"
+
+
+#--------------------------------------------------------
+# Assessments
+assessments:
+  # BMI Classification
+  - id: bmi_underweight
+    title: "Underweight (BMI < 18.5)"
+    description: "BMI indicates underweight"
+    expression: $BMI < 18.5
+    required: False
+    narrative:
+      patient:
+        True: "Your BMI of $BMI indicates you are __underweight__ (BMI under 18.5)."
+      provider:
+        True: "BMI $BMI - Underweight"
+
+  - id: bmi_normal
+    title: "Normal Weight (BMI 18.5-24.9)"
+    description: "BMI indicates normal weight"
+    expression: $BMI >= 18.5 and $BMI < 25
+    required: False
+    narrative:
+      patient:
+        True: "Your BMI of $BMI is in the __normal__ range (18.5-24.9)."
+      provider:
+        True: "BMI $BMI - Normal weight"
+
+  - id: bmi_overweight
+    title: "Overweight (BMI 25-29.9)"
+    description: "BMI indicates overweight"
+    expression: $BMI >= 25 and $BMI < 30
+    required: False
+    narrative:
+      patient:
+        True: "Your BMI of $BMI indicates you are __overweight__ (BMI 25-29.9)."
+        False: "Your BMI is not in the overweight range."
+      provider:
+        True: "BMI $BMI - Overweight"
+
+  - id: bmi_obese_i
+    title: "Obesity Class I (BMI 30-34.9)"
+    description: "BMI indicates class I obesity"
+    expression: $BMI >= 30 and $BMI < 35
+    required: False
+    narrative:
+      patient:
+        True: "Your BMI of $BMI indicates __class I obesity__ (BMI 30-34.9)."
+      provider:
+        True: "BMI $BMI - Obesity class I"
+
+  - id: bmi_obese_ii
+    title: "Obesity Class II (BMI 35-39.9)"
+    description: "BMI indicates class II obesity"
+    expression: $BMI >= 35 and $BMI < 40
+    required: False
+    narrative:
+      patient:
+        True: "Your BMI of $BMI indicates __class II obesity__ (BMI 35-39.9)."
+      provider:
+        True: "BMI $BMI - Obesity class II"
+
+  - id: bmi_obese_iii
+    title: "Obesity Class III (BMI >= 40)"
+    description: "BMI indicates class III (severe) obesity"
+    expression: $BMI >= 40
+    required: False
+    narrative:
+      patient:
+        True: "Your BMI of $BMI indicates __class III (severe) obesity__ (BMI 40 or higher)."
+      provider:
+        True: "BMI $BMI - Obesity class III (severe)"
+
+  - id: is_obese
+    title: "Obese (BMI >= 30)"
+    description: "BMI 30 or higher indicates obesity"
+    expression: $BMI >= 30
+    narrative:
+      patient:
+        True: "Your BMI of $BMI indicates obesity (BMI 30 or higher)."
+        False: "Your BMI is below the obesity threshold."
+      provider:
+        True: "BMI $BMI - Obese (>=30)"
+        False: "BMI $BMI - Not obese"
+
+  - id: is_overweight
+    title: "Overweight or Obese (BMI >= 25)"
+    description: "BMI 25 or higher indicates overweight or obesity"
+    expression: $BMI >= 25
+    narrative:
+      patient:
+        True: "Your BMI of $BMI is above the normal range."
+        False: "Your BMI is in the normal range."
+      provider:
+        True: "BMI $BMI - Overweight or obese"
+
+  - id: waist_elevated_male
+    title: "Elevated Waist Circumference (Male > 102 cm)"
+    description: "Waist circumference above 102 cm in males"
+    expression: $Gender == "male" and $waist_circumference > 102
+    required: False
+    narrative:
+      patient:
+        True: "Your waist circumference of $waist_circumference cm is above the recommended level for men (102 cm)."
+      provider:
+        True: "Elevated waist circumference $waist_circumference cm (male threshold >102 cm)"
+
+  - id: waist_elevated_female
+    title: "Elevated Waist Circumference (Female > 88 cm)"
+    description: "Waist circumference above 88 cm in females"
+    expression: $Gender == "female" and $waist_circumference > 88
+    required: False
+    narrative:
+      patient:
+        True: "Your waist circumference of $waist_circumference cm is above the recommended level for women (88 cm)."
+      provider:
+        True: "Elevated waist circumference $waist_circumference cm (female threshold >88 cm)"
+
+  - id: has_obesity_comorbidities
+    title: "Has Obesity-Related Comorbidities"
+    description: "Patient has comorbid conditions associated with obesity"
+    expression: $type2_diabetes is True or $hypertension is True or $dyslipidemia is True or $obstructive_sleep_apnea is True
+    required: False
+    narrative:
+      patient:
+        True: "You have health conditions that are closely associated with excess weight and can improve with weight loss."
+        False: "No obesity-related comorbidities identified."
+      provider:
+        True: "Obesity-related comorbidities present"
+
+  - id: already_in_program
+    title: "Already in Behavioral Program"
+    description: "Patient is already enrolled in behavioral intervention"
+    expression: $enrolled_behavioral_program is True
+    required: False
+    narrative:
+      patient:
+        True: "You are currently enrolled in a weight management program."
+      provider:
+        True: "Currently enrolled in behavioral intervention"
+
+
+#--------------------------------------------------------
+# Recommendations
+recommendations:
+  - id: recommend_behavioral_intervention
+    title: "Intensive Behavioral Intervention Recommended"
+    category: medication
+    description: "USPSTF recommends intensive behavioral interventions for adults with BMI >= 30"
+    expression: $is_obese is True and $already_in_program is not True
+    uspstf_grade: B
+    level_of_evidence: A
+    class_of_recommendation: I
+    narrative:
+      patient:
+        True: |
+          ## Weight Management Intervention Recommended
+
+          Based on your BMI of $BMI, the USPSTF recommends an **intensive, multicomponent
+          behavioral intervention** for weight management.
+
+          **Effective programs include:**
+          - Behavioral counseling on diet and physical activity
+          - Goal setting and self-monitoring
+          - 12-26 sessions in the first year
+          - Both individual and group formats are effective
+
+          **Expected benefits:**
+          - Typical weight loss of 4-7 kg (9-15 lbs) over 12-18 months
+          - Improvements in blood sugar, blood pressure, and cholesterol
+          - Reduced risk of type 2 diabetes
+
+          **Ask your provider** about available programs in your area.
+        False: "Intensive behavioral intervention for obesity is not indicated at this time."
+      provider:
+        True: |
+          **USPSTF Grade B Recommendation**
+
+          Refer to intensive, multicomponent behavioral intervention.
+
+          Patient profile: Age $Age, BMI $BMI.
+
+          Effective interventions include:
+          - >=12 sessions in first year (higher intensity associated with greater weight loss)
+          - Behavioral strategies: self-monitoring, goal setting, problem solving
+          - Diet and physical activity components
+
+          Expected weight loss: 4-7 kg over 12-18 months.
+    citations:
+      - 'The USPSTF recommends that clinicians offer or refer adults with a BMI of 30 or higher to intensive, multicomponent behavioral interventions.'
+      - 'Behavioral-based weight loss interventions result in clinically meaningful weight loss of approximately 4 to 7 kg.'
+
+  - id: continue_program
+    title: "Continue Current Program"
+    category: display_patient
+    description: "Patient already in behavioral intervention"
+    expression: $is_obese is True and $already_in_program is True
+    narrative:
+      patient:
+        True: |
+          ## Continue Your Weight Management Program
+
+          You are currently enrolled in a weight management program. Continue
+          participating as recommended for the best outcomes.
+
+          **Tips for success:**
+          - Attend all scheduled sessions
+          - Track your food intake and physical activity
+          - Set realistic, achievable goals
+          - Be patient - sustainable weight loss takes time
+      provider:
+        True: "Patient enrolled in behavioral intervention. Continue and monitor progress."
+
+  - id: comorbidity_screening
+    title: "Screen for Obesity-Related Comorbidities"
+    category: evaluation
+    description: "Screen obese patients for related comorbid conditions"
+    expression: $is_obese is True
+    narrative:
+      patient:
+        True: |
+          ## Health Screening
+
+          Obesity is associated with several health conditions. Your provider should
+          screen for:
+          - Type 2 diabetes (blood sugar testing)
+          - High blood pressure
+          - Abnormal cholesterol levels
+          - Sleep apnea
+      provider:
+        True: |
+          Screen for obesity-related comorbidities:
+          - Prediabetes/T2DM (HbA1c or fasting glucose)
+          - Hypertension (BP measurement)
+          - Dyslipidemia (lipid panel)
+          - Obstructive sleep apnea (clinical assessment)
+    citations:
+      - 'Adults with obesity are at increased risk for cardiovascular disease, type 2 diabetes, certain cancers, and other conditions.'
+
+  - id: lifestyle_counseling
+    title: "Lifestyle Counseling for Overweight"
+    category: display_patient
+    description: "Lifestyle counseling for overweight but not obese patients"
+    expression: $bmi_overweight is True
+    narrative:
+      patient:
+        True: |
+          ## Healthy Weight Management
+
+          Your BMI of $BMI indicates you are overweight. While intensive behavioral
+          intervention is recommended for BMI 30+, maintaining a healthy lifestyle
+          can help prevent further weight gain.
+
+          **Healthy habits:**
+          - **Physical activity:** At least 150 minutes of moderate activity per week
+          - **Balanced diet:** Emphasize fruits, vegetables, whole grains, lean proteins
+          - **Portion control:** Be mindful of serving sizes
+          - **Limit:** Sugary beverages, processed foods, excessive alcohol
+      provider:
+        True: "BMI $BMI (overweight). Counsel on healthy lifestyle. USPSTF intensive intervention recommended at BMI >=30."

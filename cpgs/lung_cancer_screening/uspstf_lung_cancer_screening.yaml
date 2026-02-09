@@ -1,0 +1,493 @@
+CPG:
+  title: "USPSTF Lung Cancer Screening"
+  identifier: uspstf_lung_cancer_screening_2021
+  publisher: "United States Preventive Services Task Force"
+  uri: "https://www.uspreventiveservicestaskforce.org/uspstf/recommendation/lung-cancer-screening"
+  doi: 10.1001/jama.2021.1117
+  type: [screening, preventive]
+  revision: 1.0
+  revision_date: 2024-01-15
+  description: >
+    The USPSTF recommends annual screening for lung cancer with low-dose computed
+    tomography (LDCT) in adults aged 50 to 80 years who have a 20 pack-year smoking
+    history and currently smoke or have quit within the past 15 years (Grade B).
+    Screening should be discontinued once a person has not smoked for 15 years or
+    develops a health problem that substantially limits life expectancy.
+
+
+variables:
+
+#--------------------------------------------------------
+# Demographics
+  - id: Age
+    title: "Age"
+    type: integer
+    required: True
+    code:
+      concord: ['Age']
+
+  - id: Gender
+    title: "Gender"
+    required: False
+    code:
+      concord: ['Gender']
+
+#--------------------------------------------------------
+# Smoking History
+  - id: smoking_status
+    title: "Smoking Status"
+    required: True
+    user_attestable: True
+    code:
+      snomed: ["266918002", "8517006", "160617001"]
+    llm_prompt: |
+      What is the patient's smoking status?
+      Look for: current smoker, former smoker, never smoker, quit smoking,
+      pack-year history, tobacco use.
+      Return: "current", "former", or "never".
+    narrative:
+      patient:
+        HasValue: "Your smoking status is recorded as $value."
+      provider:
+        HasValue: "Smoking status: $value"
+
+  - id: is_current_smoker
+    title: "Currently Smokes"
+    type: boolean
+    required: False
+    user_attestable: True
+    code:
+      snomed: ["8517006"]
+    llm_prompt: |
+      Does the patient currently smoke cigarettes?
+      Look for: current smoker, active smoker, smokes cigarettes, tobacco use current.
+      Return: true if current smoker, false if not, null if not mentioned.
+    narrative:
+      patient:
+        True: "You are currently a smoker."
+        False: "You are not currently a smoker."
+      provider:
+        True: "Current smoker"
+        False: "Not a current smoker"
+
+  - id: is_former_smoker
+    title: "Former Smoker"
+    type: boolean
+    required: False
+    user_attestable: True
+    code:
+      snomed: ["160617001"]
+    llm_prompt: |
+      Is the patient a former smoker?
+      Look for: former smoker, quit smoking, ex-smoker, previously smoked, stopped smoking.
+      Return: true if former smoker, false if never smoked or current smoker, null if not mentioned.
+    narrative:
+      patient:
+        True: "You are a former smoker."
+        False: "You are not a former smoker."
+      provider:
+        True: "Former smoker"
+
+  - id: pack_years
+    title: "Pack-Years of Smoking"
+    required: True
+    user_attestable: True
+    code:
+      loinc: ["401201003"]
+    validator:
+      plausible: '$value >= 0 and $value <= 200'
+    llm_prompt: |
+      What is the patient's pack-year smoking history?
+      Pack-years = (packs per day) x (years smoked).
+      Look for: pack-year history, pack years, smoking history quantified.
+      Return: numeric value, or null if not mentioned.
+    narrative:
+      patient:
+        HasValue: "Your smoking history is $value pack-years."
+      provider:
+        HasValue: "Pack-year history: $value"
+
+  - id: years_since_quitting
+    title: "Years Since Quitting Smoking"
+    type: integer
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      How many years ago did the patient quit smoking?
+      Look for: quit date, years since quitting, stopped smoking X years ago.
+      Return: number of years since quitting, 0 if current smoker, null if not mentioned.
+    narrative:
+      patient:
+        HasValue: "You quit smoking $value years ago."
+      provider:
+        HasValue: "Quit $value years ago"
+
+#--------------------------------------------------------
+# Exclusions
+  - id: prior_lung_cancer
+    title: "Prior Lung Cancer Diagnosis"
+    type: boolean
+    required: False
+    user_attestable: True
+    code:
+      snomed: ["93880001"]
+    llm_prompt: |
+      Does the patient have a prior lung cancer diagnosis?
+      Look for: lung cancer, lung carcinoma, NSCLC, SCLC, lung malignancy.
+      Return: true if prior lung cancer, false if denied, null if not mentioned.
+    narrative:
+      patient:
+        True: "You have a prior diagnosis of lung cancer."
+        False: "No prior lung cancer diagnosis found."
+      provider:
+        True: "History of lung cancer"
+        False: "No prior lung cancer"
+
+  - id: limited_life_expectancy
+    title: "Limited Life Expectancy"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Does the patient have a health problem that substantially limits life expectancy
+      or the ability/willingness to have curative lung surgery?
+      Look for: terminal illness, hospice, palliative care, severe comorbidities,
+      limited life expectancy, poor functional status.
+      Return: true if limited life expectancy, false if not, null if not mentioned.
+    narrative:
+      patient:
+        True: "You have a health condition that may affect screening decisions."
+        False: "No conditions limiting life expectancy identified."
+      provider:
+        True: "Limited life expectancy - screening may not be appropriate"
+
+#--------------------------------------------------------
+# Screening Status
+  - id: ldct_within_1_year
+    title: "LDCT Within Past Year"
+    type: boolean
+    required: False
+    user_attestable: True
+    code:
+      cpt: ["71271"]
+    llm_prompt: |
+      Has the patient had a low-dose CT scan of the chest in the past year?
+      Look for: LDCT, low-dose CT, lung cancer screening CT, chest CT for screening.
+      Return: true if LDCT within past year, false if not, null if not mentioned.
+    narrative:
+      patient:
+        True: "You had a lung cancer screening CT within the past year."
+        False: "You have not had a lung cancer screening CT in the past year."
+      provider:
+        True: "LDCT completed within past year"
+        False: "No recent LDCT"
+
+#--------------------------------------------------------
+# Risk Modifiers
+  - id: copd
+    title: "Chronic Obstructive Pulmonary Disease"
+    type: boolean
+    required: False
+    user_attestable: True
+    code:
+      snomed: ["13645005"]
+    llm_prompt: |
+      Does the patient have COPD?
+      Look for: COPD, chronic obstructive pulmonary disease, emphysema, chronic bronchitis.
+      Return: true if COPD, false if denied, null if not mentioned.
+    narrative:
+      patient:
+        True: "You have COPD, which is an additional risk factor for lung cancer."
+      provider:
+        True: "COPD - additional lung cancer risk factor"
+
+  - id: family_history_lung_cancer
+    title: "Family History of Lung Cancer"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Does the patient have a family history of lung cancer?
+      Look for: family member with lung cancer, parent/sibling with lung cancer.
+      Return: true if family history, false if denied, null if not mentioned.
+    narrative:
+      patient:
+        True: "You have a family history of lung cancer."
+      provider:
+        True: "Family history of lung cancer"
+
+  - id: occupational_exposure
+    title: "Occupational Carcinogen Exposure"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Does the patient have a history of occupational exposure to lung carcinogens?
+      Look for: asbestos exposure, radon exposure, silica, arsenic, chromium,
+      diesel exhaust, occupational lung hazards.
+      Return: true if occupational exposure, false if denied, null if not mentioned.
+    narrative:
+      patient:
+        True: "You have a history of workplace exposure to substances that increase lung cancer risk."
+      provider:
+        True: "Occupational carcinogen exposure history"
+
+
+#--------------------------------------------------------
+# Eligibility
+eligibility:
+  - id: age_eligible
+    title: "Age 50 to 80 Years"
+    expression: $Age >= 50 and $Age <= 80
+    narrative:
+      patient:
+        True: "You are in the recommended screening age range (50-80 years)."
+        False: "Lung cancer screening is recommended for adults aged 50 to 80 years."
+      provider:
+        True: "Patient meets age criteria (50-80 years)"
+        False: "Patient outside recommended age range for lung cancer screening"
+
+  - id: no_prior_lung_cancer
+    title: "No Prior Lung Cancer"
+    expression: $prior_lung_cancer is not True
+    narrative:
+      patient:
+        True: "You do not have a prior lung cancer diagnosis."
+        False: "Since you have a prior lung cancer diagnosis, you need individualized follow-up rather than routine screening."
+      provider:
+        True: "No prior lung cancer - eligible for screening"
+        False: "Prior lung cancer - individualized surveillance indicated"
+
+  - id: no_limited_life_expectancy
+    title: "No Limited Life Expectancy"
+    expression: $limited_life_expectancy is not True
+    narrative:
+      patient:
+        True: "No health conditions limiting your eligibility for screening were identified."
+        False: "Screening may not be appropriate given your current health status."
+      provider:
+        True: "No conditions substantially limiting life expectancy"
+        False: "Limited life expectancy - screening not recommended"
+
+
+#--------------------------------------------------------
+# Assessments
+assessments:
+  - id: meets_pack_year_threshold
+    title: "Meets 20 Pack-Year Threshold"
+    description: "Patient has a smoking history of 20 or more pack-years"
+    expression: $pack_years >= 20
+    narrative:
+      patient:
+        True: "Your smoking history of $pack_years pack-years meets the threshold for lung cancer screening (20 or more pack-years)."
+        False: "Your smoking history of $pack_years pack-years is below the 20 pack-year threshold for screening."
+      provider:
+        True: "Pack-year history $pack_years meets >=20 threshold"
+        False: "Pack-year history $pack_years below 20 threshold"
+
+  - id: currently_smokes_or_recently_quit
+    title: "Currently Smokes or Quit Within 15 Years"
+    description: "Patient currently smokes or quit within the past 15 years"
+    expression: $is_current_smoker is True or ($is_former_smoker is True and $years_since_quitting <= 15)
+    narrative:
+      patient:
+        True: "You currently smoke or quit within the past 15 years."
+        False: "You quit smoking more than 15 years ago. Screening can be discontinued."
+      provider:
+        True: "Current smoker or quit within 15 years"
+        False: "Quit >15 years ago - screening may be discontinued"
+
+  - id: quit_over_15_years
+    title: "Quit Over 15 Years Ago"
+    description: "Former smoker who quit more than 15 years ago"
+    expression: $is_former_smoker is True and $years_since_quitting > 15
+    required: False
+    narrative:
+      patient:
+        True: "You quit smoking more than 15 years ago. Screening is no longer recommended."
+      provider:
+        True: "Former smoker, quit >15 years ago - discontinue screening"
+
+  - id: meets_screening_criteria
+    title: "Meets All Lung Cancer Screening Criteria"
+    description: "Patient meets age, pack-year, and smoking recency criteria"
+    expression: $meets_pack_year_threshold is True and $currently_smokes_or_recently_quit is True
+    narrative:
+      patient:
+        True: "You meet all the criteria for lung cancer screening."
+        False: "You do not meet all the criteria for lung cancer screening."
+      provider:
+        True: "Patient meets USPSTF lung cancer screening criteria"
+        False: "Patient does not meet full screening criteria"
+
+  - id: screening_up_to_date
+    title: "Screening Is Up to Date"
+    description: "Patient has had LDCT within the past year"
+    expression: $ldct_within_1_year is True
+    required: False
+    narrative:
+      patient:
+        True: "Your lung cancer screening is up to date."
+        False: "You have not had a lung cancer screening CT in the past year."
+      provider:
+        True: "LDCT screening up to date"
+        False: "LDCT screening not current"
+
+  - id: has_additional_risk_factors
+    title: "Has Additional Risk Factors"
+    description: "Patient has risk factors beyond smoking history"
+    expression: $copd is True or $family_history_lung_cancer is True or $occupational_exposure is True
+    required: False
+    narrative:
+      patient:
+        True: |
+          You have additional risk factors for lung cancer:
+          - COPD
+          - Family history of lung cancer
+          - Occupational exposure to carcinogens
+        False: "No additional lung cancer risk factors identified beyond smoking history."
+      provider:
+        True: "Additional lung cancer risk factors present (COPD, family history, or occupational exposure)"
+
+
+#--------------------------------------------------------
+# Recommendations
+recommendations:
+  - id: recommend_annual_ldct
+    title: "Annual LDCT Screening Recommended"
+    category: evaluation
+    description: "USPSTF recommends annual lung cancer screening with low-dose CT"
+    expression: $meets_screening_criteria is True and $screening_up_to_date is not True
+    uspstf_grade: B
+    level_of_evidence: B-R
+    class_of_recommendation: I
+    narrative:
+      patient:
+        True: |
+          ## Lung Cancer Screening Recommended
+
+          Based on your age ($Age years) and smoking history ($pack_years pack-years), the USPSTF
+          recommends **annual lung cancer screening with low-dose computed tomography (LDCT)**.
+
+          **What to expect:**
+          - LDCT is a quick, painless CT scan using low radiation
+          - The scan takes about 30 seconds
+          - No special preparation is needed
+
+          **Important:** Before starting screening, have a shared decision-making conversation
+          with your healthcare provider about the benefits, limitations, and potential harms
+          of screening including false-positive results.
+        False: "Based on your profile, lung cancer screening with LDCT is not recommended at this time."
+      provider:
+        True: |
+          **USPSTF Grade B Recommendation**
+
+          Annual lung cancer screening with LDCT recommended.
+
+          Patient profile: Age $Age, $pack_years pack-years smoking history.
+
+          Ensure shared decision-making discussion including:
+          - Benefits and limitations of screening
+          - Potential for false-positive results
+          - Commitment to annual screening
+    citations:
+      - 'The USPSTF recommends annual screening for lung cancer with LDCT in adults aged 50 to 80 years who have a 20 pack-year smoking history and currently smoke or have quit within the past 15 years.'
+      - 'Screening should be discontinued once a person has not smoked for 15 years or develops a health problem that substantially limits life expectancy.'
+
+  - id: screening_up_to_date_continue
+    title: "Continue Annual Screening"
+    category: display_patient
+    description: "Patient is up to date on screening - continue annually"
+    expression: $meets_screening_criteria is True and $screening_up_to_date is True
+    uspstf_grade: B
+    level_of_evidence: B-R
+    class_of_recommendation: I
+    narrative:
+      patient:
+        True: |
+          ## Screening Up to Date
+
+          Your lung cancer screening is up to date. Continue annual LDCT screening
+          as recommended by the USPSTF.
+
+          **Next screening:** In approximately 12 months from your last LDCT.
+      provider:
+        True: "LDCT screening current. Continue annual screening per USPSTF recommendation."
+
+  - id: recommend_smoking_cessation
+    title: "Smoking Cessation Counseling"
+    category: medication
+    description: "Smoking cessation counseling for current smokers"
+    expression: $is_current_smoker is True
+    uspstf_grade: A
+    level_of_evidence: A
+    class_of_recommendation: I
+    narrative:
+      patient:
+        True: |
+          ## Smoking Cessation
+
+          Quitting smoking is the single most important thing you can do to reduce
+          your lung cancer risk. Even if you qualify for screening, **quitting smoking
+          provides far greater benefit** than screening alone.
+
+          **Resources to help you quit:**
+          - Talk to your healthcare provider about cessation medications
+          - Call 1-800-QUIT-NOW for free counseling
+          - Consider nicotine replacement therapy (patches, gum, lozenges)
+      provider:
+        True: |
+          **USPSTF Grade A: Smoking cessation intervention recommended.**
+
+          Offer pharmacotherapy (varenicline, bupropion, NRT) and behavioral counseling.
+          Smoking cessation is more effective at reducing lung cancer mortality than screening.
+    citations:
+      - 'The USPSTF recommends that clinicians ask all adults about tobacco use, advise them to stop using tobacco, and provide behavioral interventions and FDA-approved pharmacotherapy for cessation.'
+
+  - id: discontinue_screening
+    title: "Screening May Be Discontinued"
+    category: display_patient
+    description: "Screening can be discontinued for former smokers who quit >15 years ago"
+    expression: $quit_over_15_years is True
+    narrative:
+      patient:
+        True: |
+          ## Screening No Longer Recommended
+
+          Since you quit smoking more than 15 years ago, the USPSTF recommends
+          that lung cancer screening be **discontinued**.
+
+          Your lung cancer risk has decreased significantly since quitting.
+          Continue to maintain a healthy lifestyle.
+      provider:
+        True: "Former smoker, quit >15 years ago. USPSTF recommends discontinuing LDCT screening."
+    citations:
+      - 'Screening should be discontinued once a person has not smoked for 15 years.'
+
+  - id: shared_decision_making
+    title: "Shared Decision-Making Discussion"
+    category: display_patient
+    description: "Shared decision-making is essential before initiating screening"
+    expression: $meets_screening_criteria is True
+    narrative:
+      patient:
+        True: |
+          ## Understanding Lung Cancer Screening
+
+          **Benefits of screening:**
+          - Can detect lung cancer at an early, more treatable stage
+          - Reduces lung cancer mortality by about 20% in high-risk individuals
+
+          **Things to consider:**
+          - False-positive results may lead to additional tests or procedures
+          - Some cancers found by screening may never cause symptoms (overdiagnosis)
+          - Small radiation exposure with each scan
+
+          **Talk to your provider** about whether screening is right for you based on
+          your overall health, preferences, and values.
+      provider:
+        True: |
+          Ensure shared decision-making discussion per USPSTF guidance:
+          - Benefits: ~20% reduction in lung cancer mortality
+          - Harms: false positives (up to 25% per round), overdiagnosis, radiation exposure
+          - Patient must be willing to undergo annual screening

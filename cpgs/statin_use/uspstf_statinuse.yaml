@@ -7,6 +7,7 @@ CPG:
   uri: https://jamanetwork.com/journals/jama/fullarticle/2795193
   doi: 10.1001/jama.2022.13044
   type: [preventative]
+  description: "Statin use for primary prevention of cardiovascular disease in adults aged 40 to 75 with cardiovascular risk factors"
   uspstf: https://www.uspreventiveservicestaskforce.org/uspstf/index.php/recommendation/statin-use-in-adults-preventive-medication
   functions_module_name: ascvd_risk_scores
 

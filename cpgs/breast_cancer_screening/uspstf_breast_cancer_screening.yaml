@@ -1,0 +1,432 @@
+CPG:
+  title: "USPSTF Breast Cancer Screening"
+  identifier: uspstf_breast_cancer_screening_2024
+  publisher: "United States Preventive Services Task Force"
+  uri: "https://www.uspreventiveservicestaskforce.org/uspstf/recommendation/breast-cancer-screening"
+  doi: 10.1001/jama.2024.5534
+  type: [screening, preventive]
+  revision: 1.0
+  revision_date: 2024-04-30
+  description: >
+    The USPSTF recommends biennial screening mammography for women aged 40 to 74 years
+    (Grade B). The 2024 update lowered the starting age from 50 to 40. This recommendation
+    applies to cisgender women and all other persons assigned female at birth who are at
+    average risk. Persons with high-risk factors (BRCA mutations, prior chest radiation,
+    prior breast cancer) need individualized management.
+
+
+variables:
+
+#--------------------------------------------------------
+# Demographics
+  - id: Age
+    title: "Age"
+    type: integer
+    required: True
+    code:
+      concord: ['Age']
+
+  - id: Gender
+    title: "Gender"
+    required: False
+    code:
+      concord: ['Gender']
+
+  - id: sex_assigned_at_birth
+    title: "Sex Assigned at Birth"
+    required: True
+    user_attestable: True
+    llm_prompt: |
+      What was the patient's sex assigned at birth?
+      Look for: sex at birth, biological sex, natal sex, assigned female, assigned male.
+      Return: "female" or "male".
+    narrative:
+      patient:
+        HasValue: "Your sex assigned at birth is $value."
+
+#--------------------------------------------------------
+# Exclusions (high-risk groups needing specialist management)
+  - id: prior_breast_cancer
+    title: "Prior Breast Cancer Diagnosis"
+    type: boolean
+    required: False
+    user_attestable: True
+    code:
+      snomed: ["254837009", "254838004"]
+    llm_prompt: |
+      Does the patient have a prior breast cancer diagnosis?
+      Look for: breast cancer, breast carcinoma, DCIS, invasive breast cancer,
+      history of breast cancer, breast malignancy.
+      Return: true if prior breast cancer, false if denied, null if not mentioned.
+    narrative:
+      patient:
+        True: "You have a prior breast cancer diagnosis."
+        False: "No prior breast cancer diagnosis found."
+      provider:
+        True: "History of breast cancer - individualized surveillance needed"
+
+  - id: brca_mutation
+    title: "Known BRCA or High-Risk Genetic Mutation"
+    type: boolean
+    required: False
+    user_attestable: True
+    code:
+      snomed: ["412734009"]
+    llm_prompt: |
+      Does the patient have a known BRCA1, BRCA2, or other high-risk genetic mutation
+      associated with breast cancer?
+      Look for: BRCA positive, BRCA1, BRCA2, high-risk genetic mutation, Li-Fraumeni,
+      PALB2, ATM mutation.
+      Return: true if high-risk mutation present, false if tested negative, null if not mentioned.
+    narrative:
+      patient:
+        True: "You have a known genetic mutation associated with high breast cancer risk."
+        False: "No high-risk genetic mutations identified."
+      provider:
+        True: "BRCA/high-risk mutation positive - enhanced screening protocol needed"
+
+  - id: prior_chest_radiation
+    title: "Prior Chest Radiation (Age 10-30)"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Did the patient receive chest radiation therapy between ages 10 and 30?
+      Look for: chest radiation, mantle radiation, mediastinal radiation, radiation for
+      Hodgkin lymphoma, thoracic radiation in childhood/adolescence.
+      Return: true if chest radiation in that age range, false if denied, null if not mentioned.
+    narrative:
+      patient:
+        True: "You received chest radiation therapy at a young age, which increases breast cancer risk."
+      provider:
+        True: "History of chest radiation age 10-30 - enhanced screening protocol needed"
+
+#--------------------------------------------------------
+# Risk Factors
+  - id: family_history_breast_cancer
+    title: "Family History of Breast Cancer"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Does the patient have a first-degree relative with breast cancer?
+      Look for: mother with breast cancer, sister with breast cancer, daughter with
+      breast cancer, family history of breast cancer.
+      Return: true if family history, false if denied, null if not mentioned.
+    narrative:
+      patient:
+        True: "You have a family history of breast cancer."
+        False: "No family history of breast cancer reported."
+      provider:
+        True: "First-degree relative with breast cancer"
+
+  - id: breast_density_dense
+    title: "Dense Breast Tissue"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Does the patient have dense breast tissue on mammography?
+      Look for: dense breasts, heterogeneously dense, extremely dense, breast density
+      category C or D, BI-RADS density c or d.
+      Return: true if dense breasts, false if not dense, null if not mentioned.
+    narrative:
+      patient:
+        True: "You have dense breast tissue, which can make mammograms harder to read and may slightly increase breast cancer risk."
+        False: "Your breast tissue is not classified as dense."
+      provider:
+        True: "Dense breast tissue (BI-RADS C or D)"
+
+#--------------------------------------------------------
+# Screening Status
+  - id: mammogram_within_2_years
+    title: "Mammogram Within Past 2 Years"
+    type: boolean
+    required: False
+    user_attestable: True
+    code:
+      cpt: ["77067", "77066", "77065"]
+    llm_prompt: |
+      Has the patient had a mammogram within the past 2 years?
+      Look for: mammogram, mammography, breast screening, screening mammogram.
+      Return: true if mammogram within 2 years, false if not, null if not mentioned.
+    narrative:
+      patient:
+        True: "You had a mammogram within the past 2 years."
+        False: "You have not had a mammogram in the past 2 years."
+      provider:
+        True: "Mammogram within past 2 years"
+        False: "No mammogram within past 2 years"
+
+#--------------------------------------------------------
+# Additional Risk Context
+  - id: age_at_menarche_under_12
+    title: "Early Menarche (Before Age 12)"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Did the patient begin menstruation before age 12?
+      Look for: early menarche, menarche before 12, first period before age 12.
+      Return: true if menarche before 12, false if 12 or later, null if not mentioned.
+
+  - id: nulliparous
+    title: "Nulliparous (Never Given Birth)"
+    type: boolean
+    required: False
+    user_attestable: True
+    code:
+      snomed: ["58532003"]
+    llm_prompt: |
+      Has the patient never given birth?
+      Look for: nulliparous, no pregnancies, never pregnant, no children.
+      Return: true if never given birth, false if has given birth, null if not mentioned.
+
+  - id: first_birth_after_30
+    title: "First Birth After Age 30"
+    type: boolean
+    required: False
+    user_attestable: True
+    llm_prompt: |
+      Was the patient's first live birth after age 30?
+      Look for: first pregnancy after 30, first child after 30, late first pregnancy.
+      Return: true if first birth after 30, false if before 30, null if not mentioned.
+
+  - id: hormone_replacement_therapy
+    title: "Current or Recent Hormone Replacement Therapy"
+    type: boolean
+    required: False
+    user_attestable: True
+    code:
+      snomed: ["266717002"]
+    llm_prompt: |
+      Is the patient currently using or has recently used hormone replacement therapy (HRT)?
+      Look for: HRT, hormone replacement, estrogen therapy, estrogen plus progestin,
+      menopausal hormone therapy.
+      Return: true if current or recent HRT, false if not, null if not mentioned.
+
+
+#--------------------------------------------------------
+# Eligibility
+eligibility:
+  - id: female_sex_at_birth
+    title: "Female Sex Assigned at Birth"
+    expression: $sex_assigned_at_birth == "female"
+    narrative:
+      patient:
+        True: "This screening recommendation applies to persons assigned female at birth."
+        False: "This screening recommendation is for persons assigned female at birth."
+      provider:
+        True: "Assigned female at birth - eligible for breast cancer screening"
+        False: "Not assigned female at birth - recommendation does not apply"
+
+  - id: age_eligible
+    title: "Age 40 to 74 Years"
+    expression: $Age >= 40 and $Age <= 74
+    narrative:
+      patient:
+        True: "You are in the recommended screening age range (40-74 years)."
+        False: "Breast cancer screening mammography is recommended for ages 40 to 74."
+      provider:
+        True: "Patient meets age criteria (40-74 years)"
+        False: "Patient outside recommended screening age range"
+
+  - id: no_prior_breast_cancer
+    title: "No Prior Breast Cancer"
+    expression: $prior_breast_cancer is not True
+    narrative:
+      patient:
+        True: "You do not have a prior breast cancer diagnosis."
+        False: "Since you have a prior breast cancer diagnosis, individualized surveillance is recommended."
+      provider:
+        True: "No prior breast cancer"
+        False: "Prior breast cancer - individualized surveillance indicated"
+
+  - id: not_high_risk_genetic
+    title: "Not Known High-Risk Genetic Mutation"
+    expression: $brca_mutation is not True
+    narrative:
+      patient:
+        True: "You do not have a known high-risk genetic mutation."
+        False: "Since you have a high-risk genetic mutation, enhanced screening beyond standard mammography is recommended."
+      provider:
+        True: "No known BRCA/high-risk mutation"
+        False: "BRCA/high-risk mutation - enhanced screening protocol needed"
+
+  - id: no_prior_chest_radiation
+    title: "No Prior Chest Radiation"
+    expression: $prior_chest_radiation is not True
+    narrative:
+      patient:
+        True: "You did not receive chest radiation at a young age."
+        False: "Since you received chest radiation, you may need enhanced screening beyond standard mammography."
+      provider:
+        True: "No history of chest radiation age 10-30"
+        False: "Prior chest radiation - enhanced screening protocol needed"
+
+
+#--------------------------------------------------------
+# Assessments
+assessments:
+  - id: age_40_to_49
+    title: "Age 40-49"
+    description: "Patient in the newly included age group (2024 update)"
+    expression: $Age >= 40 and $Age < 50
+    required: False
+    narrative:
+      patient:
+        True: "You are in the 40-49 age group. The 2024 USPSTF update now recommends biennial mammography starting at age 40."
+      provider:
+        True: "Age 40-49 - newly included in 2024 USPSTF update (previously started at 50)"
+
+  - id: age_50_to_74
+    title: "Age 50-74"
+    description: "Patient in the established screening age group"
+    expression: $Age >= 50 and $Age <= 74
+    required: False
+    narrative:
+      patient:
+        True: "You are in the established screening age group (50-74)."
+      provider:
+        True: "Age 50-74 - established screening age group"
+
+  - id: screening_up_to_date
+    title: "Screening Up to Date"
+    description: "Mammogram completed within the past 2 years"
+    expression: $mammogram_within_2_years is True
+    required: False
+    narrative:
+      patient:
+        True: "Your breast cancer screening is up to date."
+        False: "You are due for a screening mammogram."
+      provider:
+        True: "Mammography screening current"
+        False: "Mammography screening not current"
+
+  - id: has_elevated_risk_factors
+    title: "Has Elevated Risk Factors"
+    description: "Patient has risk factors that elevate breast cancer risk"
+    expression: $family_history_breast_cancer is True or $breast_density_dense is True or $age_at_menarche_under_12 is True or $nulliparous is True or $first_birth_after_30 is True or $hormone_replacement_therapy is True
+    required: False
+    narrative:
+      patient:
+        True: "You have factors that may increase your breast cancer risk. Discuss these with your provider."
+        False: "No additional breast cancer risk factors identified."
+      provider:
+        True: "Elevated risk factors present"
+
+  - id: may_benefit_from_risk_assessment
+    title: "May Benefit from Formal Risk Assessment"
+    description: "Patient has factors suggesting formal risk assessment may be useful"
+    expression: $family_history_breast_cancer is True or $breast_density_dense is True
+    required: False
+    narrative:
+      patient:
+        True: "You may benefit from a formal breast cancer risk assessment to determine if additional screening is appropriate."
+      provider:
+        True: "Consider formal risk assessment (e.g., Tyrer-Cuzick model) given family history and/or breast density"
+
+
+#--------------------------------------------------------
+# Recommendations
+recommendations:
+  - id: recommend_biennial_mammography
+    title: "Biennial Screening Mammography Recommended"
+    category: evaluation
+    description: "USPSTF recommends biennial mammography for average-risk women 40-74"
+    expression: $screening_up_to_date is not True
+    uspstf_grade: B
+    level_of_evidence: B-R
+    class_of_recommendation: I
+    narrative:
+      patient:
+        True: |
+          ## Breast Cancer Screening Recommended
+
+          The USPSTF recommends a **screening mammogram every 2 years** for women
+          aged 40 to 74 years at average risk.
+
+          **What to expect:**
+          - A mammogram is an X-ray of the breast
+          - The appointment takes about 20 minutes
+          - You may experience brief discomfort during compression
+
+          **Schedule your mammogram** with your healthcare provider or a local imaging center.
+        False: "Based on your profile, routine screening mammography is not recommended at this time."
+      provider:
+        True: |
+          **USPSTF Grade B Recommendation**
+
+          Biennial screening mammography recommended.
+
+          Patient profile: Age $Age, average risk.
+
+          Order screening mammogram. Next screen in 2 years if normal.
+    citations:
+      - 'The USPSTF recommends biennial screening mammography for women aged 40 to 74 years.'
+      - 'The USPSTF concludes with moderate certainty that screening mammography in women aged 40 to 74 years has a moderate net benefit.'
+
+  - id: screening_current_continue
+    title: "Continue Biennial Screening"
+    category: display_patient
+    description: "Screening up to date, continue biennial schedule"
+    expression: $screening_up_to_date is True
+    narrative:
+      patient:
+        True: |
+          ## Screening Up to Date
+
+          Your breast cancer screening is current. Continue screening mammography
+          every 2 years as recommended.
+
+          **Next mammogram:** Approximately 2 years from your last screening.
+      provider:
+        True: "Mammography current. Continue biennial screening per USPSTF."
+
+  - id: risk_assessment_referral
+    title: "Risk Assessment Discussion"
+    category: display_patient
+    description: "Consider risk assessment for patients with elevated risk factors"
+    expression: $may_benefit_from_risk_assessment is True
+    narrative:
+      patient:
+        True: |
+          ## Breast Cancer Risk Assessment
+
+          Based on your risk factors (family history and/or dense breasts), you may
+          benefit from a **breast cancer risk assessment**.
+
+          This assessment can help determine:
+          - Your estimated lifetime risk of breast cancer
+          - Whether additional screening (such as breast MRI) would be beneficial
+          - Whether genetic counseling is appropriate
+
+          **Talk to your provider** about whether a formal risk assessment is right for you.
+      provider:
+        True: |
+          Consider formal breast cancer risk assessment (e.g., Tyrer-Cuzick/IBIS model).
+
+          If lifetime risk >=20%, consider supplemental screening with breast MRI.
+          If significant family history, consider genetic counseling referral.
+    citations:
+      - 'The USPSTF recommends that primary care clinicians assess women with a personal or family history of breast, ovarian, tubal, or peritoneal cancer for potential BRCA1/2 mutations.'
+
+  - id: genetic_counseling_referral
+    title: "Genetic Counseling Consideration"
+    category: display_provider
+    description: "Consider genetic counseling if strong family history"
+    expression: $family_history_breast_cancer is True
+    narrative:
+      patient:
+        True: |
+          ## Genetic Counseling
+
+          Because you have a family history of breast cancer, you may benefit from
+          **genetic counseling** to assess whether genetic testing is appropriate.
+
+          Genetic testing can identify mutations (such as BRCA1/BRCA2) that significantly
+          increase breast cancer risk and may change your screening and prevention options.
+      provider:
+        True: "Family history of breast cancer present. Consider BRCA/genetic risk assessment per USPSTF recommendation on BRCA-related cancer risk assessment."
+    citations:
+      - 'The USPSTF recommends that primary care clinicians assess women with a personal or family history of breast, ovarian, tubal, or peritoneal cancer or who have an ancestry associated with BRCA1/2 gene mutations with an appropriate brief familial risk assessment tool.'
