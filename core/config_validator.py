@@ -53,7 +53,7 @@ class ValidationSeverity(Enum):
     INFO = "info"           # Informational, no action required
 
 
-@dataclass
+@dataclass(slots=True)
 class ValidationIssue:
     """A single validation issue found in the configuration.
 
@@ -79,7 +79,7 @@ class ValidationIssue:
         return result
 
 
-@dataclass
+@dataclass(slots=True)
 class InheritanceNode:
     """A node in the configuration inheritance chain."""
     config_id: str
@@ -89,7 +89,7 @@ class InheritanceNode:
     local_rules_count: int
 
 
-@dataclass
+@dataclass(slots=True)
 class ImpactAnalysis:
     """Analysis of how a configuration change affects CPG evaluation.
 
@@ -117,7 +117,7 @@ class ImpactAnalysis:
         )
 
 
-@dataclass
+@dataclass(slots=True)
 class ValidationResult:
     """Result of configuration validation.
 

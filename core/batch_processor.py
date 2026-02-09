@@ -36,7 +36,7 @@ class ProcessingMode(Enum):
     PROCESS_POOL = "process_pool"
 
 
-@dataclass
+@dataclass(slots=True)
 class BatchResult:
     """Result from batch processing a single patient.
 
@@ -62,7 +62,7 @@ class BatchResult:
         }
 
 
-@dataclass
+@dataclass(slots=True)
 class BatchProcessingReport:
     """Aggregate report from batch processing.
 
@@ -105,7 +105,7 @@ class BatchProcessingReport:
         }
 
 
-@dataclass
+@dataclass(slots=True)
 class MultiCPGResult:
     """Result from evaluating a patient against multiple CPGs.
 
@@ -534,7 +534,7 @@ class MultiCPGEvaluator:
 # PatientScreener — Efficient single-patient multi-CPG screening
 # ============================================================================
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class CoverageGap:
     """A missing variable that would unlock or improve CPG evaluations."""
     variable_id: str
@@ -545,7 +545,7 @@ class CoverageGap:
     impact_score: float        # 0–1, higher = more impactful
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class CoverageAnalysis:
     """Which missing variables would unlock the most CPGs."""
     gaps: tuple[CoverageGap, ...]  # Sorted by impact_score desc
@@ -554,7 +554,7 @@ class CoverageAnalysis:
     missing_variables: int
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class CPGScreeningResult:
     """Result for a single CPG in the screening."""
     cpg_id: str
@@ -565,7 +565,7 @@ class CPGScreeningResult:
     error: str | None
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class ScreeningResult:
     """Complete screening result for a patient across all CPGs."""
     patient_id: str

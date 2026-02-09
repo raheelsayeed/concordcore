@@ -29,7 +29,7 @@ import yaml
 log = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclass(slots=True)
 class ThresholdOverride:
     """Override for a specific threshold in an assessment or recommendation.
 
@@ -47,7 +47,7 @@ class ThresholdOverride:
     reason: str = None
 
 
-@dataclass
+@dataclass(slots=True)
 class ExpressionOverride:
     """Override an assessment or recommendation expression.
 
@@ -63,7 +63,7 @@ class ExpressionOverride:
     reason: str = None
 
 
-@dataclass
+@dataclass(slots=True)
 class RecommendationFilter:
     """Filter to include or exclude recommendations.
 
@@ -79,7 +79,7 @@ class RecommendationFilter:
     reason: str = None
 
 
-@dataclass
+@dataclass(slots=True)
 class LocalRule:
     """Additional local rule to add to evaluation.
 
@@ -99,7 +99,7 @@ class LocalRule:
     priority: int = 100
 
 
-@dataclass
+@dataclass(slots=True)
 class InstitutionConfig:
     """Configuration for an institution's CPG customizations.
 

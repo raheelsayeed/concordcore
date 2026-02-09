@@ -19,7 +19,7 @@ import logging
 log = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclass(slots=True)
 class CalculationStep:
     """A single step in a calculation.
 
@@ -39,7 +39,7 @@ class CalculationStep:
     reference: str = None
 
 
-@dataclass
+@dataclass(slots=True)
 class TransparentCalculation:
     """A fully transparent calculation with all steps shown.
 
@@ -106,7 +106,7 @@ class TransparentCalculation:
         return "\n".join(lines)
 
 
-@dataclass
+@dataclass(slots=True)
 class CounterFactualResult:
     """Result of a counter-factual (what-if) analysis.
 
@@ -156,7 +156,7 @@ class CounterFactualResult:
         }
 
 
-@dataclass
+@dataclass(slots=True)
 class EvidenceChainLink:
     """A single link in the evidence chain.
 
@@ -178,7 +178,7 @@ class EvidenceChainLink:
     citation: str = None
 
 
-@dataclass
+@dataclass(slots=True)
 class EvidenceChain:
     """Complete evidence chain from raw data to recommendation.
 
@@ -248,7 +248,7 @@ class EvidenceChain:
         return "\n".join(lines)
 
 
-@dataclass
+@dataclass(slots=True)
 class GuidelineCurrencyProof:
     """Proof that the guideline being used is current.
 

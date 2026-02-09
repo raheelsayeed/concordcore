@@ -59,7 +59,7 @@ class VersionBump(Enum):
     NONE = "none"    # No changes
 
 
-@dataclass
+@dataclass(slots=True)
 class FieldChange:
     """A change to a specific field."""
     path: str  # e.g., "assessment[0].expression"
@@ -78,7 +78,7 @@ class FieldChange:
         return f"  {self.path}: unchanged"
 
 
-@dataclass
+@dataclass(slots=True)
 class VariableChange:
     """Change to a variable definition."""
     variable_id: str
@@ -107,7 +107,7 @@ class VariableChange:
         return False
 
 
-@dataclass
+@dataclass(slots=True)
 class CPGDiff:
     """Diff between two CPG versions."""
     old_identifier: str

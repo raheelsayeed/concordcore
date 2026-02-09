@@ -290,7 +290,7 @@ class EvaluatedRecommendation:
     
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class RecommendationResult:
 
     context: EvaluationContext

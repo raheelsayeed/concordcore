@@ -19,7 +19,7 @@ from variables.record import Record
 log = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclass(slots=True)
 class ConcordUser:
     """Session state that accumulates user inputs across multiple interactions.
 

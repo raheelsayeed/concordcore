@@ -36,7 +36,7 @@ import logging
 log = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclass(slots=True)
 class SingleEvaluationMetrics:
     """Metrics for a single CPG evaluation."""
     cpg_id: str
@@ -47,7 +47,7 @@ class SingleEvaluationMetrics:
     recommendations_count: int = 0
 
 
-@dataclass
+@dataclass(slots=True)
 class BenchmarkResult:
     """Result of benchmarking a single CPG."""
     cpg_id: str
@@ -90,7 +90,7 @@ class BenchmarkResult:
         }
 
 
-@dataclass
+@dataclass(slots=True)
 class BatchBenchmarkResult:
     """Result of batch processing benchmark."""
     patient_count: int
@@ -124,7 +124,7 @@ class BatchBenchmarkResult:
         }
 
 
-@dataclass
+@dataclass(slots=True)
 class MultiCPGBenchmarkResult:
     """Result of multi-CPG evaluation benchmark."""
     cpg_count: int
@@ -152,7 +152,7 @@ class MultiCPGBenchmarkResult:
         }
 
 
-@dataclass
+@dataclass(slots=True)
 class LLMCostComparison:
     """Cost comparison between Concord and LLM approaches."""
     scenario: str
@@ -186,7 +186,7 @@ class LLMCostComparison:
         }
 
 
-@dataclass
+@dataclass(slots=True)
 class BenchmarkReport:
     """Complete benchmark report."""
     timestamp: str

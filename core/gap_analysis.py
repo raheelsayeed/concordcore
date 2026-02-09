@@ -48,7 +48,7 @@ class GapStatus(Enum):
     DECLINED = "declined"  # Patient declined
 
 
-@dataclass
+@dataclass(slots=True)
 class CareGap:
     """A gap in preventive care.
 
@@ -123,7 +123,7 @@ class CareGap:
         }
 
 
-@dataclass
+@dataclass(slots=True)
 class GapAnalysisReport:
     """Complete gap analysis report for a patient.
 

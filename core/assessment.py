@@ -155,7 +155,7 @@ class AssessmentRecord(record.Record):
 
 
 
-@dataclass
+@dataclass(slots=True)
 class AssessedRecord:
     """Result of evaluating one assessment variable."""
     record: AssessmentRecord
@@ -187,7 +187,7 @@ class AssessedRecord:
         return self.record.var.show_if_negative
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class AssessmentResult:
     assessments: list[AssessedRecord]
 

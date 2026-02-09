@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from ai.notes_extractor import ExtractionConfig
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class HealthContext:
     """Container for patient health data used in CPG evaluation.
 

@@ -37,7 +37,7 @@ def build_code_index(user_records: list) -> dict[str, 'Record']:
     return index
 
 
-@dataclass(frozen=True)
+@dataclass(slots=True)
 class DependencyGraph:
     """Tracks variable dependencies derived from panel validators.
 

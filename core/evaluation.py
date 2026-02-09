@@ -27,6 +27,7 @@ class EvaluatedRecord:
     error: Exception | None = None
     dependency_vars: list[Record] | None = None
     __sufficiency_status: SufficiencyResultStatus | None = None
+    date: datetime = field(default_factory=datetime.now)
 
     @property
     def id(self):
@@ -36,7 +37,6 @@ class EvaluatedRecord:
         return f'EvalRecord={self.record.id} evaluation_result={self.evaluation_result} status={self.sufficiency_status} error={self.error} dependencies={self.dependency_vars}'
 
     def __post_init__(self):
-        self.date = datetime.now()
         self.__sufficiency_status = self.__get_sufficiency_status()
 
 
@@ -74,7 +74,7 @@ class EvaluatedRecord:
         else:
             return SufficiencyResultStatus.Optional
           
-@dataclass
+@dataclass(slots=True)
 class EvaluationContext:
 
     id: str = field(default_factory=lambda: str(uuid1()))
@@ -103,7 +103,7 @@ class EvaluationContext:
  
  
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class EvaluationResult:
 
     context: EvaluationContext

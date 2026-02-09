@@ -76,7 +76,7 @@ class OutcomeType(Enum):
     ADHERENCE_POOR = "adherence_poor"  # Poor medication adherence
 
 
-@dataclass
+@dataclass(slots=True)
 class RecommendationRecord:
     """Record of a recommendation made.
 
@@ -115,7 +115,7 @@ class RecommendationRecord:
         }
 
 
-@dataclass
+@dataclass(slots=True)
 class ActionRecord:
     """Record of action taken on a recommendation.
 
@@ -148,7 +148,7 @@ class ActionRecord:
         }
 
 
-@dataclass
+@dataclass(slots=True)
 class OutcomeRecord:
     """Record of an outcome.
 
@@ -184,7 +184,7 @@ class OutcomeRecord:
         }
 
 
-@dataclass
+@dataclass(slots=True)
 class QualityMeasure:
     """A quality measure metric.
 

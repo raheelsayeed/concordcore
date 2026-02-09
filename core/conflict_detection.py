@@ -47,7 +47,7 @@ class ConflictSeverity(Enum):
     CRITICAL = "critical"  # Critical conflict, must be resolved before proceeding
 
 
-@dataclass
+@dataclass(slots=True)
 class ConflictingRecommendation:
     """A recommendation involved in a conflict.
 
@@ -69,7 +69,7 @@ class ConflictingRecommendation:
     evidence_level: str = None
 
 
-@dataclass
+@dataclass(slots=True)
 class Conflict:
     """A detected conflict between CPG recommendations.
 
@@ -116,7 +116,7 @@ class Conflict:
         }
 
 
-@dataclass
+@dataclass(slots=True)
 class ConflictReport:
     """Complete report of conflicts from multi-CPG evaluation.
 

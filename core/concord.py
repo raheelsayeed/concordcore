@@ -27,7 +27,7 @@ from .healthcontext import HealthContext
 log = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class EvaluationMetadata:
     """Metadata for tracking evaluation provenance and reproducibility.
 

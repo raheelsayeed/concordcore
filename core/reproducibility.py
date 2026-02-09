@@ -29,7 +29,7 @@ class VerificationStatus(Enum):
     ERROR = "error"
 
 
-@dataclass
+@dataclass(slots=True)
 class VerificationResult:
     """Result of a reproducibility verification.
 
