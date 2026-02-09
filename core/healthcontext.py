@@ -144,7 +144,8 @@ class HealthContext:
 
         Example:
             ```python
-            cpg = CPG.load('cpgs/cholesterol.yaml')
+            from core.cpg_registry import get_registry
+            cpg = get_registry().get('2019AccPrimaryPreventionASCVD')
             notes = "55 yo male, LDL 165 mg/dL, HDL 42 mg/dL, no diabetes."
             ctx = HealthContext.from_clinical_notes(notes, cpg)
             ```
@@ -190,7 +191,8 @@ class HealthContext:
 
         Example:
             ```python
-            cpg = CPG.load('cpgs/cholesterol.yaml')
+            from core.cpg_registry import get_registry
+            cpg = get_registry().get('2019AccPrimaryPreventionASCVD')
             ctx = HealthContext.from_mixed_sources(
                 cpg=cpg,
                 fhir_bundle=fhir_data,

@@ -20,6 +20,23 @@ from .evaluation import EvaluationContext, EvaluationResult, SufficiencyResultSt
 log = logging.getLogger(__name__)
 
 
+def build_code_index(user_records: list) -> dict[str, 'Record']:
+    """Build index mapping code strings to records for O(1) lookup.
+
+    Args:
+        user_records: List of Record objects with optional var.code attributes
+
+    Returns:
+        Dict mapping code string representations to Records
+    """
+    index = {}
+    for record in user_records:
+        if record.var.code:
+            for c in record.var.code:
+                index[c.as_string] = record
+    return index
+
+
 @dataclass(frozen=True)
 class DependencyGraph:
     """Tracks variable dependencies derived from panel validators.
@@ -120,12 +137,7 @@ class SufficiencyEvaluator(SufficiencyEvaluatorProtocol):
 
     def _build_code_index(self, user_records: list[Record]) -> dict[str, Record]:
         """Build index mapping code strings to records for O(1) lookup."""
-        index = {}
-        for record in user_records:
-            if record.var.code:
-                for c in record.var.code:
-                    index[c.as_string] = record
-        return index
+        return build_code_index(user_records)
 
     def _find_record_by_code(self, var: Var, code_index: dict[str, Record]) -> Record | None:
         """Find a user record matching CPG variable by code using pre-built index.
@@ -151,7 +163,9 @@ class SufficiencyEvaluator(SufficiencyEvaluatorProtocol):
     def evaluate(self,
                 user_context: HealthContext,
                 context: EvaluationContext = None,
-                strict = True) -> SufficiencyResult:
+                strict = True,
+                record_index: RecordIndex = None,
+                code_index: dict = None) -> SufficiencyResult:
         """Evalutes a given list of variables for sufficiency to execute a CPG and categorizes
         each variable.
         Note: Always call cpg.is_valid() else where before evaluating for sufficiency!
@@ -160,6 +174,8 @@ class SufficiencyEvaluator(SufficiencyEvaluatorProtocol):
             user_context: HealthContext
             context (EvaluationContext, optional): Records evaluation context. Defaults to None.
             strict: If True- plausibility and panel evaluation raises evaluation error
+            record_index: Optional pre-built RecordIndex. If None, built from user_context.
+            code_index: Optional pre-built code index dict. If None, built from user_context.
 
         Returns:
             SufficiencyResult: Sufficiency
@@ -167,9 +183,9 @@ class SufficiencyEvaluator(SufficiencyEvaluatorProtocol):
 
         eval_ctx = context or EvaluationContext()
 
-        # Build indexes once for O(1) lookups
-        user_record_index = RecordIndex(user_context.records)
-        code_index = self._build_code_index(user_context.records)
+        # Build indexes once for O(1) lookups (or reuse pre-built ones)
+        user_record_index = record_index or RecordIndex(user_context.records)
+        code_index = code_index or self._build_code_index(user_context.records)
 
         records: list[Record] = []
         # --- Sufficiency only checks of `cpg.Variables`

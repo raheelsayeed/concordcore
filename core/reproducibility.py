@@ -91,10 +91,10 @@ def compute_output_hash(result: PipelineResult) -> str:
     # Add assessment results
     if result.assessment:
         assessment_data = []
-        for record in result.assessment.context.evaluation_list:
+        for assessed in result.assessment.assessments:
             assessment_data.append({
-                "id": record.id,
-                "evaluation_result": record.evaluation_result.name if record.evaluation_result else None,
+                "id": assessed.id,
+                "evaluation_result": assessed.evaluation_result.name if assessed.evaluation_result else None,
             })
         assessment_data.sort(key=lambda x: x["id"])
         output_data["assessments"] = assessment_data

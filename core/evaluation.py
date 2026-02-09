@@ -24,9 +24,9 @@ class EvaluationResultStatus(Enum):
 class EvaluatedRecord:
     record: Record
     evaluation_result: EvaluationResultStatus
-    error: Exception = None
-    dependency_vars: list[Record] = None 
-    __sufficiency_status: SufficiencyResultStatus = None
+    error: Exception | None = None
+    dependency_vars: list[Record] | None = None
+    __sufficiency_status: SufficiencyResultStatus | None = None
 
     @property
     def id(self):
@@ -50,22 +50,6 @@ class EvaluatedRecord:
         has_val     = self.record.has_value
         is_req      = self.record.var.required
         attestable  = self.record.var.user_attestable
-            # user_attestable_vars = list(filter(lambda v: v.user_attestable == True,  self.cpg_variables))
-            # inspect(user_attestable_vars)
-
-            # basically Age is required but is not user_attestable.
-            # patient_context Needs to have AGE from her EHR data!
-            #   - if found    --> sufficient
-            #   - if notFound --> insufficient
-            # so,
-            #   1. cpg.required == True,     person.v.has_value == True              -> Sufficient
-            #   2. cpg.required == False,    person.v.has_value == True              -> Sufficient
-            #   3. cpg.required == True,     person.v.has_value == False:
-            #                                       - cpg.user_attestable == True   -> SufficientWithAttestation | UserAugmentable
-            #                                       - cpg.user_attestable == False  -> Insufficient <Breaks CPG Trigger>
-
-            #   Desirables: Good to know but not necessary, less important
-            #   4. cpg.required == False,    person.v.has_value == False             -> Optional
         if is_req and has_val:
             if not self.error:
                 return SufficiencyResultStatus.Sufficient
@@ -75,10 +59,10 @@ class EvaluatedRecord:
                 else:
                     return SufficiencyResultStatus.Insufficient
                     
-        elif is_req == False and has_val:
+        elif not is_req and has_val:
             return SufficiencyResultStatus.Sufficient
-        
-        elif is_req and has_val == False:
+
+        elif is_req and not has_val:
             if attestable:
                 status = SufficiencyResultStatus.SufficientWithUserAttestation 
                 return status
@@ -93,7 +77,7 @@ class EvaluatedRecord:
 @dataclass
 class EvaluationContext:
 
-    id = uuid1()
+    id: str = field(default_factory=lambda: str(uuid1()))
     evaluation_list: list[EvaluatedRecord] = field(default_factory=list[EvaluatedRecord])
 
     @property 
@@ -145,15 +129,6 @@ class EvaluationResult:
         return list(filter(lambda ev: ev.sufficiency_status.value == SufficiencyResultStatus.Sufficient.value, self.context.evaluation_list))
 
     @property
-    def attestation_variables(self):    
-        # print('only variables counted in attestable')
-        # exit()
-        return list(filter(lambda ev: ev.record.var.user_attestable == True and ev.record.has_value == False, self.context.evaluation_list))
-               
-
-        
-
-
-
-
+    def attestation_variables(self):
+        return list(filter(lambda ev: ev.record.var.user_attestable and not ev.record.has_value, self.context.evaluation_list))
 

@@ -20,7 +20,7 @@ from .recommendation import EvaluatedRecommendation, RecommendationResult
 from .sufficiency import SufficiencyResult, SufficiencyEvaluator, SufficiencyEvaluatorProtocol
 from .evaluation import EvaluatedRecord, EvaluationContext
 from .record_index import RecordIndex
-from .errors import NeedAttestationError
+from .errors import NeedAttestationError, CPGDefinitionError, PipelineError
 from variables.value import Value
 from .healthcontext import HealthContext
 
@@ -109,10 +109,10 @@ class Concord:
 
     Example:
         ```python
-        from core.cpg import CPG
+        from core.cpg_registry import get_registry
         from core.concord import Concord
 
-        cpg = CPG.from_document_path('cpgs/cholesterol.yaml')
+        cpg = get_registry().get('2019AccPrimaryPreventionASCVD')
         concord = Concord(cpg=cpg, healthcontext=patient_data)
 
         # Run evaluation pipeline
@@ -144,17 +144,17 @@ class Concord:
     ignore_eligibility: bool = False
     """If True, allows assessment even if eligibility was not checked."""
 
-    until_year: int = None
+    until_year: int | None = None
     """Optional: Only consider health data up to this year."""
 
-    __eligibility_result: EligibilityResult = field(default=None)
-    __assessment_result: AssessmentResult = field(default=None)
-    __recommendations_result: RecommendationResult = field(default=None)
-    __sufficiency_result: SufficiencyResult = field(init=False)
+    __eligibility_result: EligibilityResult | None = field(default=None)
+    __assessment_result: AssessmentResult | None = field(default=None)
+    __recommendation_result: RecommendationResult | None = field(default=None)
+    __sufficiency_result: SufficiencyResult | None = field(default=None, init=False)
 
     @cached_property
     def until_date(self) -> date|None:
-        return datetime(self.until_year, 12, 31).date if self.until_year else None
+        return datetime(self.until_year, 12, 31).date() if self.until_year else None
     
     @property
     def records(self):
@@ -174,7 +174,7 @@ class Concord:
     @property
     def recommendation_result(self) -> RecommendationResult | None:
         """Result from recommendation evaluation."""
-        return self.__recommendations_result
+        return self.__recommendation_result
 
     @property
     def sufficiency_evaluated_records(self):
@@ -207,14 +207,14 @@ class Concord:
         json_str = json.dumps(data_repr, sort_keys=True)
         return hashlib.sha256(json_str.encode()).hexdigest()
 
-    def _create_metadata(self) -> EvaluationMetadata:
+    def _create_metadata(self, input_data_hash: str = None) -> EvaluationMetadata:
         """Create evaluation metadata for tracking and reproducibility."""
         return EvaluationMetadata(
             cpg_id=self.cpg.identifier,
             cpg_version=self.cpg.version or "1.0.0",
             cpg_last_updated=self.cpg.last_updated,
             evaluation_timestamp=datetime.utcnow().isoformat() + "Z",
-            input_data_hash=self._compute_input_hash(),
+            input_data_hash=input_data_hash or self._compute_input_hash(),
         )
 
     def eligibility(self,
@@ -238,7 +238,7 @@ class Concord:
             Exception: If the CPG has no eligibility criteria defined.
         """
         if not self.cpg.eligibility_variables:
-            raise Exception('Concord: no criterias defined to evaluate for this CPG')
+            raise CPGDefinitionError('No eligibility criteria defined for this CPG')
         
         eligibility_eval = evaluator or EligibilityEvaluator(self.cpg.eligibility_variables)
         # evalute eligibility
@@ -270,7 +270,7 @@ class Concord:
             Exception: If the CPG has no variables defined.
         """
         if not self.cpg.variables:
-            raise Exception('Concord: no variables defined to evaluate for this CPG')
+            raise CPGDefinitionError('No variables defined for this CPG')
     
         # initialize an evaluator 
         sufficiency_eval = sufficiency_evaluator or SufficiencyEvaluator('se', cpg_variables=self.cpg.variables)
@@ -285,8 +285,6 @@ class Concord:
         log.info(f'Validation policy={self.strict_validation}')
 
         return self.__sufficiency_result
-
-
 
     def assess(self,
                 assessment_evaluator: AssessmentEvaluatorProtocol = None,
@@ -321,13 +319,13 @@ class Concord:
 
         if not self.ignore_eligibility:
             if self.__eligibility_result is None:
-                errs.append(Exception('Eligibility evaluation must be completed before risk assessment'))
+                errs.append(PipelineError('Eligibility evaluation must be completed before risk assessment'))
 
             if self.__eligibility_result.is_eligible is False:
-                errs.append(Exception('Eligibility criteria not met, cannot execute CPG'))
-        
+                errs.append(PipelineError('Eligibility criteria not met, cannot execute CPG'))
+
         if self.__sufficiency_result.result is None:
-            errs.append(Exception(f'Sufficiency not evaluated for CPG={self.cpg.identifier}'))
+            errs.append(PipelineError(f'Sufficiency not evaluated for CPG={self.cpg.identifier}'))
 
         if self.__sufficiency_result.is_executable is False:
             suff_errors = [ev.error for ev in self.__sufficiency_result.insufficient_variables]
@@ -360,14 +358,12 @@ class Concord:
         
 
         evaluator = assessment_evaluator or AssessmentEvaluator()
-        ctx = EvaluationContext()
 
         self.__assessment_result = evaluator.assess(
             assessment_variables= self.cpg.assessment_variables,
             evaluated_records= self.sufficiency_evaluated_records,
             persona= self.healthcontext.persona,
             functions_module= self.cpg.functions_module,
-            context= ctx
         )
 
 
@@ -400,10 +396,10 @@ class Concord:
         context = context or EvaluationContext()
         evaluated_recommendations = []
         if self.assessment_result is None:
-            raise Exception('Assessment must be completed before calling recommendations()')
+            raise PipelineError('Assessment must be completed before calling recommendations()')
 
         # Build indexes once for O(1) lookup during all recommendation evaluations
-        assessment_list = self.assessment_result.context.evaluation_list
+        assessment_list = self.assessment_result.assessments
         sufficiency_list = self.sufficiency_evaluated_records
 
         assessment_index = {ea.id: ea for ea in assessment_list}
@@ -426,23 +422,26 @@ class Concord:
                 log.debug(eval_rec)
                 evaluated_recommendations.append(eval_rec)
 
-        self.__recommendations_result = RecommendationResult(
+        self.__recommendation_result = RecommendationResult(
             context=context,
             recommendations=sorted(evaluated_recommendations, key=lambda er: er.applies if er.applies else False, reverse=True)
         )
-        return self.__recommendations_result
+        return self.__recommendation_result
 
     
     @property
     def applied_recommendations(self) -> list | None:
         """Recommendations that apply to this patient."""
-        if not self.__recommendations_result:
+        if not self.__recommendation_result:
             return None
         return self.recommendation_result.applied
 
     def evaluate(self,
                  skip_eligibility: bool = False,
-                 ignore_attestations: bool = False) -> PipelineResult:
+                 ignore_attestations: bool = False,
+                 record_index: RecordIndex = None,
+                 code_index: dict = None,
+                 _input_data_hash: str = None) -> PipelineResult:
         """Run complete CPG evaluation pipeline.
 
         Convenience method that executes all phases in sequence and returns
@@ -453,6 +452,9 @@ class Concord:
         Args:
             skip_eligibility: If True, skips eligibility check
             ignore_attestations: If True, proceeds without user attestations
+            record_index: Optional pre-built RecordIndex for shared index reuse
+            code_index: Optional pre-built code index dict for shared index reuse
+            _input_data_hash: Optional pre-computed input hash (avoids recomputation)
 
         Returns:
             PipelineResult with results from all phases
@@ -472,12 +474,16 @@ class Concord:
         recommendations_result = None
 
         # Create metadata for tracking
-        metadata = self._create_metadata()
+        metadata = self._create_metadata(input_data_hash=_input_data_hash)
 
         # Phase 1: Eligibility
         if not skip_eligibility and self.cpg.eligibility_variables:
             try:
-                eligibility_result = self.eligibility()
+                elig_evaluator = EligibilityEvaluator(self.cpg.eligibility_variables)
+                eligibility_result = elig_evaluator.evaluate(
+                    self.healthcontext, record_index=record_index
+                )
+                self.__eligibility_result = eligibility_result
                 if not eligibility_result.is_eligible:
                     return PipelineResult(
                         eligibility=eligibility_result,
@@ -495,7 +501,14 @@ class Concord:
         # Phase 2: Sufficiency
         if self.cpg.variables:
             try:
-                sufficiency_result = self.sufficiency()
+                suff_evaluator = SufficiencyEvaluator('se', cpg_variables=self.cpg.variables)
+                sufficiency_result = suff_evaluator.evaluate(
+                    self.healthcontext,
+                    strict=self.strict_validation,
+                    record_index=record_index,
+                    code_index=code_index
+                )
+                self.__sufficiency_result = sufficiency_result
             except Exception as e:
                 errors.append(e)
                 log.error(f"Sufficiency check failed: {e}")
@@ -582,10 +595,4 @@ class Concord:
         if not self.recommendation_result:
             return None
         return self.evaluated_record(identifier=identifier, records=self.recommendation_result.recommendations)
-
-        
-
-
-
-
 
