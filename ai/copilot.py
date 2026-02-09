@@ -145,11 +145,11 @@ class HealthCopilot:
     Example:
         ```python
         from ai import HealthCopilot
-        from core.cpg import CPG
+        from core.cpg_registry import get_registry
         from core.healthcontext import HealthContext
 
         # Initialize
-        cpg = CPG.from_document_path('cpgs/cholesterol.yaml')
+        cpg = get_registry().get('2019AccPrimaryPreventionASCVD')
         copilot = HealthCopilot(cpg)
 
         # Evaluate patient
@@ -269,15 +269,15 @@ class HealthCopilot:
 
             # Extract assessments with narratives
             if result.assessment:
-                for ev in result.assessment.context.evaluation_list:
-                    title = ev.id
-                    if hasattr(ev.record, 'var') and ev.record.var.title:
-                        title = ev.record.var.title
+                for assessed in result.assessment.assessments:
+                    title = assessed.id
+                    if assessed.var.title:
+                        title = assessed.var.title
                     assessment_dict = {
-                        'id': ev.id,
+                        'id': assessed.id,
                         'title': title,
-                        'result': ev.record.assessment_value if hasattr(ev.record, 'assessment_value') else None,
-                        'narrative': ev.record.narrative if hasattr(ev.record, 'narrative') else None
+                        'result': assessed.value.value if assessed.value else None,
+                        'narrative': assessed.narrative
                     }
                     context.assessments.append(assessment_dict)
 

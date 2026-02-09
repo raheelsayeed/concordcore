@@ -18,6 +18,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from core.cpg import CPG
+from core.cpg_registry import get_registry
 from core.concord import Concord, NeedAttestationError
 from core.healthcontext import HealthContext
 from core.security import SecurityError
@@ -80,8 +81,7 @@ def main():
 def demonstrate_attestation_handling():
     """Show how to handle NeedAttestationError."""
 
-    cpg_path = Path(__file__).parent.parent / 'cpgs' / 'cholesterol.yaml'
-    cpg = CPG.from_document_path(str(cpg_path))
+    cpg = get_registry().get('2019AccPrimaryPreventionASCVD')
 
     # Create health context with some data missing
     age = Age(55)
@@ -131,8 +131,7 @@ def demonstrate_attestation_handling():
 def demonstrate_insufficiency_handling():
     """Show how to handle insufficient data."""
 
-    cpg_path = Path(__file__).parent.parent / 'cpgs' / 'cholesterol.yaml'
-    cpg = CPG.from_document_path(str(cpg_path))
+    cpg = get_registry().get('2019AccPrimaryPreventionASCVD')
 
     # Create health context with only age
     age = Age(55)
@@ -169,8 +168,7 @@ def demonstrate_insufficiency_handling():
 def demonstrate_ineligibility_handling():
     """Show how to handle ineligible patients."""
 
-    cpg_path = Path(__file__).parent.parent / 'cpgs' / 'cholesterol.yaml'
-    cpg = CPG.from_document_path(str(cpg_path))
+    cpg = get_registry().get('2019AccPrimaryPreventionASCVD')
 
     # Create health context with age outside eligibility range
     age = Age(35)  # Too young for cholesterol CPG (typically 40-75)

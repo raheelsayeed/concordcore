@@ -17,7 +17,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from core.cpg import CPG
+from core.cpg_registry import get_registry
 from core.concord import Concord
 from core.healthcontext import HealthContext
 from fhir_parsers.fhirvalue import FHIRValue
@@ -95,8 +95,7 @@ def main():
     print("Creating HealthContext from FHIR values")
     print("=" * 60)
 
-    cpg_path = Path(__file__).parent.parent / 'cpgs' / 'cholesterol.yaml'
-    cpg = CPG.from_document_path(str(cpg_path))
+    cpg = get_registry().get('2019AccPrimaryPreventionASCVD')
 
     print(f"\nCPG: {cpg.title}")
     print(f"Required variables: {len(cpg.variables)}")

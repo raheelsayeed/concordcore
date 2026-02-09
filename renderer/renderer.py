@@ -5,7 +5,7 @@ from enum import Enum, auto
 from typing import Protocol
 from variables.record import Record
 
-from core.assessment import EvaluatedAssessmentRecord
+from core.assessment import AssessedRecord
 from core.recommendation import EvaluatedRecommendation
 from core.evaluation import EvaluatedRecord
 from core.concord import Concord
@@ -35,8 +35,8 @@ class RenderingProtocol(Protocol):
     def render_record(self, records: Record):
         ... 
 
-    def render_assessment(self, evaluated_record: EvaluatedRecord):
-        pass 
+    def render_assessment(self, assessed: AssessedRecord):
+        pass
 
     def render_recommendation(self, evaluated_recommendation: EvaluatedRecommendation):
         pass
@@ -127,15 +127,15 @@ class BaseRenderer(RenderingProtocol):
             log.warning(f'Rendering_template not found for Assessment={evaluated_record.record.id} at path={self.rendering_folder_path()}')
             return None
 
-    def render_assessment(self, evaluated_assessment: EvaluatedAssessmentRecord):
+    def render_assessment(self, assessed: AssessedRecord):
         try:
-            template = self.template_env.get_template(evaluated_assessment.record.id+'.html')
-            return template.render(assessment=evaluated_assessment)
+            template = self.template_env.get_template(assessed.id+'.html')
+            return template.render(assessment=assessed)
         except jinja2.exceptions.TemplateNotFound as e:
             template = self.template_env.get_template('assessment_template.html')
-            return template.render(assessment=evaluated_assessment)
+            return template.render(assessment=assessed)
         except Exception as e:
-            log.warning(f'Rendering_template not found for Assessment={evaluated_assessment.record.id} at path={self.rendering_folder_path()}')
+            log.warning(f'Rendering_template not found for Assessment={assessed.id} at path={self.rendering_folder_path()}')
             return None
     def render_variable_record(self, record: EvaluatedRecord):
         pass
@@ -156,8 +156,8 @@ class BaseRenderer(RenderingProtocol):
 
     def render_assessments(self):
         try:
-            evaluated_assessments = self.concord.assessment_result.context.evaluation_list        
-            rendered_html = [self.render_assessment(ea) for ea in evaluated_assessments]
+            assessed_list = self.concord.assessment_result.assessments
+            rendered_html = [self.render_assessment(a) for a in assessed_list]
             return rendered_html
         except Exception as e:
             log.error(e)
@@ -184,7 +184,7 @@ class BaseRenderer(RenderingProtocol):
 
         d = { }
         d['template_id'] = self.id
-        d['assessments'] = self.render_assessments() or self.concord.assessment_result.context.evaluation_list
+        d['assessments'] = self.render_assessments() or self.concord.assessment_result.assessments
         d['recommendations'] = self.render_recommendations() or self.concord.recommendation_result.recommendations
         d['records'] = self.render_evaluated_records() or self.concord.sufficiency_evaluated_records
         d.update(self.concord.cpg.as_dict())

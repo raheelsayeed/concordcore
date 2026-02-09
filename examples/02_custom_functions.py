@@ -16,7 +16,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from core.cpg import CPG
+from core.cpg_registry import get_registry
 from core.concord import Concord
 from core.healthcontext import HealthContext
 from variables.record import Record
@@ -39,13 +39,12 @@ def main():
     # =========================================================================
     print("\nLoading Cholesterol CPG with custom functions...")
 
-    cpg_path = Path(__file__).parent.parent / 'cpgs' / 'cholesterol.yaml'
-    cpg = CPG.from_document_path(str(cpg_path))
+    cpg = get_registry().get('2019AccPrimaryPreventionASCVD')
 
     print(f"Functions module: {cpg.functions_module}")
 
     # The cholesterol CPG uses a custom function for ASCVD risk calculation
-    # See cpgs/ascvd_risk_scores.py for the implementation
+    # See cpgs/cholesterol/ascvd_risk_scores.py for the implementation
 
     # =========================================================================
     # Create comprehensive patient data for risk calculation

@@ -22,8 +22,8 @@ Example usage:
     print(prompt['system'])  # Claude-optimized system prompt with XML tags
 
     # With CPG context
-    from core.cpg import CPG
-    cpg = CPG.from_document_path('cpgs/cholesterol.yaml')
+    from core.cpg_registry import get_registry
+    cpg = get_registry().get('2019AccPrimaryPreventionASCVD')
     manager = InstructionManager.for_cpg(cpg)
 
     # Get instructions for conversation

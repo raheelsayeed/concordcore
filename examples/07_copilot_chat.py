@@ -29,7 +29,7 @@ def main():
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--dry-run', action='store_true')
-    parser.add_argument('--cpg', default='cpgs/cholesterol.yaml')
+    parser.add_argument('--cpg', default='cpgs/cholesterol/cholesterol.yaml')
     args = parser.parse_args()
 
     # Setup

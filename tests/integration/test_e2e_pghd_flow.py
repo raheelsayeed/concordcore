@@ -35,10 +35,11 @@ from ontology.codes import ConcordDefinition, CodeGender, CodeRaceEthnicity
 @pytest.fixture
 def cholesterol_cpg():
     """Load the real cholesterol CPG from disk."""
-    cpg_path = Path(__file__).parent.parent.parent / 'cpgs' / 'cholesterol.yaml'
-    if not cpg_path.exists():
+    from core.cpg_registry import get_registry
+    try:
+        return get_registry().get('2019AccPrimaryPreventionASCVD')
+    except KeyError:
         pytest.skip("Cholesterol CPG not found")
-    return CPG.from_document_path(str(cpg_path))
 
 
 @pytest.fixture
@@ -242,10 +243,10 @@ class TestE2EPGHDFlow:
         # Phase 3: Assessment
         assessment = concord.assess(ignore_required_variable_attestations=True)
         assert isinstance(assessment, AssessmentResult)
-        assert assessment.context is not None
+        assert assessment.assessments is not None
 
         # Verify specific assessment IDs exist
-        assessed_ids = {ea.id for ea in assessment.context.evaluation_list}
+        assessed_ids = {a.id for a in assessment.assessments}
         assert 'ascvd_ten_year_risk_score' in assessed_ids
         assert 'ldl_over_190' in assessed_ids or 'ldl_over_190' in assessed_ids
         assert 'has_diabetes' in assessed_ids

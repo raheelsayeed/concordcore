@@ -138,11 +138,11 @@ except NeedAttestationError as e:
         result = concord.assess()
 
 logger.info(f'Assessment Complete?={result.success}')
-print_evaluatedrecords(result.context.evaluation_list, title="AssessmentVariables")
+print_evaluatedrecords(result.assessments, title="AssessmentVariables")
 if not result.success:
-    logger.error(f'Assessment could not be completed, is insufficient. Must stop here.')
-    for insuff_record in result.insufficient_variables:
-        logger.error(insuff_record)
+    logger.error(f'Assessment could not be completed. Must stop here.')
+    for err in result.errors:
+        logger.error(err)
     exit()
 
 
@@ -202,8 +202,8 @@ if inspect_output:
 for record in concord.sufficiency_result.context.evaluation_list:
     logger.debug(f'VARIABLE:narrative test record={record.record.narrative}')
 ## Narrative tests
-for record in concord.assessment_result.context.evaluation_list:
-    logger.debug(f'ASSESSMENT:narrative test record={record.record.narrative}')
+for assessed in concord.assessment_result.assessments:
+    logger.debug(f'ASSESSMENT:narrative test record={assessed.narrative}')
 
 
 if args.template_name:

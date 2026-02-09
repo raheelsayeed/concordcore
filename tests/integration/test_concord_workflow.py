@@ -134,10 +134,11 @@ class TestConcordWithCholesterolCPG:
     @pytest.fixture
     def cholesterol_cpg(self):
         """Load the cholesterol CPG."""
-        cpg_path = Path(__file__).parent.parent.parent / 'cpgs' / 'cholesterol.yaml'
-        if not cpg_path.exists():
+        from core.cpg_registry import get_registry
+        try:
+            return get_registry().get('2019AccPrimaryPreventionASCVD')
+        except KeyError:
             pytest.skip("Cholesterol CPG not found")
-        return CPG.from_document_path(str(cpg_path))
 
     @pytest.fixture
     def complete_healthcontext(self):

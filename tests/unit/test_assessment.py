@@ -7,8 +7,8 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from core.assessment import AssessmentVar, AssessmentRecord, AssessmentEvaluator, AssessmentResult
-from core.evaluation import EvaluatedRecord, EvaluationContext
+from core.assessment import AssessmentVar, AssessmentRecord, AssessmentEvaluator, AssessmentResult, AssessedRecord
+from core.evaluation import EvaluatedRecord, EvaluationResultStatus
 from variables.record import Record
 from variables.var import Var, Narrative
 from variables.value import Value
@@ -192,7 +192,7 @@ class TestAssessmentEvaluator:
             assessment_variables=assessment_variables,
             evaluated_records=[ldl_evaluated_record]
         )
-        assert len(result.context.evaluation_list) == len(assessment_variables)
+        assert len(result.assessments) == len(assessment_variables)
 
     def test_assess_with_chained_assessments(self, ldl_evaluated_record):
         """Test assessment that references another assessment."""
@@ -207,8 +207,8 @@ class TestAssessmentEvaluator:
         )
         # First assessment should be True (150 > 130)
         # Second should also be True (high_ldl == True)
-        assert result.context.evaluation_list[0].record.value.value is True
-        assert result.context.evaluation_list[1].record.value.value is True
+        assert result.assessments[0].value.value is True
+        assert result.assessments[1].value.value is True
 
 
 class TestAssessmentResult:
@@ -216,10 +216,12 @@ class TestAssessmentResult:
 
     def test_assessment_result_success(self):
         """Test AssessmentResult success property."""
-        context = EvaluationContext()
-        var = Var(id='test', title='Test')
-        record = Record(var=var, initial_values=[Value(True)])
-        context.successful_evaluation(record)
+        av = AssessmentVar(id='test', title='Test', expression='$x > 0')
+        ar = AssessmentRecord(var=av)
+        assessed = AssessedRecord(
+            record=ar,
+            evaluation_result=EvaluationResultStatus.Successful
+        )
 
-        result = AssessmentResult(context=context)
+        result = AssessmentResult(assessments=[assessed])
         assert result.success is True

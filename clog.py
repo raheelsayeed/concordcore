@@ -99,7 +99,7 @@ def print_evaluatedrecords(variables, title = None, subtitle = None):
 # style="white on blue"
         try:
             sufficiency = '-'
-            if ev.sufficiency_status is not None:
+            if getattr(ev, 'sufficiency_status', None) is not None:
                 if ev.sufficiency_status.value ==  SufficiencyResultStatus.Sufficient.value:
                     sufficiency = '[green] Sufficient '
                 elif ev.sufficiency_status.value ==  SufficiencyResultStatus.Insufficient.value:
