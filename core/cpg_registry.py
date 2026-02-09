@@ -22,11 +22,17 @@ Example usage:
 
     # Group by category
     by_cat = registry.list_by_category()
+
+    # Find CPGs that use a specific variable (e.g., a lab test)
+    hits = registry.find_by_variable("LDL")
+    for hit in hits:
+        print(f"{hit.cpg_title}: used in {hit.phases}")
     ```
 """
 
 import logging
-from dataclasses import dataclass
+import re
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import yaml
@@ -34,7 +40,7 @@ import yaml
 log = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class CPGEntry:
     """Lightweight CPG metadata extracted from YAML without full variable parsing."""
 
@@ -59,6 +65,56 @@ class CPGEntry:
         }
 
 
+@dataclass(frozen=True, slots=True)
+class VariableUsage:
+    """Describes how a variable is used within a specific CPG."""
+
+    cpg_identifier: str
+    cpg_title: str
+    phases: tuple[str, ...]  # e.g. ("input", "assessment", "recommendation")
+    details: tuple[str, ...]  # human-readable detail per usage
+
+    def as_dict(self) -> dict:
+        return {
+            "cpg_identifier": self.cpg_identifier,
+            "cpg_title": self.cpg_title,
+            "phases": list(self.phases),
+            "details": list(self.details),
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class ScreeningResult:
+    """Result of screening a patient against a single CPG."""
+
+    cpg_identifier: str
+    cpg_title: str
+    is_eligible: bool
+    description: str
+    category: str
+    publisher: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class CPGVar:
+    """A variable definition with cross-CPG provenance."""
+
+    var: object  # Var — use object to avoid import at class level
+    cpg_identifiers: tuple[str, ...]
+
+    def as_dict(self) -> dict:
+        return {
+            "variable_id": self.var.id,
+            "title": self.var.title,
+            "category": str(self.var.category) if self.var.category else None,
+            "type": self.var.type.value if self.var.type else None,
+            "required": self.var.required,
+            "user_attestable": self.var.user_attestable,
+            "cpg_identifiers": list(self.cpg_identifiers),
+            "cpg_count": len(self.cpg_identifiers),
+        }
+
+
 class CPGRegistry:
     """Auto-discovers CPGs from a directory and provides lazy-loaded access.
 
@@ -74,6 +130,8 @@ class CPGRegistry:
         self._cpgs_dir = cpgs_dir.resolve()
         self._entries: dict[str, CPGEntry] = {}
         self._cpg_cache: dict[str, object] = {}  # identifier -> CPG
+        self._var_index: dict[str, list[VariableUsage]] | None = None  # lazy
+        self._variables_index: dict[str, CPGVar] | None = None  # lazy
         self._scan()
 
     @property
@@ -200,6 +258,183 @@ class CPGRegistry:
         self._cpg_cache.pop(identifier, None)
         return self.get(identifier)
 
+    def find_by_variable(self, variable_id: str) -> list[VariableUsage]:
+        """Find all CPGs that reference a given variable.
+
+        Uses a lazily-built inverted index for O(1) lookups after first call.
+
+        Args:
+            variable_id: Variable name to search for (case-insensitive).
+
+        Returns:
+            List of VariableUsage describing each CPG's use of the variable.
+        """
+        if self._var_index is None:
+            self._build_var_index()
+        return self._var_index.get(variable_id.lower(), [])
+
+    def _build_var_index(self) -> None:
+        """Build inverted index: variable_id (lowercase) -> list[VariableUsage]."""
+        index: dict[str, list[VariableUsage]] = {}
+
+        for identifier in self.identifiers():
+            try:
+                cpg = self.get(identifier)
+            except Exception:
+                continue
+
+            # Collect all (variable_id, phase, detail) tuples for this CPG
+            var_hits: dict[str, list[tuple[str, str]]] = {}  # vid -> [(phase, detail)]
+
+            for v in cpg.variables:
+                vid = v.id.lower()
+                title = getattr(v, "title", None) or v.id
+                var_hits.setdefault(vid, []).append(
+                    ("input", f"Defined as input variable: {title}")
+                )
+
+            for v in cpg.eligibility_variables:
+                expr = getattr(v, "expression", "") or ""
+                for ref in re.findall(r"\$(\w+)", expr):
+                    var_hits.setdefault(ref.lower(), []).append(
+                        ("eligibility", f"Referenced in eligibility '{v.id}': {expr[:80]}")
+                    )
+
+            for v in cpg.assessment_variables:
+                expr = getattr(v, "expression", "") or ""
+                for ref in re.findall(r"\$(\w+)", expr):
+                    title = getattr(v, "title", None) or v.id
+                    var_hits.setdefault(ref.lower(), []).append(
+                        ("assessment", f"Referenced in assessment '{title}'")
+                    )
+
+            for v in cpg.recommendation_variables:
+                expr = str(getattr(v, "expression", "") or "")
+                compl = str(getattr(v, "compliance_expression", "") or "")
+                for ref in re.findall(r"\$(\w+)", expr + " " + compl):
+                    title = getattr(v, "title", None) or v.id
+                    var_hits.setdefault(ref.lower(), []).append(
+                        ("recommendation", f"Referenced in recommendation '{title}'")
+                    )
+
+            # Build VariableUsage per variable for this CPG
+            for vid, hits in var_hits.items():
+                phases = tuple(dict.fromkeys(p for p, _ in hits))
+                details = tuple(d for _, d in hits)
+                usage = VariableUsage(
+                    cpg_identifier=identifier,
+                    cpg_title=cpg.title,
+                    phases=phases,
+                    details=details,
+                )
+                index.setdefault(vid, []).append(usage)
+
+        self._var_index = index
+
+    def variables(self, cpgs: list[str] | None = None) -> list[CPGVar]:
+        """Return all unique input variables across CPGs.
+
+        Args:
+            cpgs: Optional list of CPG identifiers to filter by.
+                  If ``None``, returns variables from all CPGs.
+
+        Returns:
+            List of :class:`CPGVar` sorted by variable ID.
+
+        Raises:
+            KeyError: If any identifier in *cpgs* is unknown.
+        """
+        if cpgs is not None and len(cpgs) == 0:
+            return []
+
+        if self._variables_index is None:
+            self._build_variables_index()
+
+        if cpgs is None:
+            return sorted(self._variables_index.values(), key=lambda cv: cv.var.id)
+
+        # Validate all requested identifiers
+        for ident in cpgs:
+            if ident not in self._entries:
+                raise KeyError(
+                    f"Unknown CPG identifier: '{ident}'. "
+                    f"Available: {self.identifiers()}"
+                )
+
+        cpg_set = set(cpgs)
+        result: list[CPGVar] = []
+        for cv in self._variables_index.values():
+            overlap = tuple(i for i in cv.cpg_identifiers if i in cpg_set)
+            if overlap:
+                result.append(CPGVar(var=cv.var, cpg_identifiers=overlap))
+        return sorted(result, key=lambda cv: cv.var.id)
+
+    def _build_variables_index(self) -> None:
+        """Build index: variable_id -> CPGVar with provenance."""
+        index: dict[str, CPGVar] = {}
+
+        for identifier in self.identifiers():
+            try:
+                cpg = self.get(identifier)
+            except Exception:
+                continue
+
+            for v in cpg.variables:
+                if v.id in index:
+                    # Accumulate this CPG identifier
+                    existing = index[v.id]
+                    index[v.id] = CPGVar(
+                        var=existing.var,
+                        cpg_identifiers=existing.cpg_identifiers + (identifier,),
+                    )
+                else:
+                    index[v.id] = CPGVar(var=v, cpg_identifiers=(identifier,))
+
+        self._variables_index = index
+
+    def screen(self, health_context) -> list[ScreeningResult]:
+        """Screen a patient against all CPGs for eligibility.
+
+        This is the single canonical implementation — app and MCP server
+        should both delegate here instead of reimplementing the loop.
+
+        Args:
+            health_context: Patient HealthContext to check.
+
+        Returns:
+            List of ScreeningResult for every CPG (eligible and ineligible).
+        """
+        from core.eligibility import EligibilityEvaluator
+
+        results: list[ScreeningResult] = []
+
+        for identifier in self.identifiers():
+            try:
+                cpg = self.get(identifier)
+            except Exception:
+                continue
+
+            try:
+                if cpg.eligibility_variables:
+                    evaluator = EligibilityEvaluator(cpg.eligibility_variables)
+                    result = evaluator.evaluate(health_context)
+                    is_eligible = result.is_eligible
+                else:
+                    is_eligible = True
+            except Exception:
+                is_eligible = False
+
+            results.append(ScreeningResult(
+                cpg_identifier=identifier,
+                cpg_title=cpg.title,
+                is_eligible=is_eligible,
+                description=getattr(cpg, "description", "") or "",
+                category=getattr(cpg, "category", "") or "",
+                publisher=cpg.publisher,
+            ))
+
+        return results
+
     def rescan(self) -> None:
         """Re-glob the directory and rebuild the entry index.
 
@@ -207,6 +442,8 @@ class CPGRegistry:
         """
         old_cache = self._cpg_cache.copy()
         self._cpg_cache.clear()
+        self._var_index = None  # invalidate
+        self._variables_index = None  # invalidate
         self._scan()
         # Restore cached CPGs that are still valid
         for ident in self._entries:

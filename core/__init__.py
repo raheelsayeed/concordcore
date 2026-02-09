@@ -86,6 +86,7 @@ __all__ = [
     # CPG Registry
     'CPGRegistry',
     'CPGEntry',
+    'CPGVar',
     'get_registry',
 ]
 
@@ -222,6 +223,9 @@ def __getattr__(name):
     elif name == 'CPGEntry':
         from .cpg_registry import CPGEntry
         return CPGEntry
+    elif name == 'CPGVar':
+        from .cpg_registry import CPGVar
+        return CPGVar
     elif name == 'get_registry':
         from .cpg_registry import get_registry
         return get_registry
