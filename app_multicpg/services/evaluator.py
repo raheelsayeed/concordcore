@@ -5,7 +5,6 @@ import sys
 from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Any
-from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 
 # Add project root to path
@@ -15,6 +14,7 @@ from core.cpg import CPG
 from core.concord import Concord, PipelineResult
 from core.healthcontext import HealthContext
 from core.conflict_detection import ConflictDetector, ConflictReport
+from core.batch_processor import PatientScreener, CoverageAnalysis
 from primitives import Persona
 
 from .cpg_loader import get_cpg_loader
@@ -49,6 +49,7 @@ class EvaluationSummary:
     total_recommendations: int
     applied_recommendations: int
     conflicts: ConflictReport | None
+    coverage: CoverageAnalysis | None = None
     evaluations: dict[str, CPGEvaluationResult] = field(default_factory=dict)
     total_elapsed_ms: float = 0.0
     errors: list[str] = field(default_factory=list)
@@ -123,11 +124,10 @@ class MultiCPGService:
 
             elapsed_ms = (time.time() - start_time) * 1000
 
-            # Extract assessments from context.evaluation_list
+            # Extract assessments
             assessments = []
-            if result.assessment and hasattr(result.assessment, 'context'):
-                if hasattr(result.assessment.context, 'evaluation_list'):
-                    assessments = list(result.assessment.context.evaluation_list or [])
+            if result.assessment and hasattr(result.assessment, 'assessments'):
+                assessments = list(result.assessment.assessments or [])
 
             # Extract all recommendations from recommendations.recommendations
             all_recs = []
@@ -181,62 +181,68 @@ class MultiCPGService:
     ) -> EvaluationSummary:
         """Evaluate multiple CPGs against patient data.
 
+        Uses :class:`PatientScreener` for efficient single-pass screening
+        with shared indexes and coverage analysis.
+
         Args:
             cpg_ids: List of CPG IDs to evaluate
             health_context: Patient health data
             patient_id: Patient identifier
             patient_name: Patient display name
             persona: Persona for rendering narratives
-            parallel: Whether to evaluate in parallel
+            parallel: Whether to evaluate in parallel (unused, kept for compat)
 
         Returns:
             EvaluationSummary with all results
         """
         start_time = time.time()
 
-        # Load all CPGs
-        cpgs = self.loader.load_cpgs(cpg_ids)
+        screener = PatientScreener(cpg_ids=cpg_ids)
+        screening = screener.screen(
+            health_context,
+            patient_id=patient_id,
+            ignore_attestations=True,
+        )
 
         evaluations: dict[str, CPGEvaluationResult] = {}
         errors: list[str] = []
 
-        if parallel and len(cpgs) > 1:
-            # Parallel evaluation
-            with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-                futures = {
-                    executor.submit(
-                        self.evaluate_single_cpg, cpg, health_context, persona
-                    ): cpg
-                    for cpg in cpgs
-                }
+        for sr in screening.results:
+            pr = sr.pipeline_result
+            assessments, all_recs, applied_recs = [], [], []
+            if pr:
+                if pr.assessment and hasattr(pr.assessment, 'assessments'):
+                    assessments = list(pr.assessment.assessments or [])
+                if pr.recommendations:
+                    if hasattr(pr.recommendations, 'recommendations'):
+                        all_recs = list(pr.recommendations.recommendations or [])
+                    if hasattr(pr.recommendations, 'applied'):
+                        applied_recs = list(pr.recommendations.applied or [])
 
-                for future in as_completed(futures):
-                    cpg = futures[future]
-                    try:
-                        result = future.result()
-                        evaluations[result.cpg_id] = result
-                        if result.error:
-                            errors.append(f"{result.cpg_id}: {result.error}")
-                    except Exception as e:
-                        errors.append(f"{cpg.identifier}: {str(e)}")
-        else:
-            # Sequential evaluation
-            for cpg in cpgs:
-                result = self.evaluate_single_cpg(cpg, health_context, persona)
-                evaluations[result.cpg_id] = result
-                if result.error:
-                    errors.append(f"{result.cpg_id}: {result.error}")
+            evaluations[sr.cpg_id] = CPGEvaluationResult(
+                cpg_id=sr.cpg_id,
+                cpg_title=sr.cpg_title,
+                cpg_publisher="",
+                is_eligible=sr.is_eligible,
+                is_executable=sr.is_executable,
+                pipeline_result=pr,
+                applied_recommendations=applied_recs,
+                all_recommendations=all_recs,
+                assessments=assessments,
+                error=sr.error,
+            )
+            if sr.error:
+                errors.append(f"{sr.cpg_id}: {sr.error}")
 
         # Calculate statistics
         eligible_count = sum(1 for e in evaluations.values() if e.is_eligible)
         executable_count = sum(1 for e in evaluations.values() if e.is_executable)
         total_recs = sum(len(e.all_recommendations) for e in evaluations.values())
-        applied_recs = sum(len(e.applied_recommendations) for e in evaluations.values())
+        applied_recs_count = sum(len(e.applied_recommendations) for e in evaluations.values())
 
         # Detect conflicts if enabled
         conflicts = None
         if self.detect_conflicts and self.conflict_detector and len(evaluations) > 1:
-            # Prepare data for conflict detection
             eval_data = []
             for eval_result in evaluations.values():
                 if eval_result.applied_recommendations:
@@ -258,12 +264,13 @@ class MultiCPGService:
         return EvaluationSummary(
             patient_id=patient_id,
             patient_name=patient_name,
-            total_cpgs=len(cpgs),
+            total_cpgs=screening.total_cpgs,
             eligible_cpgs=eligible_count,
             executable_cpgs=executable_count,
             total_recommendations=total_recs,
-            applied_recommendations=applied_recs,
+            applied_recommendations=applied_recs_count,
             conflicts=conflicts,
+            coverage=screening.coverage,
             evaluations=evaluations,
             total_elapsed_ms=total_elapsed,
             errors=errors,
@@ -288,7 +295,7 @@ class MultiCPGService:
             EvaluationSummary with all results
         """
         available = self.loader.get_available_cpgs()
-        cpg_ids = [cfg["id"] for cfg in available]
+        cpg_ids = [cfg["identifier"] for cfg in available]
         return self.evaluate_multiple_cpgs(
             cpg_ids=cpg_ids,
             health_context=health_context,

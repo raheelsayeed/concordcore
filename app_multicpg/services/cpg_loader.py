@@ -1,74 +1,41 @@
 #!/usr/bin/env python3
-"""CPG loading service for the Multi-CPG app."""
+"""CPG loading service for the Multi-CPG app.
+
+Thin wrapper around :class:`core.cpg_registry.CPGRegistry`.
+"""
 
 import sys
 from pathlib import Path
-from functools import lru_cache
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from core.cpg import CPG
-from app_multicpg.config import CPGS_DIR, AVAILABLE_CPGS
+from core.cpg_registry import get_registry
 
 
 class CPGLoaderService:
     """Service for loading and caching CPG definitions."""
 
     def __init__(self, cpgs_dir: Path | None = None):
-        """Initialize the loader.
-
-        Args:
-            cpgs_dir: Directory containing CPG YAML files
-        """
-        self.cpgs_dir = cpgs_dir or CPGS_DIR
-        self._cache: dict[str, CPG] = {}
+        self._registry = get_registry(cpgs_dir)
 
     def load_cpg(self, cpg_id: str) -> CPG | None:
-        """Load a CPG by its ID.
+        """Load a CPG by its identifier.
 
         Args:
-            cpg_id: The CPG identifier
+            cpg_id: The CPG identifier (as defined in the YAML)
 
         Returns:
             CPG instance or None if not found
         """
-        # Check cache first
-        if cpg_id in self._cache:
-            return self._cache[cpg_id]
-
-        # Find the CPG config
-        cpg_config = None
-        for cfg in AVAILABLE_CPGS:
-            if cfg["id"] == cpg_id:
-                cpg_config = cfg
-                break
-
-        if not cpg_config:
-            return None
-
-        # Load the CPG
-        cpg_path = self.cpgs_dir / cpg_config["file"]
-        if not cpg_path.exists():
-            return None
-
         try:
-            cpg = CPG.from_document_path(str(cpg_path))
-            self._cache[cpg_id] = cpg
-            return cpg
-        except Exception as e:
-            print(f"Error loading CPG {cpg_id}: {e}")
+            return self._registry.get(cpg_id)
+        except KeyError:
             return None
 
     def load_cpgs(self, cpg_ids: list[str]) -> list[CPG]:
-        """Load multiple CPGs by their IDs.
-
-        Args:
-            cpg_ids: List of CPG identifiers
-
-        Returns:
-            List of successfully loaded CPG instances
-        """
+        """Load multiple CPGs by their identifiers."""
         cpgs = []
         for cpg_id in cpg_ids:
             cpg = self.load_cpg(cpg_id)
@@ -79,33 +46,36 @@ class CPGLoaderService:
     def get_available_cpgs(self) -> list[dict]:
         """Get list of available CPGs with metadata.
 
-        Returns:
-            List of CPG metadata dictionaries
+        Adds ``id``, ``name``, and a scalar ``category`` alias so that UI
+        code can use the short keys (``cpg["id"]``, ``cpg["name"]``) while
+        the registry uses ``identifier`` / ``title``.
         """
-        available = []
-        for cfg in AVAILABLE_CPGS:
-            cpg_path = self.cpgs_dir / cfg["file"]
-            if cpg_path.exists():
-                available.append(cfg)
-        return available
+        result = []
+        for entry in self._registry.list():
+            d = entry.as_dict()
+            d["id"] = d["identifier"]
+            d["name"] = d["title"]
+            d["category"] = d["category"][0] if d["category"] else "Other"
+            result.append(d)
+        return result
 
     def get_cpgs_by_category(self) -> dict[str, list[dict]]:
-        """Get available CPGs organized by category.
-
-        Returns:
-            Dictionary mapping category names to lists of CPG configs
-        """
-        by_category: dict[str, list[dict]] = {}
-        for cfg in self.get_available_cpgs():
-            category = cfg.get("category", "Other")
-            if category not in by_category:
-                by_category[category] = []
-            by_category[category].append(cfg)
-        return by_category
+        """Get available CPGs organized by category."""
+        result = {}
+        for cat, entries in self._registry.list_by_category().items():
+            items = []
+            for e in entries:
+                d = e.as_dict()
+                d["id"] = d["identifier"]
+                d["name"] = d["title"]
+                d["category"] = cat
+                items.append(d)
+            result[cat] = items
+        return result
 
     def clear_cache(self):
-        """Clear the CPG cache."""
-        self._cache.clear()
+        """Clear the CPG cache by rescanning."""
+        self._registry.rescan()
 
 
 # Global loader instance
