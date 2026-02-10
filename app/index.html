@@ -3,836 +3,467 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Concord Multi-CPG Demo</title>
+    <title>ConcordCore API Explorer</title>
     <style>
         :root {
-            --primary: #2563eb;
-            --primary-dark: #1d4ed8;
-            --success: #16a34a;
-            --warning: #ca8a04;
-            --danger: #dc2626;
-            --gray-50: #f9fafb;
-            --gray-100: #f3f4f6;
-            --gray-200: #e5e7eb;
-            --gray-300: #d1d5db;
-            --gray-600: #4b5563;
-            --gray-800: #1f2937;
+            --bg: #f8f9fa;
+            --surface: #ffffff;
+            --border: #e2e5e9;
+            --text: #1a1d21;
+            --text-dim: #6b7280;
+            --accent: #2563eb;
+            --accent-hover: #1d4ed8;
+            --get: #059669;
+            --post: #d97706;
+            --mono: 'SF Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace;
+            --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            --radius: 6px;
         }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background: var(--gray-50);
-            color: var(--gray-800);
-            line-height: 1.6;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 20px;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: var(--sans); background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; }
 
         header {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: white;
-            padding: 30px 20px;
-            margin-bottom: 30px;
+            background: var(--text);
+            color: #fff;
+            padding: 14px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0;
         }
+        header h1 { font-size: 1rem; font-weight: 600; letter-spacing: -0.01em; }
+        header span { font-size: 0.8rem; opacity: 0.5; }
 
-        header h1 {
-            font-size: 2rem;
-            margin-bottom: 8px;
+        .layout { display: flex; flex: 1; overflow: hidden; }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            border-right: 1px solid var(--border);
+            background: var(--surface);
+            overflow-y: auto;
+            flex-shrink: 0;
+            padding: 12px;
         }
+        .sidebar h2 { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); margin: 16px 0 8px 8px; }
+        .sidebar h2:first-child { margin-top: 4px; }
 
-        header p {
-            opacity: 0.9;
-            font-size: 1.1rem;
+        .endpoint-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            padding: 8px 10px;
+            border: none;
+            background: none;
+            border-radius: var(--radius);
+            cursor: pointer;
+            text-align: left;
+            font-size: 0.82rem;
+            font-family: var(--mono);
+            color: var(--text);
+            transition: background 0.15s;
         }
+        .endpoint-btn:hover { background: var(--bg); }
+        .endpoint-btn.active { background: #eef2ff; color: var(--accent); }
 
-        .grid {
-            display: grid;
-            grid-template-columns: 350px 1fr;
-            gap: 24px;
+        .method-badge {
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 3px;
+            text-transform: uppercase;
+            flex-shrink: 0;
+            min-width: 36px;
+            text-align: center;
         }
+        .method-badge.get { background: #d1fae5; color: var(--get); }
+        .method-badge.post { background: #fef3c7; color: var(--post); }
 
-        @media (max-width: 900px) {
-            .grid {
-                grid-template-columns: 1fr;
-            }
-        }
+        /* Main panel */
+        .main { flex: 1; overflow-y: auto; padding: 24px 32px; }
 
-        .card {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        .endpoint-header { margin-bottom: 20px; }
+        .endpoint-header h2 { font-size: 1.1rem; margin-bottom: 4px; }
+        .endpoint-header code { font-family: var(--mono); font-size: 0.85rem; color: var(--text-dim); }
+
+        .form-section {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
             padding: 20px;
             margin-bottom: 20px;
         }
+        .form-section h3 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-dim); margin-bottom: 12px; }
 
-        .card h2 {
-            font-size: 1.1rem;
-            color: var(--gray-800);
-            margin-bottom: 16px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid var(--gray-200);
-        }
-
-        .form-group {
-            margin-bottom: 16px;
-        }
-
-        label {
-            display: block;
-            font-size: 0.875rem;
-            font-weight: 500;
-            color: var(--gray-600);
-            margin-bottom: 6px;
-        }
-
-        input[type="number"],
-        input[type="text"],
-        select {
+        .field { margin-bottom: 12px; }
+        .field label { display: block; font-size: 0.8rem; font-weight: 500; margin-bottom: 4px; color: var(--text-dim); }
+        .field input, .field textarea, .field select {
             width: 100%;
-            padding: 10px 12px;
-            border: 1px solid var(--gray-300);
-            border-radius: 8px;
-            font-size: 0.95rem;
-            transition: border-color 0.2s;
-        }
-
-        input:focus, select:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-        }
-
-        .checkbox-group {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 12px;
-        }
-
-        .checkbox-group input {
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
-        }
-
-        .checkbox-group label {
-            margin: 0;
-            cursor: pointer;
-        }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 12px 24px;
-            font-size: 0.95rem;
-            font-weight: 500;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .btn-primary {
-            background: var(--primary);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: var(--primary-dark);
-        }
-
-        .btn-primary:disabled {
-            background: var(--gray-300);
-            cursor: not-allowed;
-        }
-
-        .btn-full {
-            width: 100%;
-        }
-
-        .cpg-list {
-            max-height: 250px;
-            overflow-y: auto;
-            border: 1px solid var(--gray-200);
-            border-radius: 8px;
-            padding: 8px;
-        }
-
-        .cpg-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 10px;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .cpg-item:hover {
-            background: var(--gray-100);
-        }
-
-        .cpg-item.selected {
-            background: rgba(37, 99, 235, 0.1);
-        }
-
-        .cpg-item input {
-            width: 18px;
-            height: 18px;
-        }
-
-        .cpg-info {
-            flex: 1;
-        }
-
-        .cpg-title {
-            font-weight: 500;
-            font-size: 0.9rem;
-        }
-
-        .cpg-meta {
-            font-size: 0.8rem;
-            color: var(--gray-600);
-        }
-
-        .results-panel {
-            min-height: 400px;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 16px;
-            margin-bottom: 24px;
-        }
-
-        .stat-card {
-            background: var(--gray-50);
-            border-radius: 8px;
-            padding: 16px;
-            text-align: center;
-        }
-
-        .stat-value {
-            font-size: 1.8rem;
-            font-weight: 700;
-            color: var(--primary);
-        }
-
-        .stat-value.success {
-            color: var(--success);
-        }
-
-        .stat-value.warning {
-            color: var(--warning);
-        }
-
-        .stat-label {
-            font-size: 0.8rem;
-            color: var(--gray-600);
-            margin-top: 4px;
-        }
-
-        .recommendations-list {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .rec-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
-            padding: 16px;
-            background: var(--gray-50);
-            border-radius: 8px;
-            border-left: 4px solid var(--primary);
-        }
-
-        .rec-icon {
-            width: 36px;
-            height: 36px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--primary);
-            color: white;
-            border-radius: 8px;
-            font-size: 1.2rem;
-        }
-
-        .rec-content {
-            flex: 1;
-        }
-
-        .rec-title {
-            font-weight: 600;
-            margin-bottom: 4px;
-        }
-
-        .rec-cpg {
+            padding: 8px 10px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            font-family: var(--mono);
             font-size: 0.85rem;
-            color: var(--gray-600);
+            background: var(--bg);
         }
+        .field textarea { min-height: 140px; resize: vertical; }
+        .field input:focus, .field textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(37,99,235,0.1); }
 
-        .conflict-item {
-            padding: 12px;
-            background: rgba(220, 38, 38, 0.1);
-            border-left: 4px solid var(--danger);
-            border-radius: 8px;
+        .send-btn {
+            padding: 10px 24px;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: var(--radius);
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .send-btn:hover { background: var(--accent-hover); }
+        .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Response */
+        .response-section { margin-top: 20px; }
+        .response-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
             margin-bottom: 8px;
         }
+        .response-header h3 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-dim); }
+        .status-badge { font-size: 0.75rem; font-weight: 600; padding: 2px 8px; border-radius: 3px; }
+        .status-badge.ok { background: #d1fae5; color: var(--get); }
+        .status-badge.err { background: #fee2e2; color: #dc2626; }
+        .timing { font-size: 0.75rem; color: var(--text-dim); }
 
-        .comparison-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 16px;
-        }
-
-        .comparison-table th,
-        .comparison-table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid var(--gray-200);
-        }
-
-        .comparison-table th {
-            background: var(--gray-50);
-            font-weight: 600;
-            font-size: 0.85rem;
-            color: var(--gray-600);
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 4px 10px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            border-radius: 20px;
-        }
-
-        .badge-success {
-            background: rgba(22, 163, 74, 0.1);
-            color: var(--success);
-        }
-
-        .badge-warning {
-            background: rgba(202, 138, 4, 0.1);
-            color: var(--warning);
-        }
-
-        .loading {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 60px;
-            color: var(--gray-600);
-        }
-
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid var(--gray-200);
-            border-top-color: var(--primary);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-right: 16px;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: var(--gray-600);
-        }
-
-        .empty-state h3 {
-            margin-bottom: 8px;
-        }
-
-        .tabs {
-            display: flex;
-            gap: 4px;
-            margin-bottom: 20px;
-            border-bottom: 1px solid var(--gray-200);
-        }
-
-        .tab {
-            padding: 12px 20px;
-            font-size: 0.9rem;
-            font-weight: 500;
-            color: var(--gray-600);
-            border: none;
-            background: none;
-            cursor: pointer;
-            border-bottom: 2px solid transparent;
-            margin-bottom: -1px;
-            transition: all 0.2s;
-        }
-
-        .tab:hover {
-            color: var(--primary);
-        }
-
-        .tab.active {
-            color: var(--primary);
-            border-bottom-color: var(--primary);
-        }
-
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        .benchmark-results {
-            font-family: monospace;
-            font-size: 0.85rem;
-        }
-
-        .benchmark-section {
-            margin-bottom: 24px;
-        }
-
-        .benchmark-section h4 {
-            margin-bottom: 12px;
-            color: var(--gray-600);
-        }
-
-        pre {
-            background: var(--gray-800);
-            color: #e5e7eb;
+        pre.response {
+            background: #1e293b;
+            color: #e2e8f0;
             padding: 16px;
-            border-radius: 8px;
+            border-radius: var(--radius);
             overflow-x: auto;
-            font-size: 0.85rem;
+            font-family: var(--mono);
+            font-size: 0.8rem;
+            line-height: 1.5;
+            max-height: 600px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .placeholder {
+            text-align: center;
+            padding: 80px 20px;
+            color: var(--text-dim);
+        }
+        .placeholder h2 { font-size: 1.2rem; margin-bottom: 8px; color: var(--text); }
+
+        @media (max-width: 768px) {
+            .layout { flex-direction: column; }
+            .sidebar { width: 100%; max-height: 200px; border-right: none; border-bottom: 1px solid var(--border); }
+            .main { padding: 16px; }
         }
     </style>
 </head>
 <body>
     <header>
-        <div class="container">
-            <h1>Concord Multi-CPG Demo</h1>
-            <p>Evaluate patients against multiple Clinical Practice Guidelines in milliseconds</p>
-        </div>
+        <h1>ConcordCore</h1>
+        <span>API Explorer</span>
     </header>
 
-    <div class="container">
-        <div class="grid">
-            <!-- Left Panel: Configuration -->
-            <div class="config-panel">
-                <!-- Patient Data -->
-                <div class="card">
-                    <h2>Patient Data</h2>
-                    <div class="form-group">
-                        <label>Age</label>
-                        <input type="number" id="age" value="55" min="0" max="120">
-                    </div>
-                    <div class="form-group">
-                        <label>LDL Cholesterol (mg/dL)</label>
-                        <input type="number" id="ldl" value="145" min="0">
-                    </div>
-                    <div class="form-group">
-                        <label>HDL Cholesterol (mg/dL)</label>
-                        <input type="number" id="hdl" value="38" min="0">
-                    </div>
-                    <div class="form-group">
-                        <label>Total Cholesterol (mg/dL)</label>
-                        <input type="number" id="total_cholesterol" value="220" min="0">
-                    </div>
-                    <div class="form-group">
-                        <label>Systolic BP (mmHg)</label>
-                        <input type="number" id="systolic_bp" value="142" min="0">
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="has_diabetes" checked>
-                        <label for="has_diabetes">Has Diabetes</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="has_hypertension" checked>
-                        <label for="has_hypertension">Has Hypertension</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="is_smoker" checked>
-                        <label for="is_smoker">Current Smoker</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="on_statin">
-                        <label for="on_statin">On Statin Therapy</label>
-                    </div>
-                </div>
-
-                <!-- CPG Selection -->
-                <div class="card">
-                    <h2>Select CPGs to Evaluate</h2>
-                    <div id="cpg-list" class="cpg-list">
-                        <div class="loading">
-                            <div class="spinner"></div>
-                            Loading CPGs...
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Evaluation Options -->
-                <div class="card">
-                    <h2>Options</h2>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="parallel" checked>
-                        <label for="parallel">Parallel Evaluation</label>
-                    </div>
-                    <button class="btn btn-primary btn-full" id="evaluate-btn" onclick="evaluate()">
-                        Evaluate Selected CPGs
-                    </button>
-                </div>
+    <div class="layout">
+        <nav class="sidebar" id="sidebar"></nav>
+        <main class="main" id="main">
+            <div class="placeholder">
+                <h2>ConcordCore API</h2>
+                <p>Select an endpoint from the sidebar to begin.</p>
             </div>
-
-            <!-- Right Panel: Results -->
-            <div class="results-panel">
-                <div class="card">
-                    <div class="tabs">
-                        <button class="tab active" onclick="showTab('results')">Results</button>
-                        <button class="tab" onclick="showTab('benchmark')">Benchmark</button>
-                        <button class="tab" onclick="showTab('comparison')">LLM Comparison</button>
-                    </div>
-
-                    <!-- Results Tab -->
-                    <div id="tab-results" class="tab-content active">
-                        <div id="results-content">
-                            <div class="empty-state">
-                                <h3>No Results Yet</h3>
-                                <p>Select CPGs and click "Evaluate" to see results</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Benchmark Tab -->
-                    <div id="tab-benchmark" class="tab-content">
-                        <div class="benchmark-results">
-                            <p>Run benchmarks to measure Concord's performance.</p>
-                            <button class="btn btn-primary" onclick="runBenchmark()">Run Benchmark</button>
-                            <div id="benchmark-results" style="margin-top: 20px;"></div>
-                        </div>
-                    </div>
-
-                    <!-- LLM Comparison Tab -->
-                    <div id="tab-comparison" class="tab-content">
-                        <div id="comparison-content">
-                            <p>Evaluate CPGs to see comparison with LLM-based approaches.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        </main>
     </div>
 
     <script>
-        let availableCPGs = [];
-        let selectedCPGs = new Set();
-        let lastResult = null;
+    const ENDPOINTS = [
+        {
+            group: "Discovery",
+            items: [
+                {
+                    id: "list-cpgs",
+                    method: "GET",
+                    path: "/api/cpgs",
+                    title: "List CPGs",
+                    desc: "List all CPGs grouped by category. Filter by variable code: code or system|code",
+                    fields: [
+                        { name: "code", label: "Code filter (optional, e.g. 18262-6 or http://loinc.org|18262-6)", type: "text", placeholder: "http://loinc.org|18262-6", queryParam: true },
+                    ],
+                },
+                {
+                    id: "get-cpg",
+                    method: "GET",
+                    path: "/api/cpgs/{cpg_id}",
+                    title: "CPG Detail",
+                    desc: "Full CPG detail: variables, eligibility, assessments, recommendations",
+                    fields: [
+                        { name: "cpg_id", label: "CPG Identifier", type: "text", placeholder: "2019AccPrimaryPreventionASCVD", pathParam: true },
+                    ],
+                },
+                {
+                    id: "list-variables",
+                    method: "GET",
+                    path: "/api/variables",
+                    title: "Variables Index",
+                    desc: "Cross-CPG variable index. Optional cpg_ids filter.",
+                    fields: [
+                        { name: "cpg_ids", label: "CPG IDs (comma-separated, optional)", type: "text", placeholder: "2019AccPrimaryPreventionASCVD,uspstfStatinUse", queryParam: true },
+                    ],
+                },
+            ],
+        },
+        {
+            group: "Evaluation",
+            items: [
+                {
+                    id: "screen",
+                    method: "POST",
+                    path: "/api/screen",
+                    title: "Screen Patient",
+                    desc: "Screen patient against all CPGs for eligibility",
+                    fields: [
+                        { name: "health_data", label: "Health Data (JSON array)", type: "json", default: JSON.stringify([
+                            {"variable_id": "Age", "value": 55},
+                            {"variable_id": "Sex", "value": "male"},
+                            {"variable_id": "LDL", "value": 165},
+                            {"variable_id": "HDL", "value": 42},
+                            {"variable_id": "Chol", "value": 230},
+                            {"variable_id": "diabetesMellitus", "value": 1}
+                        ], null, 2)},
+                        { name: "persona", label: "Persona", type: "select", options: ["provider", "patient", "guardian"], default: "provider" },
+                    ],
+                },
+                {
+                    id: "evaluate",
+                    method: "POST",
+                    path: "/api/evaluate",
+                    title: "Evaluate CPG",
+                    desc: "Full single-CPG pipeline: eligibility, sufficiency, assessment, recommendations",
+                    fields: [
+                        { name: "cpg_id", label: "CPG Identifier", type: "text", placeholder: "2019AccPrimaryPreventionASCVD" },
+                        { name: "health_data", label: "Health Data (JSON array)", type: "json", default: JSON.stringify([
+                            {"variable_id": "Age", "value": 55},
+                            {"variable_id": "Sex", "value": "male"},
+                            {"variable_id": "LDL", "value": 165},
+                            {"variable_id": "HDL", "value": 42},
+                            {"variable_id": "Chol", "value": 230},
+                            {"variable_id": "Trig", "value": 180},
+                            {"variable_id": "SBP", "value": 140},
+                            {"variable_id": "diabetesMellitus", "value": 1},
+                            {"variable_id": "htn", "value": 1},
+                            {"variable_id": "is_smoker", "value": 1},
+                            {"variable_id": "on_statin", "value": 0}
+                        ], null, 2)},
+                        { name: "persona", label: "Persona", type: "select", options: ["provider", "patient", "guardian"], default: "provider" },
+                    ],
+                },
+                {
+                    id: "evaluate-multi",
+                    method: "POST",
+                    path: "/api/evaluate/multi",
+                    title: "Multi-CPG Evaluate",
+                    desc: "Parallel multi-CPG evaluation with conflict detection",
+                    fields: [
+                        { name: "cpg_ids", label: "CPG IDs (JSON array)", type: "json", default: JSON.stringify(["2019AccPrimaryPreventionASCVD", "uspstfStatinUse"], null, 2) },
+                        { name: "parallel", label: "Parallel", type: "select", options: ["true", "false"], default: "true" },
+                        { name: "health_data", label: "Health Data (JSON array)", type: "json", default: JSON.stringify([
+                            {"variable_id": "Age", "value": 55},
+                            {"variable_id": "Sex", "value": "male"},
+                            {"variable_id": "LDL", "value": 165},
+                            {"variable_id": "HDL", "value": 42},
+                            {"variable_id": "Chol", "value": 230},
+                            {"variable_id": "Trig", "value": 180},
+                            {"variable_id": "SBP", "value": 140},
+                            {"variable_id": "diabetesMellitus", "value": 1},
+                            {"variable_id": "htn", "value": 1},
+                            {"variable_id": "is_smoker", "value": 1},
+                            {"variable_id": "on_statin", "value": 0}
+                        ], null, 2)},
+                        { name: "persona", label: "Persona", type: "select", options: ["provider", "patient", "guardian"], default: "provider" },
+                    ],
+                },
+                {
+                    id: "verify",
+                    method: "POST",
+                    path: "/api/verify",
+                    title: "Verify Reproducibility",
+                    desc: "Re-run evaluation and compare hashes for reproducibility",
+                    fields: [
+                        { name: "cpg_id", label: "CPG Identifier", type: "text", placeholder: "2019AccPrimaryPreventionASCVD" },
+                        { name: "verification_record", label: "Verification Record (JSON)", type: "json", default: '{}', placeholder: "Paste from /api/evaluate response" },
+                        { name: "health_data", label: "Health Data (JSON array)", type: "json", default: "[]" },
+                        { name: "persona", label: "Persona", type: "select", options: ["provider", "patient", "guardian"], default: "provider" },
+                    ],
+                },
+                {
+                    id: "fhir",
+                    method: "POST",
+                    path: "/api/fhir/to-records",
+                    title: "FHIR to Records",
+                    desc: "Parse FHIR R4 bundle into CPG variable records",
+                    fields: [
+                        { name: "cpg_id", label: "CPG Identifier", type: "text", placeholder: "2019AccPrimaryPreventionASCVD" },
+                        { name: "fhir_bundle", label: "FHIR Bundle (JSON)", type: "json", default: JSON.stringify({"resourceType": "Bundle", "type": "collection", "entry": []}, null, 2) },
+                    ],
+                },
+            ],
+        },
+    ];
 
-        // Load CPGs on page load
-        async function loadCPGs() {
-            try {
-                const response = await fetch('/api/cpgs');
-                const data = await response.json();
-                availableCPGs = data.cpgs;
-                renderCPGList();
-            } catch (error) {
-                document.getElementById('cpg-list').innerHTML =
-                    '<div class="empty-state"><p>Failed to load CPGs</p></div>';
+    // Build sidebar
+    const sidebar = document.getElementById("sidebar");
+    ENDPOINTS.forEach(group => {
+        sidebar.innerHTML += `<h2>${group.group}</h2>`;
+        group.items.forEach(ep => {
+            sidebar.innerHTML += `
+                <button class="endpoint-btn" data-id="${ep.id}" onclick="selectEndpoint('${ep.id}')">
+                    <span class="method-badge ${ep.method.toLowerCase()}">${ep.method}</span>
+                    ${ep.title}
+                </button>`;
+        });
+    });
+
+    function findEndpoint(id) {
+        for (const g of ENDPOINTS) {
+            for (const ep of g.items) {
+                if (ep.id === id) return ep;
             }
         }
+        return null;
+    }
 
-        function renderCPGList() {
-            const container = document.getElementById('cpg-list');
-            if (availableCPGs.length === 0) {
-                container.innerHTML = '<div class="empty-state"><p>No CPGs available</p></div>';
-                return;
-            }
+    function selectEndpoint(id) {
+        document.querySelectorAll(".endpoint-btn").forEach(b => b.classList.remove("active"));
+        document.querySelector(`[data-id="${id}"]`).classList.add("active");
 
-            container.innerHTML = availableCPGs.map(cpg => `
-                <label class="cpg-item ${selectedCPGs.has(cpg.id) ? 'selected' : ''}">
-                    <input type="checkbox"
-                           ${selectedCPGs.has(cpg.id) ? 'checked' : ''}
-                           onchange="toggleCPG('${cpg.id}')">
-                    <div class="cpg-info">
-                        <div class="cpg-title">${cpg.title || cpg.id}</div>
-                        <div class="cpg-meta">${cpg.recommendations_count || 0} recommendations</div>
-                    </div>
-                </label>
-            `).join('');
-        }
+        const ep = findEndpoint(id);
+        const main = document.getElementById("main");
 
-        function toggleCPG(cpgId) {
-            if (selectedCPGs.has(cpgId)) {
-                selectedCPGs.delete(cpgId);
+        let fieldsHtml = "";
+        ep.fields.forEach(f => {
+            if (f.type === "json") {
+                fieldsHtml += `
+                    <div class="field">
+                        <label>${f.label}</label>
+                        <textarea id="f-${f.name}" placeholder="${f.placeholder || ''}">${f.default || ''}</textarea>
+                    </div>`;
+            } else if (f.type === "select") {
+                const opts = f.options.map(o => `<option value="${o}" ${o === f.default ? 'selected' : ''}>${o}</option>`).join("");
+                fieldsHtml += `
+                    <div class="field">
+                        <label>${f.label}</label>
+                        <select id="f-${f.name}">${opts}</select>
+                    </div>`;
             } else {
-                selectedCPGs.add(cpgId);
+                fieldsHtml += `
+                    <div class="field">
+                        <label>${f.label}</label>
+                        <input type="text" id="f-${f.name}" placeholder="${f.placeholder || ''}" value="${f.default || ''}">
+                    </div>`;
             }
-            renderCPGList();
-        }
+        });
 
-        function getPatientData() {
-            return {
-                age: parseInt(document.getElementById('age').value) || 55,
-                gender: 'male',
-                ldl: parseFloat(document.getElementById('ldl').value) || 145,
-                hdl: parseFloat(document.getElementById('hdl').value) || 38,
-                total_cholesterol: parseFloat(document.getElementById('total_cholesterol').value) || 220,
-                triglycerides: 185,
-                systolic_bp: parseInt(document.getElementById('systolic_bp').value) || 142,
-                diastolic_bp: 90,
-                has_diabetes: document.getElementById('has_diabetes').checked,
-                has_hypertension: document.getElementById('has_hypertension').checked,
-                is_smoker: document.getElementById('is_smoker').checked,
-                on_statin: document.getElementById('on_statin').checked
-            };
-        }
-
-        async function evaluate() {
-            if (selectedCPGs.size === 0) {
-                alert('Please select at least one CPG');
-                return;
-            }
-
-            const btn = document.getElementById('evaluate-btn');
-            btn.disabled = true;
-            btn.innerHTML = '<div class="spinner" style="width:20px;height:20px;border-width:2px;margin:0"></div> Evaluating...';
-
-            document.getElementById('results-content').innerHTML =
-                '<div class="loading"><div class="spinner"></div>Evaluating CPGs...</div>';
-
-            try {
-                const response = await fetch('/api/evaluate/multi', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        cpg_ids: Array.from(selectedCPGs),
-                        patient: getPatientData(),
-                        parallel: document.getElementById('parallel').checked
-                    })
-                });
-
-                lastResult = await response.json();
-                renderResults(lastResult);
-                renderComparison(lastResult);
-            } catch (error) {
-                document.getElementById('results-content').innerHTML =
-                    `<div class="empty-state"><p>Error: ${error.message}</p></div>`;
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = 'Evaluate Selected CPGs';
-            }
-        }
-
-        function renderResults(result) {
-            const container = document.getElementById('results-content');
-
-            // Stats
-            const allRecs = result.all_recommendations || [];
-            const conflictCount = result.conflicts ? result.conflicts.length : 0;
-
-            let html = `
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-value">${result.elapsed_ms.toFixed(1)}</div>
-                        <div class="stat-label">milliseconds</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value">${result.cpgs_evaluated}</div>
-                        <div class="stat-label">CPGs evaluated</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value success">${allRecs.length}</div>
-                        <div class="stat-label">recommendations</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value ${conflictCount > 0 ? 'warning' : ''}">${conflictCount}</div>
-                        <div class="stat-label">conflicts</div>
-                    </div>
+        main.innerHTML = `
+            <div class="endpoint-header">
+                <h2>${ep.title}</h2>
+                <code>${ep.method} ${ep.path}</code>
+                <p style="margin-top:6px;font-size:0.85rem;color:var(--text-dim)">${ep.desc}</p>
+            </div>
+            ${ep.fields.length > 0 ? `
+            <div class="form-section">
+                <h3>Request</h3>
+                ${fieldsHtml}
+            </div>` : ''}
+            <button class="send-btn" id="send-btn" onclick="sendRequest('${ep.id}')">Send Request</button>
+            <div class="response-section" id="response-section" style="display:none">
+                <div class="response-header">
+                    <h3>Response</h3>
+                    <span class="status-badge" id="status-badge"></span>
+                    <span class="timing" id="timing"></span>
                 </div>
-            `;
+                <pre class="response" id="response-body"></pre>
+            </div>`;
+    }
 
-            // Mode badge
-            html += `
-                <p style="margin-bottom: 16px;">
-                    Mode: <span class="badge badge-success">${result.parallel_mode ? 'Parallel' : 'Sequential'}</span>
-                    &nbsp;
-                    Speedup vs LLM: <span class="badge badge-success">${result.comparison.speedup}x faster</span>
-                </p>
-            `;
+    async function sendRequest(id) {
+        const ep = findEndpoint(id);
+        const btn = document.getElementById("send-btn");
+        btn.disabled = true;
+        btn.textContent = "Sending...";
 
-            // Conflicts
-            if (conflictCount > 0) {
-                html += '<h3 style="margin-bottom: 12px; color: var(--danger);">Conflicts Detected</h3>';
-                html += '<div style="margin-bottom: 24px;">';
-                result.conflicts.forEach(c => {
-                    html += `
-                        <div class="conflict-item">
-                            <strong>${c.conflict_type || 'Conflict'}</strong>:
-                            ${c.description || JSON.stringify(c)}
-                        </div>
-                    `;
-                });
-                html += '</div>';
-            }
+        const startTime = performance.now();
 
-            // Recommendations
-            html += '<h3 style="margin-bottom: 12px;">Recommendations</h3>';
-            if (allRecs.length === 0) {
-                html += '<p style="color: var(--gray-600);">No recommendations apply to this patient.</p>';
-            } else {
-                html += '<div class="recommendations-list">';
-                allRecs.forEach(rec => {
-                    html += `
-                        <div class="rec-item">
-                            <div class="rec-icon">Rx</div>
-                            <div class="rec-content">
-                                <div class="rec-title">${rec.title || rec.id}</div>
-                                <div class="rec-cpg">${rec.cpg_title} (${rec.cpg_id})</div>
-                            </div>
-                        </div>
-                    `;
-                });
-                html += '</div>';
-            }
+        try {
+            let url = ep.path;
+            let options = { headers: {} };
 
-            container.innerHTML = html;
-        }
-
-        function renderComparison(result) {
-            const container = document.getElementById('comparison-content');
-            const comp = result.comparison;
-
-            container.innerHTML = `
-                <h3 style="margin-bottom: 16px;">Concord vs LLM-based Evaluation</h3>
-                <table class="comparison-table">
-                    <thead>
-                        <tr>
-                            <th>Metric</th>
-                            <th>Concord</th>
-                            <th>LLM (Estimated)</th>
-                            <th>Advantage</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Time</td>
-                            <td><strong>${comp.concord_time_ms.toFixed(1)} ms</strong></td>
-                            <td>${comp.llm_estimated_time_ms.toLocaleString()} ms</td>
-                            <td><span class="badge badge-success">${comp.speedup}x faster</span></td>
-                        </tr>
-                        <tr>
-                            <td>Cost</td>
-                            <td><strong>$0.00</strong></td>
-                            <td>$${comp.llm_estimated_cost_usd.toFixed(4)}</td>
-                            <td><span class="badge badge-success">100% savings</span></td>
-                        </tr>
-                        <tr>
-                            <td>Deterministic</td>
-                            <td><strong>Yes</strong></td>
-                            <td>No (probabilistic)</td>
-                            <td><span class="badge badge-success">Reproducible</span></td>
-                        </tr>
-                        <tr>
-                            <td>Offline</td>
-                            <td><strong>Yes</strong></td>
-                            <td>No (API required)</td>
-                            <td><span class="badge badge-success">Air-gap capable</span></td>
-                        </tr>
-                    </tbody>
-                </table>
-                <p style="margin-top: 16px; color: var(--gray-600); font-size: 0.9rem;">
-                    * LLM estimates based on Claude Sonnet pricing ($0.003/1K input, $0.015/1K output tokens)
-                    at ~2000 input + 500 output tokens per evaluation.
-                </p>
-            `;
-        }
-
-        async function runBenchmark() {
-            const container = document.getElementById('benchmark-results');
-            container.innerHTML = '<div class="loading"><div class="spinner"></div>Running benchmarks...</div>';
-
-            try {
-                const response = await fetch('/api/benchmark', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        cpg_ids: selectedCPGs.size > 0 ? Array.from(selectedCPGs) : null,
-                        iterations: 20,
-                        patient_counts: [10, 50, 100]
-                    })
-                });
-
-                const data = await response.json();
-
-                let html = '<div class="benchmark-section">';
-                html += '<h4>Single CPG Evaluation</h4>';
-                html += '<table class="comparison-table"><thead><tr><th>CPG</th><th>Avg (ms)</th><th>P95 (ms)</th><th>Evals/sec</th></tr></thead><tbody>';
-                data.single_cpg.forEach(r => {
-                    if (!r.error) {
-                        html += `<tr><td>${r.cpg_id}</td><td>${r.avg_ms.toFixed(2)}</td><td>${r.p95_ms.toFixed(2)}</td><td>${r.evaluations_per_second.toFixed(0)}</td></tr>`;
+            if (ep.method === "GET") {
+                // Substitute path params
+                ep.fields.forEach(f => {
+                    if (f.pathParam) {
+                        const val = document.getElementById(`f-${f.name}`).value.trim();
+                        url = url.replace(`{${f.name}}`, encodeURIComponent(val));
+                    }
+                    if (f.queryParam) {
+                        const val = document.getElementById(`f-${f.name}`).value.trim();
+                        if (val) {
+                            url += (url.includes("?") ? "&" : "?") + `${f.name}=${encodeURIComponent(val)}`;
+                        }
                     }
                 });
-                html += '</tbody></table></div>';
+                options.method = "GET";
+            } else {
+                options.method = "POST";
+                options.headers["Content-Type"] = "application/json";
 
-                if (data.batch.length > 0) {
-                    html += '<div class="benchmark-section">';
-                    html += '<h4>Batch Processing</h4>';
-                    html += '<table class="comparison-table"><thead><tr><th>Patients</th><th>Mode</th><th>Total (ms)</th><th>Pat/sec</th></tr></thead><tbody>';
-                    data.batch.forEach(r => {
-                        if (!r.error) {
-                            html += `<tr><td>${r.patient_count}</td><td>${r.mode}</td><td>${r.total_ms.toFixed(1)}</td><td>${r.patients_per_second.toFixed(0)}</td></tr>`;
-                        }
-                    });
-                    html += '</tbody></table></div>';
-                }
-
-                if (data.multi_cpg.length > 0) {
-                    html += '<div class="benchmark-section">';
-                    html += '<h4>Multi-CPG Evaluation</h4>';
-                    html += '<table class="comparison-table"><thead><tr><th>CPGs</th><th>Mode</th><th>Total (ms)</th><th>CPGs/sec</th></tr></thead><tbody>';
-                    data.multi_cpg.forEach(r => {
-                        if (!r.error) {
-                            html += `<tr><td>${r.cpg_count}</td><td>${r.parallel ? 'parallel' : 'sequential'}</td><td>${r.total_ms.toFixed(1)}</td><td>${r.cpgs_per_second.toFixed(0)}</td></tr>`;
-                        }
-                    });
-                    html += '</tbody></table></div>';
-                }
-
-                container.innerHTML = html;
-            } catch (error) {
-                container.innerHTML = `<p style="color: var(--danger);">Error: ${error.message}</p>`;
+                const body = {};
+                ep.fields.forEach(f => {
+                    const el = document.getElementById(`f-${f.name}`);
+                    let val = el.value.trim();
+                    if (f.type === "json") {
+                        try { val = JSON.parse(val); } catch(e) { /* send as-is */ }
+                    } else if (f.type === "select") {
+                        if (val === "true") val = true;
+                        else if (val === "false") val = false;
+                    }
+                    body[f.name] = val;
+                });
+                options.body = JSON.stringify(body);
             }
+
+            const resp = await fetch(url, options);
+            const elapsed = (performance.now() - startTime).toFixed(0);
+            const data = await resp.json();
+
+            showResponse(resp.status, elapsed, data);
+        } catch (err) {
+            const elapsed = (performance.now() - startTime).toFixed(0);
+            showResponse(0, elapsed, { error: err.message });
+        } finally {
+            btn.disabled = false;
+            btn.textContent = "Send Request";
         }
+    }
 
-        function showTab(tabName) {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    function showResponse(status, elapsedMs, data) {
+        const section = document.getElementById("response-section");
+        section.style.display = "block";
 
-            document.querySelector(`.tab[onclick="showTab('${tabName}')"]`).classList.add('active');
-            document.getElementById(`tab-${tabName}`).classList.add('active');
-        }
+        const badge = document.getElementById("status-badge");
+        badge.textContent = status || "ERR";
+        badge.className = `status-badge ${status >= 200 && status < 300 ? 'ok' : 'err'}`;
 
-        // Initialize
-        loadCPGs();
+        document.getElementById("timing").textContent = `${elapsedMs} ms`;
+        document.getElementById("response-body").textContent = JSON.stringify(data, null, 2);
+    }
     </script>
 </body>
 </html>
