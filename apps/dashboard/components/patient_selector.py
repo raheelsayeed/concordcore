@@ -2,8 +2,8 @@
 """Patient selection and data input components - Monotone UI."""
 
 import streamlit as st
-from app_multicpg.data import SAMPLE_PATIENTS, get_sample_patient
-from app_multicpg.styles import COLORS
+from apps.dashboard.data import SAMPLE_PATIENTS, get_sample_patient
+from apps.dashboard.styles import COLORS
 
 
 def render_patient_selector() -> str | None:

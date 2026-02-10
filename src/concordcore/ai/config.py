@@ -64,7 +64,7 @@ class LLMConfig:
         Returns:
             ExtractionConfig instance with these settings.
         """
-        from ai.notes_extractor import ExtractionConfig
+        from concordcore.ai.notes_extractor import ExtractionConfig
 
         return ExtractionConfig(
             provider=self.provider,

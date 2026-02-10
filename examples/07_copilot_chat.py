@@ -20,8 +20,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from concordcore.core.cpg import CPG
 from concordcore.primitives.types import Persona
-from ai import HealthCopilot
-from ai.prompts import format_template
+from concordcore.ai import HealthCopilot
+from concordcore.ai.prompts import format_template
 import misc
 
 

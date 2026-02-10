@@ -1,4 +1,4 @@
-"""Tests for mcp_server — MCP Apps architecture."""
+"""Tests for apps.mcp — MCP Apps architecture."""
 
 import asyncio
 import inspect
@@ -11,7 +11,7 @@ import pytest
 class TestAttestationAppHTML:
     @pytest.fixture(autouse=True)
     def _load_html(self):
-        from mcp_server.html_renderer import get_attestation_app_html
+        from apps.mcp.html_renderer import get_attestation_app_html
         self.html = get_attestation_app_html()
 
     def test_valid_html_structure(self):
@@ -108,7 +108,7 @@ class TestAttestationAppHTML:
 
 class TestServerArchitecture:
     def test_collect_attestation_has_meta_ui(self):
-        from mcp_server.server import mcp
+        from apps.mcp.server import mcp
         tools = asyncio.run(mcp.list_tools())
         ca = next(t for t in tools if t.name == "collect_attestation")
         d = ca.model_dump(by_alias=True, exclude_none=True)
@@ -116,38 +116,38 @@ class TestServerArchitecture:
         assert d["_meta"]["ui"]["resourceUri"].startswith("ui://")
 
     def test_resource_at_ui_uri(self):
-        from mcp_server.server import mcp, ATTESTATION_UI_URI
+        from apps.mcp.server import mcp, ATTESTATION_UI_URI
         resources = asyncio.run(mcp.list_resources())
         uris = [str(r.uri) for r in resources]
         assert ATTESTATION_UI_URI in uris
 
     def test_resource_mime_type(self):
-        from mcp_server.server import mcp, MCP_APP_MIME
+        from apps.mcp.server import mcp, MCP_APP_MIME
         resources = asyncio.run(mcp.list_resources())
         r = next(r for r in resources if "attestation" in str(r.uri))
         assert r.mimeType == MCP_APP_MIME
 
     def test_resource_serves_html(self):
-        from mcp_server.server import mcp, ATTESTATION_UI_URI
+        from apps.mcp.server import mcp, ATTESTATION_UI_URI
         content = asyncio.run(mcp.read_resource(ATTESTATION_UI_URI))
         html = content if isinstance(content, str) else str(content)
         assert "<!DOCTYPE html>" in html
         assert "app.connect()" in html
 
-    def test_eight_tools_registered(self):
-        from mcp_server.server import mcp
+    def test_nine_tools_registered(self):
+        from apps.mcp.server import mcp
         names = [t.name for t in asyncio.run(mcp.list_tools())]
-        assert len(names) == 8
+        assert len(names) == 9
         for name in ("acknowledge_guidelines", "list_cpgs", "get_cpg_info",
                       "screen_patient", "create_health_context",
                       "evaluate_patient", "collect_attestation",
-                      "submit_attestation"):
+                      "submit_attestation", "verify_evaluation"):
             assert name in names
 
 
 class TestTransportConfig:
     def test_host_and_port_writable(self):
-        from mcp_server.server import mcp
+        from apps.mcp.server import mcp
         orig = (mcp.settings.host, mcp.settings.port)
         try:
             mcp.settings.host = "127.0.0.1"
@@ -160,19 +160,19 @@ class TestTransportConfig:
 
 class TestToolBehavior:
     def test_list_cpgs(self):
-        from mcp_server.server import list_cpgs
+        from apps.mcp.server import list_cpgs
         result = json.loads(list_cpgs())
         assert "available_cpgs" in result
         assert isinstance(result["total_count"], int)
 
     def test_acknowledge_guidelines(self):
-        from mcp_server.server import acknowledge_guidelines
+        from apps.mcp.server import acknowledge_guidelines
         result = json.loads(acknowledge_guidelines("test-ack-2"))
         assert result["status"] == "acknowledged"
         assert "guidelines" in result
 
     def test_get_cpg_info(self):
-        from mcp_server.server import list_cpgs, get_cpg_info
+        from apps.mcp.server import list_cpgs, get_cpg_info
         cpgs = json.loads(list_cpgs())
         if cpgs["total_count"] > 0:
             result = json.loads(get_cpg_info(cpgs["available_cpgs"][0]["identifier"]))
@@ -180,21 +180,21 @@ class TestToolBehavior:
             assert "variables" in result
 
     def test_guidelines_interactive_form_language(self):
-        from mcp_server.guidelines import MANDATORY_GUIDELINES
+        from apps.mcp.guidelines import MANDATORY_GUIDELINES
         assert "renders an INTERACTIVE FORM" in MANDATORY_GUIDELINES
         assert "DO NOT create your own UI" in MANDATORY_GUIDELINES
         assert "DO NOT list, describe, or enumerate the form fields" in MANDATORY_GUIDELINES
         assert "ask the user each question conversationally" not in MANDATORY_GUIDELINES
 
     def test_collect_attestation_docstring(self):
-        from mcp_server.server import collect_attestation
+        from apps.mcp.server import collect_attestation
         doc = collect_attestation.__doc__
         assert "interactive" in doc.lower()
         assert "DO NOT ask the user questions yourself" in doc
         assert "DO NOT list or describe the form fields" in doc
 
     def test_imports_from_own_package(self):
-        import mcp_server.server as mod
+        import apps.mcp.server as mod
         source = inspect.getsource(mod)
         assert "from .state import" in source
         assert "from .guidelines import" in source
@@ -202,7 +202,7 @@ class TestToolBehavior:
         assert "sys.path.insert" not in source
 
     def test_guidelines_required_before_health_context(self):
-        from mcp_server.server import create_health_context
+        from apps.mcp.server import create_health_context
         result = json.loads(create_health_context(
             session_id="blocked-session-2",
             health_data=[{"variable_id": "Age", "value": 55}],
@@ -210,7 +210,7 @@ class TestToolBehavior:
         assert result["error"] == "GUIDELINES_NOT_ACKNOWLEDGED"
 
     def test_collect_attestation_returns_str(self):
-        from mcp_server.server import (
+        from apps.mcp.server import (
             acknowledge_guidelines, create_health_context,
             evaluate_patient, collect_attestation, list_cpgs,
         )
@@ -230,7 +230,7 @@ class TestToolBehavior:
         assert "session_id" in data and "cpg_id" in data
 
     def test_collect_attestation_field_keys(self):
-        from mcp_server.server import (
+        from apps.mcp.server import (
             acknowledge_guidelines, create_health_context,
             evaluate_patient, collect_attestation, list_cpgs,
         )

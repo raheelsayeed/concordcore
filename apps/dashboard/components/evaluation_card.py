@@ -2,7 +2,7 @@
 """Evaluation result display - crisp monotone design."""
 
 import streamlit as st
-from app_multicpg.styles import COLORS
+from apps.dashboard.styles import COLORS
 
 
 def render_evaluation_summary(summary, view_mode: str = "provider"):

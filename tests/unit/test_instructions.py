@@ -3,7 +3,7 @@
 
 import pytest
 
-from ai.instructions import (
+from concordcore.ai.instructions import (
     LLMProviderType,
     InstructionContext,
     FormattingStyle,

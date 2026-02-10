@@ -38,7 +38,17 @@ src/concordcore/
 ├── pghd/          # Patient-generated health data
 ├── formats/       # FHIR adapter, protocol
 ├── fhir_parsers/  # FHIR R4 resource parsing
-└── cpgs/          # CPG YAML definitions + Python modules
+├── cpgs/          # CPG YAML definitions + Python modules
+└── ai/            # LLM integration (notes extraction, copilot, adapters)
+```
+
+Application code lives under `apps/`:
+
+```
+apps/
+├── api/           # FastAPI REST server (uvicorn apps.api.server:app)
+├── dashboard/     # Streamlit dashboard (streamlit run apps/dashboard/run.py)
+└── mcp/           # MCP server (python -m apps.mcp)
 ```
 
 ### CPG Registry
@@ -55,7 +65,7 @@ by_cat = registry.list_by_category()       # Grouped by category
 ids = registry.identifiers()               # All discovered identifiers
 ```
 
-All consumers (`app_multicpg`, `mcp_server`, `app/server`, `core/benchmarks`) delegate to the registry. Do not construct CPG file paths manually—use `get_registry().get(identifier)`.
+All consumers (`apps/dashboard`, `apps/mcp`, `apps/api`, `core/benchmarks`) delegate to the registry. Do not construct CPG file paths manually—use `get_registry().get(identifier)`.
 
 ### Core Evaluation Flow
 
@@ -82,6 +92,7 @@ Each phase must complete successfully before the next can proceed. `NeedAttestat
 - **`primitives/`**: Types, codes (LOINC, SNOMED, RxNorm, CPT), units, validation
 - **`fhir_parsers/`**: FHIR R4 resource parsing (Observation, Condition, MedicationRequest, Procedure)
 - **`cpgs/`**: CPG YAML definitions and accompanying Python function modules
+- **`ai/`**: LLM integration - notes extraction (`ClinicalNotesExtractor`), copilot (`HealthCopilot`), adapters (Anthropic, OpenAI), instruction scaffolding
 
 ### Expression System
 

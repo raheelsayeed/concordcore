@@ -2,7 +2,7 @@
 """Conflict display - crisp monotone design."""
 
 import streamlit as st
-from app_multicpg.styles import COLORS
+from apps.dashboard.styles import COLORS
 
 
 def render_conflict_panel(conflicts, view_mode: str = "provider"):

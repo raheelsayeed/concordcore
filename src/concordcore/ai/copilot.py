@@ -19,7 +19,7 @@ from concordcore.primitives.types import Persona
 from .llm_provider import ConversationProvider
 
 if TYPE_CHECKING:
-    from ai.instructions import InstructionManager, LLMProviderType
+    from concordcore.ai.instructions import InstructionManager, LLMProviderType
 
 
 @dataclass
@@ -197,7 +197,7 @@ class HealthCopilot:
         if instruction_manager:
             self._instruction_manager = instruction_manager
         elif llm_provider:
-            from ai.instructions import InstructionManager
+            from concordcore.ai.instructions import InstructionManager
             self._instruction_manager = InstructionManager.for_cpg(cpg)
         else:
             self._instruction_manager = None
@@ -340,7 +340,7 @@ class HealthCopilot:
 
         # Use instruction manager if available
         if self._instruction_manager and self.llm_provider:
-            from ai.instructions import InstructionContext
+            from concordcore.ai.instructions import InstructionContext
             prompt = self._build_instruction_based_prompt(
                 user_question, context, include_history
             )
@@ -365,7 +365,7 @@ class HealthCopilot:
         include_history: bool
     ) -> dict[str, str]:
         """Build prompt using instruction manager for provider-specific formatting."""
-        from ai.instructions import InstructionContext
+        from concordcore.ai.instructions import InstructionContext
 
         # Build user content with question and history
         user_content = self._build_user_prompt(user_question, context, include_history)

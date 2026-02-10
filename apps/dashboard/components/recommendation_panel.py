@@ -2,8 +2,8 @@
 """Recommendation display - crisp monotone design."""
 
 import streamlit as st
-from app_multicpg.services import RankedRecommendation, PriorityLevel
-from app_multicpg.styles import COLORS
+from apps.dashboard.services import RankedRecommendation, PriorityLevel
+from apps.dashboard.styles import COLORS
 
 
 PRIORITY_LABELS = {

@@ -5,7 +5,7 @@ This module provides a registry for managing LLM adapters and provides
 functions for registering and retrieving adapters by name.
 
 Example usage:
-    from ai.adapters import get_adapter, register_adapter
+    from concordcore.ai.adapters import get_adapter, register_adapter
 
     # Get a registered adapter
     adapter = get_adapter('anthropic', api_key='...')
@@ -17,7 +17,7 @@ Example usage:
 import logging
 from typing import Any
 
-from ai.llm_provider import LLMProvider
+from concordcore.ai.llm_provider import LLMProvider
 
 log = logging.getLogger(__name__)
 
@@ -98,13 +98,13 @@ def is_registered(name: str) -> bool:
 def _register_builtin_adapters():
     """Register built-in adapters if their dependencies are available."""
     try:
-        from ai.adapters.anthropic_adapter import AnthropicAdapter
+        from concordcore.ai.adapters.anthropic_adapter import AnthropicAdapter
         register_adapter('anthropic', AnthropicAdapter)
     except ImportError:
         log.debug("Anthropic adapter not available (anthropic package not installed)")
 
     try:
-        from ai.adapters.openai_adapter import OpenAIAdapter
+        from concordcore.ai.adapters.openai_adapter import OpenAIAdapter
         register_adapter('openai', OpenAIAdapter)
     except ImportError:
         log.debug("OpenAI adapter not available (openai package not installed)")

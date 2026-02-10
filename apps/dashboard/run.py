@@ -4,19 +4,19 @@
 A streamlined provider-focused interface for evaluating patients
 against clinical practice guidelines.
 
-Run with: streamlit run app_multicpg/run.py
+Run with: streamlit run apps/dashboard/run.py
 """
 
 import sys
 from pathlib import Path
 
-project_root = Path(__file__).parent.parent
+project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 import streamlit as st
 
-from app_multicpg.styles import get_custom_css
-from app_multicpg.views.main_view import render_main_view
+from apps.dashboard.styles import get_custom_css
+from apps.dashboard.views.main_view import render_main_view
 
 
 def main():

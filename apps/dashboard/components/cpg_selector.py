@@ -2,9 +2,9 @@
 """CPG selection component - single column monotone."""
 
 import streamlit as st
-from app_multicpg.config import AVAILABLE_CPGS, CPG_CATEGORIES
-from app_multicpg.services import CPGLoaderService
-from app_multicpg.styles import COLORS
+from apps.dashboard.config import AVAILABLE_CPGS, CPG_CATEGORIES
+from apps.dashboard.services import CPGLoaderService
+from apps.dashboard.styles import COLORS
 
 
 def render_cpg_selector(loader: CPGLoaderService) -> list[str]:

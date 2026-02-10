@@ -15,7 +15,7 @@ from concordcore.variables import var, value, record
 if TYPE_CHECKING:
     from concordcore.core.cpg import CPG
     from concordcore.core.concord_user import ConcordUser
-    from ai.notes_extractor import ExtractionConfig
+    from concordcore.ai.notes_extractor import ExtractionConfig
 
 
 @dataclass(frozen=True, slots=True)
@@ -150,7 +150,7 @@ class HealthContext:
             ctx = HealthContext.from_clinical_notes(notes, cpg)
             ```
         """
-        from ai.notes_extractor import ClinicalNotesExtractor
+        from concordcore.ai.notes_extractor import ClinicalNotesExtractor
 
         extractor = ClinicalNotesExtractor(extraction_config)
         records = extractor.extract_from_cpg(clinical_notes, cpg)
@@ -213,7 +213,7 @@ class HealthContext:
 
         # Priority 2: Clinical notes (LLM extraction)
         if clinical_notes and cpg:
-            from ai.notes_extractor import ClinicalNotesExtractor
+            from concordcore.ai.notes_extractor import ClinicalNotesExtractor
 
             extractor = ClinicalNotesExtractor(extraction_config)
 

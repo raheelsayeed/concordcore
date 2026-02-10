@@ -11,9 +11,9 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from ai.llm_provider import ExtractionResult, LLMProvider
-from ai.clinical_note import ClinicalNote
-from ai.adapters import get_adapter, is_registered
+from concordcore.ai.llm_provider import ExtractionResult, LLMProvider
+from concordcore.ai.clinical_note import ClinicalNote
+from concordcore.ai.adapters import get_adapter, is_registered
 from concordcore.variables.var import Var
 from concordcore.variables.value import Value
 from concordcore.variables.record import Record
@@ -73,7 +73,7 @@ class ClinicalNotesExtractor:
     unstructured clinical notes text using configured LLM adapters.
 
     Example:
-        from ai.notes_extractor import ClinicalNotesExtractor, ExtractionConfig
+        from concordcore.ai.notes_extractor import ClinicalNotesExtractor, ExtractionConfig
         from concordcore.core.cpg_registry import get_registry
 
         cpg = get_registry().get('uspstf_colorectal_cancer_screening')

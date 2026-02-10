@@ -1,4 +1,4 @@
-# Test Prompt for mcp_server
+# Test Prompt for apps.mcp
 
 Copy-paste the text below into Claude Desktop to test the MCP Apps attestation flow.
 
@@ -9,7 +9,7 @@ MCP Apps iframes only render over HTTP transport (not stdio). Use this setup:
 1. Start the server:
    ```bash
    source .venv/bin/activate
-   python -m mcp_server --transport streamable-http
+   python -m apps.mcp --transport streamable-http
    ```
 2. In another terminal, start a cloudflared tunnel:
    ```bash
@@ -29,7 +29,7 @@ MCP Apps iframes only render over HTTP transport (not stdio). Use this setup:
   "mcpServers": {
     "concord-ui": {
       "command": "python",
-      "args": ["-m", "mcp_server"],
+      "args": ["-m", "apps.mcp"],
       "cwd": "/Users/raheel/claude-projects/concordcore"
     }
   }

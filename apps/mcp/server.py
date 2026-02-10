@@ -1,7 +1,8 @@
 """FastMCP server for Concord with MCP Apps UI support (v2).
 
-8 tools: acknowledge_guidelines, list_cpgs, get_cpg_info, screen_patient,
-create_health_context, evaluate_patient, collect_attestation, submit_attestation.
+9 tools: acknowledge_guidelines, list_cpgs, get_cpg_info, screen_patient,
+create_health_context, evaluate_patient, collect_attestation, submit_attestation,
+verify_evaluation.
 """
 
 from __future__ import annotations
@@ -15,6 +16,7 @@ from mcp.server.fastmcp import FastMCP
 from concordcore.core.concord import Concord, NeedAttestationError
 from concordcore.core.cpg_registry import get_registry
 from concordcore.core.healthcontext import HealthContext
+from concordcore.core.reproducibility import compute_output_hash, ReproducibilityVerifier
 from concordcore.primitives.types import Persona
 from concordcore.variables.var import Var
 
@@ -343,6 +345,18 @@ def evaluate_patient(session_id: str, cpg_id: str) -> str:
             result["status"] = "evaluated"
         result["is_complete"] = pipeline.is_complete
 
+        # Add reproducibility metadata
+        output_hash = compute_output_hash(pipeline)
+        if pipeline.metadata:
+            result["metadata"] = {
+                **pipeline.metadata.to_dict(),
+                "output_hash": output_hash,
+            }
+            verifier = ReproducibilityVerifier(cpg)
+            session.verification_records[cpg_id] = verifier.create_verification_record(
+                pipeline, session.health_context
+            )
+
     except NeedAttestationError as e:
         result["status"] = "needs_attestation"
         result["missing_attestations"] = [ev.record.id for ev in e.records]
@@ -466,6 +480,40 @@ def submit_attestation(
         "errors": errors_list or None,
         "message": "Call evaluate_patient again to re-evaluate with new data",
     }, indent=2)
+
+
+# --- Tool 9 ---
+
+@mcp.tool()
+def verify_evaluation(session_id: str, cpg_id: str) -> str:
+    """Verify that a previous CPG evaluation is reproducible.
+
+    Re-runs the evaluation with the same input data and compares
+    cryptographic hashes to confirm deterministic results.
+
+    Must be called after evaluate_patient has completed for the given cpg_id.
+    """
+    error = _check_guidelines(session_id, "verify_evaluation")
+    if error:
+        return json.dumps(error, indent=2)
+
+    session = state.get_session(session_id, create=False)
+    if not session:
+        return json.dumps({"error": f"Session not found: {session_id}"})
+    if not session.health_context:
+        return json.dumps({"error": f"No health context for session: {session_id}"})
+
+    original_record = session.verification_records.get(cpg_id)
+    if not original_record:
+        return json.dumps({
+            "error": f"No verification record for CPG '{cpg_id}'. Run evaluate_patient first.",
+        })
+
+    cpg = state.load_cpg(cpg_id)
+    verifier = ReproducibilityVerifier(cpg)
+    verification = verifier.verify(original_record, session.health_context)
+
+    return json.dumps(verification.to_dict(), indent=2, default=str)
 
 
 # --- Prompt ---

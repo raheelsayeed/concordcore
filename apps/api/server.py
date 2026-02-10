@@ -4,7 +4,7 @@
 Complete REST API for CPG discovery, evaluation, screening,
 reproducibility verification, and FHIR data ingestion.
 
-Run with: uvicorn app.server:app --reload --port 8080
+Run with: uvicorn apps.api.server:app --reload --port 8080
 """
 
 import time

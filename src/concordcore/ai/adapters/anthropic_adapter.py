@@ -15,10 +15,10 @@ try:
 except ImportError:
     anthropic = None
 
-from ai.llm_provider import ExtractionResult, LLMProvider
+from concordcore.ai.llm_provider import ExtractionResult, LLMProvider
 
 if TYPE_CHECKING:
-    from ai.instructions import InstructionManager
+    from concordcore.ai.instructions import InstructionManager
 
 log = logging.getLogger(__name__)
 
@@ -232,7 +232,7 @@ Respond with a JSON object containing: found, value, confidence, source_text"""
             Tuple of (system_prompt, user_prompt)
         """
         if self._instruction_manager:
-            from ai.instructions import InstructionContext, LLMProviderType
+            from concordcore.ai.instructions import InstructionContext, LLMProviderType
 
             # Build user content with extraction details
             user_content = self._build_user_prompt(extraction_prompt, clinical_notes, expected_type)
@@ -254,7 +254,7 @@ Respond with a JSON object containing: found, value, confidence, source_text"""
     def _get_temperature(self) -> float:
         """Get temperature, using instruction manager hint if available."""
         if self._instruction_manager:
-            from ai.instructions import InstructionContext, LLMProviderType
+            from concordcore.ai.instructions import InstructionContext, LLMProviderType
             hint = self._instruction_manager.get_temperature(
                 InstructionContext.EXTRACTION,
                 LLMProviderType.CLAUDE

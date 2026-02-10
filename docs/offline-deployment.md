@@ -136,7 +136,7 @@ virtualenv-clone concord-venv concord-bundle
 
 ```bash
 source concord-bundle/bin/activate
-python -m mcp_server  # Start MCP server
+python -m apps.mcp  # Start MCP server
 ```
 
 ## CPG Repository Setup

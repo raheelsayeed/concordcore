@@ -22,7 +22,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 
 # 2. Verify it works
-python -c "from mcp_server import serve; print('Ready!')"
+python -c "from apps.mcp import serve; print('Ready!')"
 ```
 
 ## Configure Claude Desktop (1 minute)
@@ -34,7 +34,7 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
   "mcpServers": {
     "concord": {
       "command": "python",
-      "args": ["-m", "mcp_server"],
+      "args": ["-m", "apps.mcp"],
       "cwd": "/full/path/to/concordcore"
     }
   }
@@ -88,7 +88,7 @@ Ethnicity, HbA1c, BMI
 
 ## Next Steps
 
-- Read the full [MCP Server README](../mcp_server/README.md) for detailed API docs
+- Read the full [MCP Server README](../apps.mcp/README.md) for detailed API docs
 - See [ARCHITECTURE.md](./ARCHITECTURE.md) for system design
 - Explore CPG YAML files in `cpgs/` directory
 
@@ -97,7 +97,7 @@ Ethnicity, HbA1c, BMI
 **Claude doesn't see the tools?**
 - Restart Claude Desktop after config changes
 - Check the path in config is absolute and correct
-- Run `python -m mcp_server` manually to test
+- Run `python -m apps.mcp` manually to test
 
 **Evaluation fails?**
 - Use `get_missing_data` to see what's needed
@@ -107,4 +107,4 @@ Ethnicity, HbA1c, BMI
 ## Support
 
 - Issues: https://github.com/your-org/concordcore/issues
-- Docs: See `docs/` and `mcp_server/README.md`
+- Docs: See `docs/` and `apps.mcp/README.md`

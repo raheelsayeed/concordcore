@@ -15,7 +15,7 @@ try:
 except ImportError:
     openai = None
 
-from ai.llm_provider import ExtractionResult, LLMProvider
+from concordcore.ai.llm_provider import ExtractionResult, LLMProvider
 
 log = logging.getLogger(__name__)
 

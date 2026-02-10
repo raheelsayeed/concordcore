@@ -11,6 +11,7 @@ PROTECTED_TOOLS = {
     "submit_attestation",
     "collect_attestation",
     "detect_care_gaps",
+    "verify_evaluation",
 }
 
 MANDATORY_GUIDELINES = """

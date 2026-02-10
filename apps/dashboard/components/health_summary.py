@@ -2,7 +2,7 @@
 """Patient health summary component."""
 
 import streamlit as st
-from app_multicpg.services import (
+from apps.dashboard.services import (
     ExplanationService,
     EvaluationSummary,
     RankedRecommendation,

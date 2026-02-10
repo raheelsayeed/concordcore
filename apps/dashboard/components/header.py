@@ -2,7 +2,7 @@
 """Header and navigation components - Artistic UI (concor.ai inspired)."""
 
 import streamlit as st
-from app_multicpg.styles import COLORS
+from apps.dashboard.styles import COLORS
 
 
 def render_header(view_mode: str = "provider"):

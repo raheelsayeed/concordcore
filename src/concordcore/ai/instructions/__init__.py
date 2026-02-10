@@ -8,7 +8,7 @@ This package provides a layered instruction system for different LLM providers:
 
 Example usage:
     ```python
-    from ai.instructions import InstructionManager, LLMProviderType, InstructionContext
+    from concordcore.ai.instructions import InstructionManager, LLMProviderType, InstructionContext
 
     # System-only instructions
     manager = InstructionManager.system_only()

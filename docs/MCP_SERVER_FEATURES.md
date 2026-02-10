@@ -214,7 +214,7 @@ This document outlines the current MCP server capabilities and proposed future f
 
 ### For New Tools
 
-- Follow existing patterns in `mcp_server/server.py`
+- Follow existing patterns in `apps/mcp/server.py`
 - Use FastMCP decorators (`@mcp.tool`, `@mcp.resource`)
 - Create dedicated modules for complex features (like `form_builder.py`, `guidelines.py`)
 - Use `meta={"ui": {...}}` for tools with MCP Apps UI

@@ -33,6 +33,7 @@ class EvaluationSession:
     fhir_resources: list[dict] = field(default_factory=list)
     confidence_scores: dict[str, Any] = field(default_factory=dict)
     prioritized_recommendations: list = field(default_factory=list)
+    verification_records: dict[str, dict] = field(default_factory=dict)
 
     def acknowledge_guidelines(self) -> None:
         self.guidelines_acknowledged = True

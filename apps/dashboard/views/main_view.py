@@ -3,13 +3,9 @@
 
 import re
 import streamlit as st
-from app_multicpg.services import MultiCPGService, PriorityRanker
-from app_multicpg.styles import COLORS
-from app_multicpg.data import get_patient_health_context, SAMPLE_PATIENTS
-
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+from apps.dashboard.services import MultiCPGService, PriorityRanker
+from apps.dashboard.styles import COLORS
+from apps.dashboard.data import get_patient_health_context, SAMPLE_PATIENTS
 from concordcore.primitives import Persona
 from concordcore.core.cpg_registry import get_registry
 
