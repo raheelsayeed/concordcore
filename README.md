@@ -1,317 +1,221 @@
-`concord_`
-=========
+# ConcordCore
 
---- note: not ready for use, check `main.py` for latest on init ---
+A deterministic Python framework for evaluating Clinical Practice Guidelines (CPGs) against patient health data.
 
-Python framework to compute and yeild recommendations based on published evidence, clinical practice guideline(s),for a given longitudinal health record. 
+![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
+![License MIT](https://img.shields.io/badge/license-MIT-green)
 
-1. __IN__
-    - `CPG-YAML`: A clinical practise guideline (CPG) definition file, encoded in `YAML` and accompanying `<file-name>.py` module if necessary.
-    - `HealthContext`: a longtidinal health record consisting of `concord.variables.record(s)`
-2. __OUT__ 
-    - Eligibility: Does the CPG apply to the given `healthcontext`?
-    - Sufficiency: Is the data in `healthcontext` sufficient or partly sufficient to successfully execute the given CPG
-    - Assessments: CPG defined evaluation of health based on given health data
-    - Recommendations: Personalized to the given `healthcontext`
+## What is ConcordCore?
 
+ConcordCore is an offline-capable engine that evaluates published clinical practice guidelines against a patient's health record. It processes YAML-defined CPGs through a structured pipeline — eligibility, sufficiency, assessment, and recommendations — producing deterministic, reproducible results. No LLM or internet connection required. FHIR R4 compatible.
 
-# Installation
+## Key Features
+
+- **5-phase evaluation pipeline** — eligibility, sufficiency, assessment, recommendations, and narrative generation
+- **15+ bundled CPGs** — USPSTF screenings, ACC/AHA cholesterol management, and more
+- **FHIR R4 parsing** — Observation, Condition, MedicationRequest, Procedure, Patient resources
+- **Expression engine** — `$VarID` syntax with accessors, custom functions, and cross-variable references
+- **Persona-aware narratives** — patient, provider, and guardian-facing text with value substitution
+- **MCP server** — expose CPG evaluation as tools for LLM assistants
+- **Offline / air-gap capable** — no network calls, fully deterministic
+
+## Installation
 
 ```bash
-$ git clone https://github.com/concordhealth/concord.git
-$ cd concord
-$ python3 -m venv .venv
-$ source .venv/bin/activate
-$ pip install -r requirements.txt
-$ ./main.py -f cpgs/cholesterol/cholesterol.yaml -t document -p patient
+pip install git+https://github.com/raheelsayeed/concordcore.git
 ```
 
+With AI integration (Anthropic/OpenAI adapters):
 
-# defining_ clinical practise guideline
+```bash
+pip install "concordcore[ai] @ git+https://github.com/raheelsayeed/concordcore.git"
+```
 
-Sample versions of a defined cpg are in `cpgs/`
+For development:
 
-## 1. Creating variables
+```bash
+git clone https://github.com/raheelsayeed/concordcore.git
+cd concordcore
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+```
+
+## Quick Start
+
+```python
+from concordcore.core.cpg_registry import get_registry
+from concordcore.core.concord import Concord
+from concordcore.core.healthcontext import HealthContext
+from concordcore.variables.record import Record
+from concordcore.variables.var import Var
+from concordcore.variables.value import Value
+from concordcore.variables.age import Age
+from concordcore.primitives.code import Code
+from concordcore.primitives.types import Persona
+
+# 1. Load a CPG from the registry
+cpg = get_registry().get('2019AccPrimaryPreventionASCVD')
+
+# 2. Build patient health context
+healthcontext = HealthContext(
+    records=[
+        Age(55),
+        Record(Var(id='LDL', title='LDL Cholesterol', code=[Code.loinc('13457-7')]),
+               _Record__values=[Value(165)]),
+        Record(Var(id='HDL', title='HDL Cholesterol', code=[Code.loinc('2085-9')]),
+               _Record__values=[Value(52)]),
+    ],
+    persona=Persona.patient,
+)
+
+# 3. Evaluate
+concord = Concord(cpg=cpg, healthcontext=healthcontext)
+result = concord.evaluate()
+
+print(result.eligibility.is_eligible)
+print(result.sufficiency.is_executable)
+for rec in result.recommendations.applied:
+    print(rec.recommendation.title, rec.narrative)
+```
+
+## Available Clinical Practice Guidelines
+
+| Identifier | Guideline | Publisher |
+|---|---|---|
+| `2019AccPrimaryPreventionASCVD` | Primary Prevention of ASCVD — Blood Cholesterol Management | ACC / AHA |
+| `uspstfStatinUse` | Statin Use for Primary Prevention of Cardiovascular Disease | USPSTF |
+| `screening_for_cervical_cancer` | Cervical Cancer Screening | USPSTF |
+| `uspstf_colorectal_cancer_screening_2021` | Colorectal Cancer Screening | USPSTF |
+| `uspstf_hypertension_screening_2021` | Hypertension Screening in Adults | USPSTF |
+| `uspstf_diabetes_screening_2021` | Prediabetes and Type 2 Diabetes Screening | USPSTF |
+| `uspstf_hiv_screening` | HIV Screening | USPSTF |
+| `uspstf_hepatitis_c_screening` | Hepatitis C Virus Screening | USPSTF |
+| `uspstf_hepatitis_b_screening` | Hepatitis B Virus Screening | USPSTF |
+| `uspstf_depression_screening` | Depression Screening in Adults | USPSTF |
+| `uspstf_breast_cancer_screening_2024` | Breast Cancer Screening | USPSTF |
+| `uspstf_lung_cancer_screening_2021` | Lung Cancer Screening | USPSTF |
+| `uspstf_obesity_screening_2018` | Obesity Screening and Behavioral Interventions | USPSTF |
+| `uspstf_osteoporosis_screening_2018` | Osteoporosis Screening to Prevent Fractures | USPSTF |
+| `uspstf_alcohol_use_screening_2018` | Unhealthy Alcohol Use Screening and Counseling | USPSTF |
+
+```python
+# List all available CPGs programmatically
+from concordcore.core.cpg_registry import get_registry
+for entry in get_registry().list():
+    print(entry.identifier, entry.title)
+```
+
+## Evaluation Pipeline
+
+Each phase must complete successfully before the next can proceed:
+
+```
+CPG + HealthContext
+    → Eligibility    Does this guideline apply to the patient?
+    → Sufficiency    Is there enough data to evaluate?
+    → Assessment     What does the data indicate?
+    → Recommendations  What actions are recommended?
+```
+
+Step-by-step API:
+
+```python
+concord = Concord(cpg=cpg, healthcontext=healthcontext)
+
+eligibility = concord.eligibility()       # EligibilityResult
+sufficiency = concord.sufficiency()       # SufficiencyResult
+assessment  = concord.assess()            # AssessmentResult
+recommendations = concord.recommendations()  # RecommendationResult
+```
+
+Or run all phases at once:
+
+```python
+result = concord.evaluate()  # PipelineResult
+```
+
+## Expression System
+
+CPG variables use `$VarID` references evaluated with `simpleeval`:
 
 ```yaml
-variables:
-    - id: LDL
-      title: Low density lipoprotein
-      user_attestable: True
-      required: True
-      category: laboratory
-      code:
-        loinc: ['13457-7']
-      validator:
-        plausible: '$value > 40'
-        panel: '$value <= ($Chol - $HDL)'
-        attestable_type: integer
+# Direct value comparison
+expression: $LDL > 189
 
+# Reference assessment results
+expression: $ldl_over_189 == True
 
+# Value count and date accessors
+expression: $LDL.count > 3
+expression: $LDL.date
 
-# validator.plausible, IF_SET: validates `value` to be more than 40. Else raises Exception
-# validator.panel: IF_SET: validates the value in relation to other tests within the user record
-# validator.attestable_type: IF_SET: validates the `attested_value` with the given `value_type`
+# Built-in functions
+expression: in_range($Age, 40, 75)
 ```
 
-Creating variables in py:
+## FHIR Integration
 
-```python
-from concord.variables import value, var, record
+ConcordCore parses FHIR R4 resources into its internal data model:
 
-ldl_val     = value.Value(121)
-ldl_var     = var.Var(id="LDL", title="Low Density Lipoprotein", code=[Code.loinc('loinc_code')])
-ldl_record  = record.Record(ldl_var, [ldl_val,...,...])
+- **Resources**: Observation, Condition, MedicationRequest, Procedure, Patient
+- **Code systems**: LOINC, SNOMED CT, RxNorm, CPT, ICD-10, CVX
+
+## Applications
+
+ConcordCore ships with three application frontends under `apps/`:
+
+**MCP Server** — expose CPG evaluation as tools for Claude and other LLM assistants:
+
+```bash
+python -m apps.mcp
 ```
 
-## 1. Construct a CPG
+**Streamlit Dashboard** — interactive patient screening and CPG explorer:
 
-```python
-# path to Concord_defined_CPG file yaml file.
-# ../cholesterol.yaml
-# ../cholesterol.py ---> functions module accompanying the CPG
-
-cpg_filepath = '../cpgs/statin_cholesterol.yaml'
-statin_cholesterol_cpg = cpg.BaseCPG.from_document_path(cpg_filepath)
-
-# check if cpg is valid
-try:
-  is_cpg_valid = cpg.validate()
-except Exception as e:
-  print(e)
-
-from clog import *
-print_variables(cpg.variables)
-
-<< insert picture >>
+```bash
+streamlit run apps/dashboard/run.py
 ```
 
-## 2. User data 
+**FastAPI Server** — REST API for CPG evaluation:
 
-```python
-from concord.healthcontext import HealthContext
-from concord.primitives.types import Persona
-
-# interaction-context is that a `Patient` is launching the app 
-persona = Persona.patient 
-# init healthcontext with user data: a list of "records". 
-user_context = HealthContext(records=<# list of records #>, persona=persona)
-# alternatively: healthcontext can be created from a list of values
-# user_context = HealthContext.from_values(values: list[Value], for_variables: list[Var], persona: Persona, until_date: date = None):
+```bash
+uvicorn apps.api.server:app
 ```
 
-## 3. Initialize a cpg-manager class 
+## Project Structure
 
-`concord.concord.Concord` is the core management class that takes in user data `healthcontext` and `CPG` and parses through eligibility check, sufficiency check, assessment evaluation and recommendations.
+```
+src/concordcore/
+├── core/           # Evaluation pipeline, registry, orchestrator
+├── variables/      # Var, Value, Record data model
+├── primitives/     # Types, codes, units, validation
+├── ontology/       # Code system definitions (LOINC, SNOMED, etc.)
+├── pghd/           # Patient-generated health data
+├── formats/        # FHIR adapter and protocol
+├── fhir_parsers/   # FHIR R4 resource parsing
+├── cpgs/           # Bundled CPG definitions (YAML + Python)
+└── ai/             # LLM integration (copilot, notes extraction)
 
-```python
-from concord.concord import Concord
-
-manager = Concord(statin_cholesterol_cpg, healthcontext=user_context)
+apps/
+├── api/            # FastAPI REST server
+├── dashboard/      # Streamlit dashboard
+└── mcp/            # MCP server for LLM tool use
 ```
 
-## 4. Eligibility variables
+## Development
 
-Checks for the eligibility and applicability of `CPG` for a given `HealthContext` as specificed in the cpg definition file. See `concord.eligibility`
+```bash
+git clone https://github.com/raheelsayeed/concordcore.git
+cd concordcore
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
 
-Policy
-
-- Value __shall__ only be a `boolean`
-
-```yaml
-eligibility:
-
-    - id: age_range
-      title: This CPG is fit for people aged between 40 and 75 years
-      expression: $Age > 39 and $Age < 76
-      # only applicable for individuals with age over 39 and less than 76
-```
-Use `Concord` to check eligibility check
-
-```python
-try:
-    
-    result = concord.eligibility()
-    print(f'IS_Eligibility: {result.is_eligible}')
-
-except Exception as e:
-    raise e
-```
-Check `concord.eligbility.EligibilityResult` class for a list of eligibilited specific records that were evaluated
-
-
-
-## 3. Sufficiency variables
-
-Checks for the sufficiency of health data (`HealthContext`) to __execute__ a CPG as specified in the definition file. See `concord.sufficiency`. Based on defined charateristics (`var.required` and `var.user_attestable`), each variable is evaluated to one of the following:
-
-```python
-class SufficiencyResultStatus(Enum):
-    SufficientWithUserAttestation    = auto()
-    Sufficient                       = auto()
-    Insufficient                     = auto()
-    Optional                         = auto()
+# Run tests
+pytest tests/
+pytest tests/unit/          # Unit tests only
+pytest tests/integration/   # Integration tests only
 ```
 
-```python
+## License
 
-try:
-    result = concord.sufficiency()
-    print(f'SufficiencyResult: IS_EXECUTABLE={result.is_executable}')
-
-except Exception as e:
-    raise e
-```
-
-## 3. Assessment variables
-
-Checks for the eligibility and applicability of `CPG` for a given `HealthContext` as specificed in the cpg definition file. See `concord.assessment`. 
-
-Policy: 
-
-- __Shall__ have an `expression` or a `function` attribute
-- __Shall__ have references to other variables within `expression` witha `$` sign.(eg. `$LDL` or `$age_range`)
-- __Shall__ reference variables defined in `variables` or `assessments`.
-
-```yaml
-assessments:
-
-    - id: ldl_over_189
-      title: LDL is greater than 189
-      expression: $LDL > 189
-      narrative:
-        patient:
-          True: |
-            Your LDL-Cholesterol is $LDL mg/dL.
-            A value of __190 mg/dL or more__ is a high risk state that increases the risk of developing heart attack or stroke or other cardiovascular event.
-          None: Could not be determined.
-          False: Your recent LDL is below 189 mg/dL
-```
-
-## 4. Recommendations
-
-To define a conditioned recommendation, use `RecommendationVar`. See `concord.recommendations` for more, including `EvaluatedRecommendation` that is the result of `concord.recommendations()`. 
-
-Policy to define `RecommendationVar` 
-
-- `type=display` are notices only. `expression` for evaluation will be ignored
-- __Shall__ evaluate to resulting value-type of `boolean`
-- __Shall__ evaluate only `AssessmentVar` variable-type. 
-
-Recommendation objects have the following attributes:
-
-```yaml
-recommendations:
-# --- Example of a recommendation type "Display" --- #
-  - id: display_uc
-    type: display
-    title: Understanding Cholesterol
-    narrative:
-      patient:
-        True: |
-          Elevated cholesterol (a fat-like substance that comes from animal foods or is made in your body) can clog arteries that reduce blood flow to the organs and may lead to heart attack or stroke or other cardiovascular event.
-```
-```yaml
-recommendations:
-# --- Example of a recommendation based on evaluated expression
-  - id: sbp_1_ldl
-    title: Recommendation based on High LDL
-    type: medication
-    description: LDL over 189 enhances the risk of developing a heart attack, stroke or other cardiovascular event.
-    expression: $ldl_over_189 == True
-    narrative:
-      patient:
-        True: Evidence suggests that starting a __high intensity statin__ medication to control blood cholesterol has been helpful. Your LDL is $LDL
-    citations: a list of citations supporting this
-    class_of_recommendation: II_B
-```
-
-
-
-
-
-
-
-
-| concord_modules_ | description |
-| --- | --- |
-| concord.primitives | list of primitives types `code`,`unit` |
-| concord.variables | list of variables– `value`,`var`,`record` |
-| concord.eligibility | eligibility evaluation `eligibilityVar` |
-| concord.sufficiency| Checks all `var(s) and record(s)` for sufficiency |
-| concord.assessment| `AssessmentVar`, `AssessmentRecord`, `AssessmentResult` |
-| concord.recommendation | Recommendation protocol module 
-| inputsession| Patient-Reported Health Data caputuring protocol |
-| ontology| convinience `presets`, `codes` for ontological codes |
-| renderer|`jinja` based templating module for creating mutli-modal data (apps,voice, in-context LLM data) |
-| fhir_variables| `FHIRValue`, `FHIRRecommendation` for FHIR packaging |
-| outcomes| Todo |
-
-
-# Resources 
-
-- ValueSets from --> https://ecqi.healthit.gov/ecqm/ec/2022/cms0124v10?qt-tabs_hybrid_measure=measure-information
-
-
-# Under review - consideration
-
-- __Package__
-  - [x] !!! Reorganize package, move outcomes into concord
-
-- __HealthContext__:
-  - [x] !!! Define method to include "persona" within the input healthcontext. This persona would be an enum of patient/practitioner
-  - [x] launchcontext? something similar to SoF LaunchContext. check smart 2.00
-  
-- __Variables__:
-  - [x] !!! Variable.expression.evaluation Enums. Capture errorones contexts
-    - [x] variableID: variable.value is None
-    - [x] variableID: variable.value TypeError for expression
-  - [x] `validation`: Specify checks for validity and plausibility of a given value for that variable. Usecase: LDL value must be less than or equal to the difference between total-cholesterol and HDL.
-    - [x] validator-conformance-level: Failed evaluation maybe ignored if strict=False
-    - [x] Use `attestable-type` IF_FOUND for `attestable_value`
-  - [ ] !!! `value-capture-method`: Custom cpg-module-function to define key-path or keymap to get data for a given data-model. Forexample: SBP-loinc within a BP Observation FHIR resource
-  - [ ] `Code` Hierarchy: 
-  - [x] [limited: only done for recommendations] !!! Collate Record.value.sources. Recommendation-LDl should list: ldl_over_189 AND ldl_values. For now-- only recommendations have the complete based_on_records call.
-
-- __AssessmentVariables__:
-  - [x] !!! Write tests for pghd capture for an assessmentvar; value only returns .__assessment_value__; must return pghd also.
-  - [-] Abort---- _AssessmentVar, if attestable can have its own attestable.value_type_:
-
-- __RecommendationVar__:
-  - [X] !!! Comlpiance expression
-  - [X] !!! Comlpiance narrative?
-  - [ ] Non-compliance evidence capture
-
-- __PGHD__
-  - [ ] !!! Module to isolate attestable values into a concord.pghd_data()
-  
-- __Narratives__:
-  - [ ] In-context QA data generation
-  - [X] Enums for persona: Patient, Provider, Provider-Patient-Encounter, PHD (personal-health-device) based context? (maybe too complex)
-  - [X] Tests for narratives with Persona
-
-- __Rendering and Templates__:
-  - [ ] rendering.py: cache_proprty for all generic templates
-  - [ ] practitioner, single cpg, default tempalte
-  - [ ] patient, single cpg, default template
-  - [ ] practitioner, combined cpgs, default template
-  - [ ] patient, combined-cpgs, default template
-
-- __Evidence__:
-  - [ ] provider-facing evidence capture module. To capture/suggest reasons behind why a guideline could not be executed for the given patient/population
-  - [ ] patient-facing evidence capture. Why patient thinks the guideline may not __apply__ or not be __executable__ for them. 
-  - [ ] `evidence_rejectioning_module`: LLM based suggestions for providers to quickly select/click/tap/reply reasons for the above
-
-- __FHIR__:
-  - [ ] direct-fhir-json to `concord.value` conversion. Skip `fhirclient` or `fhir.resource`
- 
-- __ActionRecommendation__:
-  - [ ] Enums for VariableActionRecommendation: Eg. variable.stale --> ActionRecommendation('get new lab test done), AR1('go here..'), AR2('notify your doctor for a new test')
-  - [ ] Enums for Recommendation
-  - [ ] Enums for Assessment
-  - [ ] If Provider.persona == print handOut for patient
-  
-- __Ontology__:
-  - [ ] concord.valueSet.store = single location to lookup codes (temporarily)
-  - [ ] Permanent: FHIR_ValueSet lookup API design
-
+MIT
